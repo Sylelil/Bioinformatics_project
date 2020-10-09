@@ -31,3 +31,5 @@ colab/whoosh_index/
 # Documentation build
 docs/build
 
+datasets
+scripts/venv

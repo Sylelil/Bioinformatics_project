@@ -281,7 +281,6 @@ def main():
     # 2.a Pre-processing data
     print("\nDifferentially gene expression analysis [DGEA]")
 
-    '''
     # 2.a.1 Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
     df, removed_genes = remove_genes_with_median_0(df)
@@ -290,7 +289,7 @@ def main():
     print(f'>> Removed genes: {removed_genes}'
           f'\n>> Number of genes removed: {len(removed_genes)}'
           f'\n>> Number of genes remained: {n_features}')
-    '''
+
     # 2.a.2 Apply logarithmic transformation on gene expression data
     #       Description : x = Log(x+1), where x is the gene expression value
     print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
@@ -299,7 +298,7 @@ def main():
 
     print(f'>> First 10 values before transformation:\n{df.head(10)}')
     print(f'>> First 10 values after transformation:\n{df_log_transformed.head(10)}')
-    
+
     # Separate patients data frame in normal data frame and tumor data frame
     df_0_log_transformed = df_log_transformed.loc[df_log_transformed.index.str.endswith('_0')]
     df_1_log_transformed = df_log_transformed.loc[df_log_transformed.index.str.endswith('_1')]
@@ -310,15 +309,15 @@ def main():
     alpha = 0.05
     # Anderson test
     print("\n[DGEA pre-processing] Anderson test:")
-    a_normal_genes = anderson_normality_test(df_log_transformed, df_1_log_transformed)
+    a_normal_genes = anderson_normality_test(df_0, df_1)
 
     # Shapiro test
     print("\n[DGEA pre-processing] Shapiro test:")
-    s_normal_genes = shapiro_normality_test(df_0_log_transformed, df_1_log_transformed, alpha)
+    s_normal_genes = shapiro_normality_test(df_0, df_1, alpha)
 
     # Normal test
     print("\n[DGEA pre-processing] Normal test:")
-    n_normal_genes = normal_test(df_0_log_transformed, df_1_log_transformed, alpha)
+    n_normal_genes = normal_test(df_0, df_1, alpha)
 
     # Results
     print(f'\n>> Number of genes with both healthy and diseased patient groups normally distributed:'
@@ -340,7 +339,7 @@ def main():
     # 2.b.2 Welch t test
     print("\n[DGEA statistical test] Welch t-test statistics:")
     alpha = 0.05
-    w_reduced_genes = welch_t_test(df_0_log_transformed, df_1_log_transformed, alpha)
+    w_reduced_genes = welch_t_test(df_0, df_1, alpha)
 
     df_reduced = df[w_reduced_genes]
     n_features = len(df_reduced.columns)  # update number of features
@@ -367,25 +366,18 @@ def main():
     # 2.e PCA
     print("\n[DGEA dimensionality reduction] Principal component analysis (PCA)")
     # 2.e.1 Divide data in training and test data
-    X_train_0, X_valid_0, X_test_0, y_train_0, y_valid_0, y_test_0 = train_test_split(df_reduced_0, df_reduced_0.index,
-                                                                                      train_perc=0.50, valid_perc=0.20,
-                                                                                      test_perc=0.30, random_state=0)
-    X_train_1, X_valid_1, X_test_1, y_train_1, y_valid_1, y_test_1 = train_test_split(df_reduced_1, df_reduced_1.index,
-                                                                                      train_perc=0.50, valid_perc=0.20,
-                                                                                      test_perc=0.30, random_state=0)
+    X_train_0, X_test_0, y_train_0, y_test_0 = train_test_split(df_reduced_0, df_reduced_0.index,
+                                                                test_size=0.2, random_state=0)
+    X_train_1, X_test_1, y_train_1, y_test_1 = train_test_split(df_reduced_1, df_reduced_1.index,
+                                                                test_size=0.2, random_state=0)
     X_train = X_train_0.append(X_train_1)
     y_train = y_train_0.append(y_train_1)
-
-    X_valid = X_valid_0.append(X_valid_1)
-    y_valid = y_valid_0.append(y_valid_1)
-
     X_test = X_test_0.append(X_test_1)
     y_test = y_test_0.append(y_test_1)
 
     # 2.e.2 Standardize features by removing the mean and scaling to unit variance
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train)
-    X_valid = sc.transform(X_valid)
     X_test = sc.transform(X_test)
 
     # 2.e.3 Perform the dimensionality reduction onto dataset with PCA (principal component Analysis)
@@ -393,10 +385,8 @@ def main():
     #                     to be explained is greater than the percentage specified by n_components
     pca = PCA(n_components=0.95)
     X_train_pca = pca.fit_transform(X_train)
-    X_valid_pca = pca.transform(X_valid)
     X_test_pca = pca.transform(X_test)
     print(f'>> Shape of training set after PCA: {X_train_pca.shape}')
-    print(f'>> Shape of validation set after PCA: {X_valid_pca.shape}')
     print(f'>> Shape of test set after PCA: {X_test_pca.shape}')
 
     # 2.e.4 Plot the explained variance as a function of the number of dimensions

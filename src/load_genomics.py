@@ -13,6 +13,7 @@ from scipy import stats
 import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def read_gene_expression_data(path):
@@ -204,44 +205,15 @@ def plot_hierarchical_clustering(df):
     :param df:
     :return:
     """
-    D = pdist(df) # distance matrix
-
-    # Compute and plot dendrogram.
-    fig = pylab.figure()
-    axdendro = fig.add_axes([0.09, 0.1, 0.2, 0.8])
-    Y = hier.linkage(D, method='centroid')
-    Z = hier.dendrogram(Y, orientation='right')
-    axdendro.set_xticks([])
-    axdendro.set_yticks([])
-
-    print('-----------D-----------')
-    print(D.shape)
-    print(D.ind)
-    print('-----------Y-----------')
-    print(Y.shape)
-    print('-----------Z-----------')
-    print(Z.shape)
-
-    # Plot distance matrix.
-    axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.8])
-    index = Z['leaves']
-    D = D[index, :]
-    D = D[:, index]
-    im = axmatrix.matshow(D, aspect='auto', origin='lower')
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
-
-    # Plot colorbar.
-    axcolor = fig.add_axes([0.91, 0.1, 0.02, 0.8])
-    pylab.colorbar(im, cax=axcolor)
-
-    # Display and save figure.
-    fig.show()
-    #fig.savefig('dendrogram.png')
+    heatmap_data = pd.pivot_table(df, values=df.index,
+                                  index=df.index,
+                                  columns=df.columns)
+    hcplot = sns.clustermap(heatmap_data)
+    plt.show()
 
 def random_undersample(df, size):
     random_indices = np.random.choice(df.index, size, replace=False)
-    df_undersampled = df.loc([[random_indices]])
+    df_undersampled = df.loc[random_indices]
     return random_indices, df_undersampled
 
 def main():
@@ -269,11 +241,6 @@ def main():
     n_features = len(df.columns)
     print(f">> Number of features (genes): {n_features}")
 
-    # 1.b.3 hierarchical clustering
-    # TODO
-    #plot_hierarchical_clustering(df_reduced_0)
-    #plot_hierarchical_clustering(df_reduced_1)
-
     ###################################################
     #   2 - Differentially gene expression analysis   #
     ###################################################
@@ -281,7 +248,7 @@ def main():
     # 2.a Pre-processing data
     print("\nDifferentially gene expression analysis [DGEA]")
 
-    '''
+
     # 2.a.1 Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
     df, removed_genes = remove_genes_with_median_0(df)
@@ -290,7 +257,7 @@ def main():
     print(f'>> Removed genes: {removed_genes}'
           f'\n>> Number of genes removed: {len(removed_genes)}'
           f'\n>> Number of genes remained: {n_features}')
-    '''
+
     # 2.a.2 Apply logarithmic transformation on gene expression data
     #       Description : x = Log(x+1), where x is the gene expression value
     print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
@@ -304,6 +271,7 @@ def main():
     df_0_log_transformed = df_log_transformed.loc[df_log_transformed.index.str.endswith('_0')]
     df_1_log_transformed = df_log_transformed.loc[df_log_transformed.index.str.endswith('_1')]
 
+    '''
     # 2.a.3 Check for normality of our data
     #       For each gene, I check the normality distribution
     #       of the 2 groups of data (healthy data and diseased data)
@@ -325,6 +293,7 @@ def main():
           f'\n>> Result for Anderson test: {len(a_normal_genes)} (over {n_features})'
           f'\n>> Result for Shapiro test: {len(s_normal_genes)} (over {n_features})'
           f'\n>> Result for Normal test: {len(n_normal_genes)} (over {n_features})')
+    '''
 
     # 2.b Statistical test
     '''
@@ -364,23 +333,30 @@ def main():
     plot_histograms(df_no_expr.loc[df_no_expr.index.str.endswith('_0')],
                     df_no_expr.loc[df_no_expr.index.str.endswith('_1')], colors=['orange', 'green'])
 
+
+    # 2.d hierarchical clustering
+    # TODO
+    plot_hierarchical_clustering(df_reduced_0)
+    plot_hierarchical_clustering(df_reduced_1)
+
     # 2.e PCA
     print("\n[DGEA dimensionality reduction] Principal component analysis (PCA)")
-    # 2.e.1 Divide data in training and test data
-    X_train_0, X_valid_0, X_test_0, y_train_0, y_valid_0, y_test_0 = train_test_split(df_reduced_0, df_reduced_0.index,
-                                                                                      train_perc=0.50, valid_perc=0.20,
-                                                                                      test_perc=0.30, random_state=0)
-    X_train_1, X_valid_1, X_test_1, y_train_1, y_valid_1, y_test_1 = train_test_split(df_reduced_1, df_reduced_1.index,
-                                                                                      train_perc=0.50, valid_perc=0.20,
-                                                                                      test_perc=0.30, random_state=0)
-    X_train = X_train_0.append(X_train_1)
-    y_train = y_train_0.append(y_train_1)
+    # 2.e.1 Undersample majority class and divide data in training and test data
 
-    X_valid = X_valid_0.append(X_valid_1)
-    y_valid = y_valid_0.append(y_valid_1)
+    sample_size = 200
+    indices_undersampling, X_train_1 = random_undersample(df_reduced_1, sample_size)
+    X_train_1, X_valid_1, y_train_1, y_valid_1 = train_test_split(X_train_1, X_train_1.index,
+                                                                                      train_size=0.50, random_state=0)
+    X_valid_1, X_test_1, y_valid_1, y_test_1 = train_test_split(X_valid_1, y_valid_1,
+                                                                                      train_size=0.20, random_state=0)
+    X_train_0, X_valid_0, y_train_0, y_valid_0 = train_test_split(df_reduced_0, df_reduced_0.index,
+                                                                                      train_size=0.50, random_state=0)
+    X_valid_0, X_test_0, y_valid_0, y_test_0 = train_test_split(X_valid_0, y_valid_0,
+                                                                                      train_size=0.20, random_state=0)
 
-    X_test = X_test_0.append(X_test_1)
-    y_test = y_test_0.append(y_test_1)
+    X_train = X_train_1.append(X_train_0)
+    X_valid = X_valid_1.append(X_valid_0)
+    X_test = X_test_1.append(X_test_0)
 
     # 2.e.2 Standardize features by removing the mean and scaling to unit variance
     sc = StandardScaler()
@@ -404,13 +380,6 @@ def main():
     plot_variance_vs_num_components(X_train)
 
     # Plot first vs second principal component
-
-    ###################################################
-    #   3 - Random undersampling                      #
-    ###################################################
-    sample_size = 100
-    indices_undersampling, X_train_undersampled = random_undersample(X_train_pca, sample_size)
-    # usare i restanti sample come X_test???????
 
 
 if __name__ == "__main__":

@@ -33,3 +33,5 @@ docs/build
 
 datasets
 scripts/venv
+
+venv/

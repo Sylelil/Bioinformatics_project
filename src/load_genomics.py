@@ -1,12 +1,56 @@
 import pandas as pd
-#import tensorflow as tf
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 import os
 import sys
-from scipy import stats
 import numpy as np
+from scipy import stats
+from scipy.spatial.distance import pdist
+import scipy.cluster.hierarchy as hier
+import pylab
+import time
+from tqdm import tqdm
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
+def plot_hierarchical_clustering(df):
+    D = pdist(df) # distance matrix
+
+    # Compute and plot dendrogram.
+    fig = pylab.figure()
+    axdendro = fig.add_axes([0.09, 0.1, 0.2, 0.8])
+    Y = hier.linkage(D, method='centroid')
+    Z = hier.dendrogram(Y, orientation='right')
+    axdendro.set_xticks([])
+    axdendro.set_yticks([])
+
+    print('-----------D-----------')
+    print(D.shape)
+    print(D.ind)
+    print('-----------Y-----------')
+    print(Y.shape)
+    print('-----------Z-----------')
+    print(Z.shape)
+
+    # Plot distance matrix.
+    axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.8])
+    index = Z['leaves']
+    D = D[index, :]
+    D = D[:, index]
+    im = axmatrix.matshow(D, aspect='auto', origin='lower')
+    axmatrix.set_xticks([])
+    axmatrix.set_yticks([])
+
+    # Plot colorbar.
+    axcolor = fig.add_axes([0.91, 0.1, 0.02, 0.8])
+    pylab.colorbar(im, cax=axcolor)
+
+    # Display and save figure.
+    fig.show()
+    #fig.savefig('dendrogram.png')
+
+def random_undersample(df, size):
+    random_indices = np.random.choice(df.index, size, replace=False)
+    df_undersampled = df.loc([[random_indices]])
+    return random_indices, df_undersampled
 
 def main():
 
@@ -29,14 +73,15 @@ def main():
     df_1 = pd.DataFrame()
 
     print(f'Reading gene expression data...')
-    for itr, file_name in enumerate(os.listdir(path_ge)):
+    itr=0
+    for file_name in tqdm(os.listdir(path_ge)):
         file_path = os.path.join(path_ge,file_name)
         with open(file_path) as f:
             patient_df = pd.read_csv(f, sep="\t", header=None, index_col=0, names=[file_name.replace(".txt","")])
             # Calculate number of features:
             if itr == 0:
                 n_features = len(patient_df)
-
+            itr=1
             patient_df = pd.DataFrame.transpose(patient_df)
             if file_name.endswith("_0.txt"):
                 df_0 = df_0.append(patient_df)
@@ -47,6 +92,7 @@ def main():
 
     print(f">> Number of features (genes): {n_features}")
 
+    '''
     # test normality
     normal_like_genes = []
     print("Checking for normality...")
@@ -67,13 +113,14 @@ def main():
 
     print(f'normal like genes:\n{normal_like_genes}')
     print(len(normal_like_genes))
+    '''
 
     # T-test:
     alpha = 0.05
     reduced_genes = []
 
     print("Computing t-test statistics")
-    for gene in df_0.columns:
+    for gene in tqdm(df_0.columns):
         tvalue, pvalue = stats.ttest_ind(np.array(df_0[gene].tolist()), np.array(df_1[gene].tolist()), equal_var=False, nan_policy='omit')
         if not np.isnan(pvalue) and pvalue <= alpha/n_features:
             reduced_genes.append(gene)
@@ -85,6 +132,10 @@ def main():
 
     print(f'>> Shape of reduced normal dataset: {df_reduced_0.shape}')
     print(f'>> Shape of reduced tumor dataset: {df_reduced_1.shape}')
+
+    # Hierarchical clustering for visualization:
+    #plot_hierarchical_clustering(df_reduced_0)
+    #plot_hierarchical_clustering(df_reduced_1)
 
 
     # Divide data in training and test data
@@ -102,6 +153,12 @@ def main():
     # Perform the dimensionality reduction onto dataset with PCA (principal component Analysis) using N features
 
     # Plot PC
+
+    # Random undersampling of majority class (tumor)
+    sample_size = 100
+    indices_undersampling, X_train_1_undersampled = random_undersample(X_train_1, sample_size)
+    # usare i restanti sample come X_test_1???????
+
 
 if __name__ == "__main__":
     main()

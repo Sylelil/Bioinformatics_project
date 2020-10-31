@@ -205,16 +205,40 @@ def plot_hierarchical_clustering(df):
     :param df:
     :return:
     """
-    heatmap_data = pd.pivot_table(df, values=df.index,
-                                  index=df.index,
-                                  columns=df.columns)
-    hcplot = sns.clustermap(heatmap_data)
+    #heatmap_data = pd.pivot_table(df, values=df.index, index=df.index, columns=df.columns)
+    hcplot = sns.clustermap(df)
     plt.show()
 
 def random_undersample(df, size):
     random_indices = np.random.choice(df.index, size, replace=False)
     df_undersampled = df.loc[random_indices]
     return random_indices, df_undersampled
+
+def scree_plot(pca):
+    plt.plot(pca.explained_variance_)
+    plt.xlabel('number of components')
+    plt.ylabel('cumulative explained variance')
+    plt.show()
+
+def biplot(score, coeff, labels=None):
+    xs = score[:,0]
+    ys = score[:,1]
+    n = coeff.shape[0]
+    scalex = 1.0/(xs.max() - xs.min())
+    scaley = 1.0/(ys.max() - ys.min())
+    plt.scatter(xs * scalex,ys * scaley)
+    for i in range(n):
+        plt.arrow(0, 0, coeff[i,0], coeff[i,1],color = 'r',alpha = 0.5)
+        if labels is None:
+            plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, "Var"+str(i+1), color = 'g', ha = 'center', va = 'center')
+        else:
+            plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color = 'g', ha = 'center', va = 'center')
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    plt.xlabel("PC{}".format(1))
+    plt.ylabel("PC{}".format(2))
+    plt.grid()
+    plt.show()
 
 def main():
 
@@ -357,6 +381,9 @@ def main():
     X_train = X_train_1.append(X_train_0)
     X_valid = X_valid_1.append(X_valid_0)
     X_test = X_test_1.append(X_test_0)
+    y_train = y_train_1.append(y_train_0)
+    y_valid = y_valid_1.append(y_valid_0)
+    y_test = y_test_1.append(y_test_0)
 
     # 2.e.2 Standardize features by removing the mean and scaling to unit variance
     sc = StandardScaler()
@@ -380,6 +407,12 @@ def main():
     plot_variance_vs_num_components(X_train)
 
     # Plot first vs second principal component
+
+    # Scree plot
+    scree_plot(pca)
+
+    # Biplot
+    biplot(X_train_pca[:, 0:2], np.transpose(pca.components_[0:2, :]))
 
 
 if __name__ == "__main__":

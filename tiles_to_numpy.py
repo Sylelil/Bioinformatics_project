@@ -3,6 +3,8 @@ import openslide
 import openslide.deepzoom
 from pathlib import Path
 import numpy as np
+from tqdm import tqdm
+
 import tensorflow as tf
 import tensorflow.keras
 
@@ -20,9 +22,16 @@ def save_numpy_features(dir, slidename, path_to_save):
     model = ResNet50(weights='imagenet', include_top=True)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
 
+
     slide = openslide.OpenSlide(os.path.join(dir, slidename))
     zoom = openslide.deepzoom.DeepZoomGenerator(slide, tile_size=224, overlap=0)
-    level = zoom.level_count - 1
+    levels = (zoom.level_count - 1, zoom.level_count - 2)
+    level = levels[1]
+    save_path = os.path.join(path_to_save, slidename.split('.')[0] + str(level) + '.npy')
+    if os.path.exists(save_path):
+        print(f'File {save_path} exist. Skipping')
+        return
+    
     print(f'size is {zoom.level_dimensions[level]}')
     cols, rows = zoom.level_tiles[level]
     print(f'cols is {cols}, rows is {rows}')
@@ -38,10 +47,10 @@ def save_numpy_features(dir, slidename, path_to_save):
     #coords = coords[:-100]
     print(f'number of coords: {len(coords)}')
 
-    tiles = np.array([extract_tile_features(level, coord, zoom) for coord in coords])
+    tiles = np.array([extract_tile_features(level, coord, zoom) for coord in tqdm(coords)])
     tiles = preprocess_input(tiles)
 
-    X = model.predict(tiles, batch_size=32)
+    X = model.predict(tiles, batch_size=32, verbose=1)
     X = np.concatenate([coords, X], axis=1)
     np.save(os.path.join(path_to_save, slidename.split('.')[0] + str(level) + '.npy'), X)
 
@@ -49,8 +58,8 @@ def save_numpy_features(dir, slidename, path_to_save):
 def extract_tile_features(level, coord, zoom):
     print(f"Extracting coords {coord} of {zoom.tile_count}...")
 
-    tile = np.array(zoom.get_tile(level, coord))
-    tile = Image.fromarray(tile)
+    tile = zoom.get_tile(level, (22, 22))
+    #tile = Image.fromarray(tile)
     #if numpy.average(numpy.array(tile)) != 0:
     try:
         tile = to_pil(stretch(from_pil(tile)))
@@ -99,8 +108,8 @@ def main():
     for item in normal_images_list:
         save_numpy_features(item['dir'], item['file'], normal_images_save_dir)
 
- #   for item in tumor_images_list:
- #       save_numpy_features(item['dir'], item['file'], tumor_images_save_dir)
+    for item in tumor_images_list:
+        save_numpy_features(item['dir'], item['file'], tumor_images_save_dir)
 
 
 if __name__ == '__main__':

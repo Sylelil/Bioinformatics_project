@@ -24,6 +24,7 @@ def save_numpy_features(dir, slidename, path_to_save):
 
 
     slide = openslide.OpenSlide(os.path.join(dir, slidename))
+    exit()
     zoom = openslide.deepzoom.DeepZoomGenerator(slide, tile_size=224, overlap=0)
     levels = (zoom.level_count - 1, zoom.level_count - 2)
     level = levels[1]

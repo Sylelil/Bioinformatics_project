@@ -1,8 +1,5 @@
 import math
 import pandas as pd
-from scipy.spatial.distance import pdist
-import scipy.cluster.hierarchy as hier
-import pylab
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import statistics

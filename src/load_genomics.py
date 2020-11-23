@@ -377,7 +377,7 @@ def main():
                                                                                       train_size=0.50, random_state=0)
     X_valid_0, X_test_0, y_valid_0, y_test_0 = train_test_split(X_valid_0, y_valid_0,
                                                                                       train_size=0.20, random_state=0)
-
+    #TODO check if append is correct
     X_train = X_train_1.append(X_train_0)
     X_valid = X_valid_1.append(X_valid_0)
     X_test = X_test_1.append(X_test_0)

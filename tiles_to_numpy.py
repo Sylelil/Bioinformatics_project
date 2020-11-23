@@ -105,8 +105,8 @@ def main():
     if not os.path.exists(tumor_images_save_dir):
         os.mkdir(tumor_images_save_dir)
 
-    for item in normal_images_list:
-        save_numpy_features(item['dir'], item['file'], normal_images_save_dir)
+    # for item in normal_images_list:
+    #     save_numpy_features(item['dir'], item['file'], normal_images_save_dir)
 
     for item in tumor_images_list:
         save_numpy_features(item['dir'], item['file'], tumor_images_save_dir)

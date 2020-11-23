@@ -18,13 +18,12 @@ from colorcorrect.algorithm import stretch
 import os
 import itertools
 
+
 def save_numpy_features(dir, slidename, path_to_save):
     model = ResNet50(weights='imagenet', include_top=True)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
 
-
     slide = openslide.OpenSlide(os.path.join(dir, slidename))
-    exit()
     zoom = openslide.deepzoom.DeepZoomGenerator(slide, tile_size=224, overlap=0)
     levels = (zoom.level_count - 1, zoom.level_count - 2)
     level = levels[1]
@@ -59,7 +58,7 @@ def save_numpy_features(dir, slidename, path_to_save):
 def extract_tile_features(level, coord, zoom):
     print(f"Extracting coords {coord} of {zoom.tile_count}...")
 
-    tile = zoom.get_tile(level, (22, 22))
+    tile = zoom.get_tile(level, coord)
     #tile = Image.fromarray(tile)
     #if numpy.average(numpy.array(tile)) != 0:
     try:
@@ -87,7 +86,7 @@ def get_all_slides(lookup_dir):
 
 
 def main():
-    images_folder = Path('datasets') / 'images';
+    images_folder = Path('datasets') / 'images'
     classes = ('normal', 'tumor')
 
     normal_images_dir = os.path.join(images_folder, classes[0])

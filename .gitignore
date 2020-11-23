@@ -35,6 +35,6 @@ datasets
 scripts/venv
 
 venv/
-.idea/
+.idea
 
 generated/

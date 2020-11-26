@@ -1,4 +1,6 @@
 import math
+from pathlib import Path
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -260,7 +262,7 @@ def main():
     #################################################
     #   1 - Reading data and exploratory analysis   #
     #################################################
-    path_ge = sys.argv[1]
+    path_ge = Path('assets') / 'final_genes'
 
     # 1.a Reading data
     print("Reading gene expression data:")
@@ -392,7 +394,6 @@ def main():
                                                                                       train_size=0.50, random_state=0)
     X_valid_0, X_test_0, y_valid_0, y_test_0 = train_test_split(X_valid_0, y_valid_0,
                                                                                       train_size=0.20, random_state=0)
-    #TODO check if append is correct
     X_train = X_train_1.append(X_train_0)
     X_valid = X_valid_1.append(X_valid_0)
     X_test = X_test_1.append(X_test_0)
@@ -400,6 +401,8 @@ def main():
     y_valid = y_valid_1.append(y_valid_0)
     y_test = y_test_1.append(y_test_0)
 
+    print(X_train.shape)
+    print(type(X_train))
     # 2.e.2 Standardize features by removing the mean and scaling to unit variance
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train)

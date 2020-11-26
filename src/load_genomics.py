@@ -213,8 +213,8 @@ def random_undersample(df, size):
 
 def scree_plot(pca):
     plt.plot(pca.explained_variance_)
-    plt.xlabel('number of components')
-    plt.ylabel('cumulative explained variance')
+    plt.xlabel('Principal component')
+    plt.ylabel('Eigenvalue')
     plt.show()
 
 def biplot(score, coeff, labels=None):
@@ -235,6 +235,24 @@ def biplot(score, coeff, labels=None):
     plt.xlabel("PC{}".format(1))
     plt.ylabel("PC{}".format(2))
     plt.grid()
+    plt.show()
+
+def plot_pca_2D(X_train_pca, y_train):
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1', fontsize=15)
+    ax.set_ylabel('Principal Component 2', fontsize=15)
+    ax.set_title('2 component PCA', fontsize=20)
+    targets = ['0', '1']
+    colors = ['r', 'g']
+    for target, color in zip(targets, colors):
+        indices_to_keep = np.array(y_train == target)
+        ax.scatter(X_train_pca[indices_to_keep, 1]  # first principal component
+                   , X_train_pca[indices_to_keep, 2]  # second principal component
+                   , c=color
+                   , s=50)
+    ax.legend(targets)
+    ax.grid()
     plt.show()
 
 def main():
@@ -401,15 +419,16 @@ def main():
 
     # 2.e.4 Plot the explained variance as a function of the number of dimensions
     print(f'>> Plotting the explained variance as a function of the number of dimensions')
-    plot_variance_vs_num_components(X_train)
+    plot_variance_vs_num_components(X_train_pca)
 
     # Plot first vs second principal component
+    plot_pca_2D(X_train_pca, y_train)
 
     # Scree plot
     scree_plot(pca)
 
     # Biplot
-    biplot(X_train_pca[:, 0:2], np.transpose(pca.components_[0:2, :]))
+    #biplot(X_train_pca[:, 0:2], np.transpose(pca.components_[0:2, :]))
 
 
 if __name__ == "__main__":

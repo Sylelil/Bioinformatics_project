@@ -54,9 +54,21 @@ def main():
         keras.layers.Dense(2, activation='softmax')
     ])
 
+    '''
+    #vgg16:
+    model = keras.Sequential([
+        keras.layers.Dense(4096, activation='relu'),
+        keras.layers.BatchNormalization(),
+        keras.layers.Dense(4096, activation='relu'),
+        keras.layers.BatchNormalization(),
+        keras.layers.Dense(2, activation='softmax')
+    ])
+    '''
+
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
+
     model.fit(train_features, train_labels, epochs=10, shuffle=True, validation_split=0.5)
 
 

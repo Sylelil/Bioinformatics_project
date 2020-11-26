@@ -1,3 +1,5 @@
+import sys
+
 import numpy
 import openslide
 import openslide.deepzoom
@@ -59,6 +61,7 @@ def extract_tile_features(level, coord, zoom):
     print(f"Extracting coords {coord} of {zoom.tile_count}...")
 
     tile = zoom.get_tile(level, coord)
+    tile.save(os.path.join(Path("tiles"), "%d_%d.png" % (coord[0], coord[1])))
     #tile = Image.fromarray(tile)
     #if numpy.average(numpy.array(tile)) != 0:
     try:
@@ -86,14 +89,16 @@ def get_all_slides(lookup_dir):
 
 
 def main():
+    '''
     images_folder = Path('datasets') / 'images'
     classes = ('normal', 'tumor')
 
     normal_images_dir = os.path.join(images_folder, classes[0])
     tumor_images_dir = os.path.join(images_folder, classes[1])
+    '''
 
-    normal_images_list = get_all_slides(normal_images_dir)
-    tumor_images_list = get_all_slides(tumor_images_dir)
+    normal_images_list = get_all_slides(sys.argv[1])
+    tumor_images_list = get_all_slides(sys.argv[2])
 
     normal_images_save_dir = Path('generated') / 'numpy_normal'
     tumor_images_save_dir = Path('generated') / 'numpy_tumor'
@@ -105,12 +110,13 @@ def main():
     if not os.path.exists(tumor_images_save_dir):
         os.mkdir(tumor_images_save_dir)
 
-    # for item in normal_images_list:
-    #     save_numpy_features(item['dir'], item['file'], normal_images_save_dir)
-
+    for item in normal_images_list:
+        save_numpy_features(item['dir'], item['file'], normal_images_save_dir)
+        break
+    '''
     for item in tumor_images_list:
         save_numpy_features(item['dir'], item['file'], tumor_images_save_dir)
-
+    '''
 
 if __name__ == '__main__':
     main()

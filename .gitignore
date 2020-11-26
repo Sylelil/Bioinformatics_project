@@ -1,4 +1,4 @@
- *~
+*~
 *.log
 *.pot
 *.pyc
@@ -6,35 +6,29 @@
 *.egg*
 local_settings.py
 project_cfg.py
-
 *.swp
 *.sqlite3
 *.db
 .DS_Store
 .vagrant
-
 ext/
 *.egg-info/
 dist/
-
 # Coverage
 .coverage
 coverage_report/
-
 # Whoosh Index
 tests/whoosh_index/
 colab/whoosh_index/
-
 # Open Build System
 .obs/
-
 # Documentation build
 docs/build
-
-datasets
 scripts/venv
-
 venv/
-.idea
-
+.idea/
 generated/
+datasets/
+preprocessed/
+.vscode/
+.ipynb_checkpoints/

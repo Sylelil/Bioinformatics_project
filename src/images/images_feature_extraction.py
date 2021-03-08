@@ -31,6 +31,9 @@ def main():
     normal_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'numpy_normal'
     tumor_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'numpy_tumor'
 
+    normal_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'numpy_normal'
+    tumor_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'numpy_tumor'
+
     if not os.path.exists(normal_images):
         sys.stderr.write(f"File \"{normal_images}\" not found")
         exit(1)
@@ -51,11 +54,20 @@ def main():
     if not os.path.exists(Path('results') / 'images' / 'selected_tiles'):
         os.mkdir(Path('results') / 'images' / 'selected_tiles')
 
+    if not os.path.exists(Path('results') / 'images' / 'masked_images'):
+        os.mkdir(Path('results') / 'images' / 'masked_images')
+
     if not os.path.exists(normal_selected_tiles_dir):
         os.mkdir(normal_selected_tiles_dir)
 
     if not os.path.exists(tumor_selected_tiles_dir):
         os.mkdir(tumor_selected_tiles_dir)
+
+    if not os.path.exists(normal_masked_images_dir):
+        os.mkdir(normal_masked_images_dir)
+
+    if not os.path.exists(tumor_masked_images_dir):
+        os.mkdir(tumor_masked_images_dir)
 
     if not os.path.exists(numpy_normal_dir):
         os.mkdir(numpy_normal_dir)
@@ -82,12 +94,12 @@ def main():
     print("\nNormal images preprocessing:")
     normal_slides_tiles_coords = utils.preprocessing_images(normal_slides_info, normal_selected_tiles_dir,
                                                             os.path.join(results, "normal_filter_info.txt"),
-                                                            scale_factor, tile_size, desired_magnification)
+                                                            scale_factor, tile_size, desired_magnification, normal_masked_images_dir)
 
     print("\nTumor images preprocessing:")
     tumor_slides_tiles_coords = utils.preprocessing_images(tumor_slides_info, tumor_selected_tiles_dir,
                                                            os.path.join(results, "tumor_filter_info.txt"),
-                                                           scale_factor, tile_size, desired_magnification)
+                                                           scale_factor, tile_size, desired_magnification, tumor_masked_images_dir)
     # features extraction
     print("\nImages feature extraction:")
     if args.method == 'fine_tuning':

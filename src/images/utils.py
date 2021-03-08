@@ -130,18 +130,18 @@ def pil_to_np_rgb(pil_img):
     return rgb
 
 
-def apply_filters(start_ind, end_ind, slide_images, scale_factor):
+def apply_filters(start_ind, end_ind, slide_images, scale_factor, path_to_save):
     string = ""
     segmented_images = {}
     for slide_num in range(start_ind - 1, end_ind):
         scaled_image, scaled_w, scaled_h = from_wsi_to_scaled_pillow_image(slide_images[slide_num]['slide_path'], scale_factor)
-        info, segmented_image = apply_filters_to_image(slide_images[slide_num], scaled_image)
+        info, segmented_image = apply_filters_to_image(slide_images[slide_num], scaled_image, path_to_save)
         string += info + '\n'
         segmented_images[slide_images[slide_num]['slide_name']] = segmented_image
     return start_ind, end_ind, string, segmented_images
 
 
-def apply_filters_to_image(slide_info, scaled_image):
+def apply_filters_to_image(slide_info, scaled_image, path_to_save):
     """
     Apply a set of filters to an image and optionally save and/or display filtered images.
     Args:
@@ -213,6 +213,8 @@ def apply_filters_to_image(slide_info, scaled_image):
 
     print("Image " + slide_info['slide_name'] + " masked")
 
+    np_image = pil_to_np_rgb(pil_segmented_image)
+    np.save(os.path.join(path_to_save, slide_info['slide_name'] + ".npy"), np_image)
     return string, pil_segmented_image
 
 
@@ -239,7 +241,7 @@ def from_wsi_to_scaled_pillow_image(file_path, scale_factor):
     return img, new_w, new_h
 
 
-def multiprocess_apply_filters_to_wsi(slides_images, dest_file_path, scale_factor):
+def multiprocess_apply_filters_to_wsi(slides_images, dest_file_path, scale_factor, path_to_save):
     """
     Convert all WSI training slides to smaller images using multiple processes (one process per core).
     Each process will process a range of slide numbers.
@@ -265,7 +267,7 @@ def multiprocess_apply_filters_to_wsi(slides_images, dest_file_path, scale_facto
         end_index = num_process * images_per_process
         start_index = int(start_index)
         end_index = int(end_index)
-        tasks.append((start_index, end_index, slides_images, scale_factor))
+        tasks.append((start_index, end_index, slides_images, scale_factor, path_to_save))
         if start_index == end_index:
             print("Task #" + str(num_process) + ": Process slide " + str(start_index))
         else:
@@ -514,8 +516,8 @@ def multiprocess_select_tiles_with_tissue(slides_images, dict_masked_pil_images,
     timer = Time()
 
     # how many processes to use
-    num_processes = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(num_processes)
+    num_processes = (multiprocessing.cpu_count()//4)+1
+    pool = multiprocessing.Pool(num_processes+1)
 
     num_train_images = len(slides_images)
     if num_processes > num_train_images:
@@ -571,75 +573,167 @@ def select_tiles_with_tissue_range(start_index, end_index, slides_info, dict_mas
 
 def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_images, selected_tiles_dir,
                                         tile_size, desired_magnification, scale_factor):
-    # Initialize deep zoom generator for the slide
-    image_dims = (slide_info['slide_width'], slide_info['slide_height'])
-    image_name = slide_info['slide_name']
-    slide = open_wsi(slide_info['slide_path'])
-    dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
+
+    #### STEP 1. Creo le mask per i vari livelli
+    ##   STEP 2. For every livello partendo da quello più basso (zoom minore)
+    ##   STEP 3. Se il quadrato corrente non è nel vettore degli scarti -> faccio operazione
+    #
+
+    ignore_vector = []
+
+    tile_sizes = [2048, 224]
+    thresholds = [0.40, 0.90]
+
+    levels = len(tile_sizes)
 
     # Find the deep zoom level corresponding to the requested magnification
     dzg_level_x = get_x_zoom_level(slide_info['highest_zoom_level'],
                                    slide_info['slide_magnification'], desired_magnification)
+    coords = []
+
+    for i in range(levels):
+        print("--> Considering level: " + str(i))
+        image_dims = (slide_info['slide_width'], slide_info['slide_height'])
+        image_name = slide_info['slide_name']
+        slide = open_wsi(slide_info['slide_path'])
+        dzg = DeepZoomGenerator(slide, tile_size=tile_sizes[i], overlap=0)
+
+        dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
+        dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
+        n_tiles = np.prod(dzg_level_x_tile_coords)
+        # Calculate patch size in the mask
+        dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
+        mask_patch_size = int(np.ceil(tile_sizes[i] * (dzg_downscaling / scale_factor)))
+        # Deep zoom generator for the mask
+        dzg_mask = DeepZoomGenerator(openslide.ImageSlide(dict_masked_pil_images[image_name]),
+                                     tile_size=mask_patch_size,
+                                     overlap=0)
+        dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
+        dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
+        dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
+        if dzg_mask_tile_coords != dzg_level_x_tile_coords:
+            print("Rounding error creates extra patches at the side(s) of the image " + slide_info['slide_name'])
+            grid_coord = (min(dzg_mask_tile_coords[0], dzg_mask_tile_coords[0]),
+                          min(dzg_mask_tile_coords[1], dzg_level_x_tile_coords[1]))
+            print("Ignoring the image border. Maximum tile coordinates: " + str(grid_coord))
+            n_tiles = grid_coord[0] * grid_coord[1]
+        else:
+            grid_coord = dzg_level_x_tile_coords
+            # threshold = 0.90  # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
+            # in order to be selected. It should range between 0 and 1.
+            (cols, rows) = grid_coord
+
+
+            for row in range(rows):
+                for col in range(cols):
+                    to_skip = False;
+                    for ignore_position in ignore_vector:
+                        tile_position = dzg.get_tile_coordinates(dzg_level_x, (col, row))
+                        x_max_ignore = ignore_position[0][0] + ignore_position[2][0]
+                        y_max_ignore = ignore_position[0][1] + ignore_position[2][1]
+                        x_max_tile = tile_position[0][0] + tile_position[2][0]
+                        y_max_tile = tile_position[0][1] + tile_position[2][1]
+                        if (tile_position[0][0] >= ignore_position[0][0] and
+                                tile_position[0][1] >= ignore_position[0][1] and
+                                x_max_tile <= x_max_ignore and
+                                y_max_tile <= y_max_ignore):
+                            #print("****** Skipping tile")
+                            to_skip = True
+                            break
+
+                    if to_skip:
+                        continue
+
+                    mask_tile = dzg_mask.get_tile(dzg_mask.level_count - 1, (col, row))
+                    rgb_mask_tile = np.asarray(mask_tile)
+
+                    to_consider = select_tile(rgb_mask_tile, thresholds[i])
+
+                    tile = dzg.get_tile(dzg_level_x, (col, row))
+                    #print("## To Consider: "+str(to_consider))
+                    if i == (levels - 1):  # Sono ultimo livello -> salva le coordinate positive
+                        #print("+++ Last Level")
+                        # we set the prediction to zero if the tile is not square -> we want only squared tiles
+                        if to_consider == 1 and (tile.size[0] == tile.size[1]):
+                            coord = (col, row)
+                            coords.append(coord)
+                    else:  # Sono livello di ottimizzazione -> salva le coordinate da non considerare
+                        #print("+++ Optimization level")
+                        if to_consider == 0:
+                            #print("===  Ignoring region")
+                            ignore_vector.append(dzg.get_tile_coordinates(dzg_level_x, (col, row)))
+                            #print("==== UPDATED IGNORE VECTOR")
+                            #print(ignore_vector)
+
+    # Initialize deep zoom generator for the slide
+    #image_dims = (slide_info['slide_width'], slide_info['slide_height'])
+    #image_name = slide_info['slide_name']
+    #slide = open_wsi(slide_info['slide_path'])
+    #dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
+
+
     # dzg_level_x = dzg.level_count - 1
-    dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
-    dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
-    n_tiles = np.prod(dzg_level_x_tile_coords)
+    #dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
+    #dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
+    #n_tiles = np.prod(dzg_level_x_tile_coords)
 
     # Calculate patch size in the mask
-    dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
-    mask_patch_size = int(np.ceil(tile_size * (dzg_downscaling / scale_factor)))
+    #dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
+    #mask_patch_size = int(np.ceil(tile_size * (dzg_downscaling / scale_factor)))
     # Deep zoom generator for the mask
-    dzg_mask = DeepZoomGenerator(openslide.ImageSlide(dict_masked_pil_images[image_name]), tile_size=mask_patch_size,
-                                 overlap=0)
-    dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
-    dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
-    dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
+    #dzg_mask = DeepZoomGenerator(openslide.ImageSlide(dict_masked_pil_images[image_name]), tile_size=mask_patch_size,
+    #                             overlap=0)
+    #dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
+    #dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
+    #dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
 
-    if dzg_mask_tile_coords != dzg_level_x_tile_coords:
-        print("Rounding error creates extra patches at the side(s) of the image " + slide_info['slide_name'])
-        grid_coord = (min(dzg_mask_tile_coords[0], dzg_level_x_tile_coords[0]),
-                      min(dzg_mask_tile_coords[1], dzg_level_x_tile_coords[1]))
-        print("Ignoring the image border. Maximum tile coordinates: " + str(grid_coord))
-        n_tiles = grid_coord[0] * grid_coord[1]
-    else:
-        grid_coord = dzg_level_x_tile_coords
+    #if dzg_mask_tile_coords != dzg_level_x_tile_coords:
+     #   print("Rounding error creates extra patches at the side(s) of the image " + slide_info['slide_name'])
+     #   grid_coord = (min(dzg_mask_tile_coords[0], dzg_level_x_tile_coords[0]),
+     #                 min(dzg_mask_tile_coords[1], dzg_level_x_tile_coords[1]))
+     #   print("Ignoring the image border. Maximum tile coordinates: " + str(grid_coord))
+     #   n_tiles = grid_coord[0] * grid_coord[1]
+    #else:
+    #    grid_coord = dzg_level_x_tile_coords
 
-    coords = []
-    preds = [0] * n_tiles
-    i = 0
-    threshold = 0.90  # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
-    # in order to be selected. It should range between 0 and 1.
-    (cols, rows) = grid_coord
-
-    for row in range(rows):
-        for col in range(cols):
-            mask_tile = dzg_mask.get_tile(dzg_mask.level_count - 1, (col, row))
-            rgb_mask_tile = np.asarray(mask_tile)
-
-            preds[i] = select_tile(rgb_mask_tile, threshold)
-
-            tile = dzg.get_tile(dzg_level_x, (col, row))
-
-            # we set the prediction to zero if the tile is not square -> we want only squared tiles
-            if tile.size[0] != tile.size[1]:
-                preds[i] = 0
-
-            if preds[i] == 1:
-                coord = (col, row)
-                coords.append(coord)
-
-            i += 1
-
+    # coords = []
+    # preds = [0] * n_tiles
+    # i = 0
+    # #threshold = 0.90  # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
+    # # in order to be selected. It should range between 0 and 1.
+    # (cols, rows) = grid_coord
+    #
+    # print("!!!!!!!!!!!!   FOR INIT")
+    # for row in range(rows):
+    #     for col in range(cols):
+    #         print("Image row: "+str(row)+" col: "+str(col))
+    #         mask_tile = dzg_mask.get_tile(dzg_mask.level_count - 1, (col, row))
+    #         rgb_mask_tile = np.asarray(mask_tile)
+    #
+    #         preds[i] = select_tile(rgb_mask_tile, threshold)
+    #
+    #         tile = dzg.get_tile(dzg_level_x, (col, row))
+    #
+    #         # we set the prediction to zero if the tile is not square -> we want only squared tiles
+    #         if tile.size[0] != tile.size[1]:
+    #             preds[i] = 0
+    #
+    #         if preds[i] == 1:
+    #             coord = (col, row)
+    #             coords.append(coord)
+    #
+    #         i += 1
+    # print("===================   FOR DONE")
     print(f"{slide_info['slide_name']}: slide num = {slide_num+1}, num tiles selected = {len(coords)}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
           f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
           f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
           f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
 
     #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
-    np.save(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'), coords)
+    np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
 
-    os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
-              os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+    #os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
+    #          os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
 
     print(">> Tiles coords saved to \"%s\"" % selected_tiles_dir)
 
@@ -807,15 +901,24 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
   return x_norm
 
 
-def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scale_factor, tile_size, desired_magnification):
+def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scale_factor, tile_size, desired_magnification, path_to_save):
     slides_tiles_coords = {}
-    if len(os.listdir(selected_tiles_dir)) == 0 or len(os.listdir(selected_tiles_dir)) < len(slides_info):
+    segmented_images = {}
+    if len(os.listdir(path_to_save)) == 0 or len(os.listdir(path_to_save)) < len(slides_info):
         # Apply filters to down scaled images
         print(">> Apply filters to down scaled images:")
-        normal_segmented_images = multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, scale_factor)
+        segmented_images = multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, scale_factor,
+                                                                    path_to_save)
+    else:
+        print(">> Loading segmented images from disk...")
+        for slide_info in slides_info:
+            np_segmented_image = np.load(os.path.join(path_to_save, slide_info['slide_name'] + '.npy'))
+            segmented_images[slide_info['slide_name']] = np_to_pil(np_segmented_image)
+
+    if len(os.listdir(selected_tiles_dir)) == 0 or len(os.listdir(selected_tiles_dir)) < len(slides_info):
 
         print(">> Select from images the tiles with tissue:")
-        slides_tiles_coords = multiprocess_select_tiles_with_tissue(slides_info, normal_segmented_images, selected_tiles_dir,
+        slides_tiles_coords = multiprocess_select_tiles_with_tissue(slides_info, segmented_images, selected_tiles_dir,
                                                                     tile_size, desired_magnification, scale_factor)
     else:
         print(">> Loading tiles coords from disk...")

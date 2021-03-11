@@ -516,8 +516,8 @@ def multiprocess_select_tiles_with_tissue(slides_images, dict_masked_pil_images,
     timer = Time()
 
     # how many processes to use
-    num_processes = (multiprocessing.cpu_count()//4)+1
-    pool = multiprocessing.Pool(num_processes+1)
+    num_processes = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(num_processes)
 
     num_train_images = len(slides_images)
     if num_processes > num_train_images:
@@ -570,8 +570,8 @@ def select_tiles_with_tissue_range(start_index, end_index, slides_info, dict_mas
                                                                                                             selected_tiles_dir, tile_size, desired_magnification, scale_factor)
     return start_index, end_index, slides_tiles_coords
 
-
-def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_images, selected_tiles_dir,
+'''
+def select_tiles_with_tissue_from_slide_2(slide_num, slide_info, dict_masked_pil_images, selected_tiles_dir,
                                         tile_size, desired_magnification, scale_factor):
 
     #### STEP 1. Creo le mask per i vari livelli
@@ -581,8 +581,10 @@ def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_i
 
     ignore_vector = []
 
-    tile_sizes = [2048, 224]
-    thresholds = [0.40, 0.90]
+    #tile_sizes = [2048, 224]
+    #thresholds = [0.40, 0.90]
+    tile_sizes = [224]
+    thresholds = [0.90]
 
     levels = len(tile_sizes)
 
@@ -626,7 +628,7 @@ def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_i
 
             for row in range(rows):
                 for col in range(cols):
-                    to_skip = False;
+                    to_skip = False
                     for ignore_position in ignore_vector:
                         tile_position = dzg.get_tile_coordinates(dzg_level_x, (col, row))
                         x_max_ignore = ignore_position[0][0] + ignore_position[2][0]
@@ -724,16 +726,90 @@ def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_i
     #
     #         i += 1
     # print("===================   FOR DONE")
+        print(f"{slide_info['slide_name']}: slide num = {slide_num+1}, num tiles selected = {len(coords)}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
+              f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
+              f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
+              f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
+
+        #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
+        np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
+
+        #os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
+        #          os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+
+        print(">> Tiles coords saved to \"%s\"" % selected_tiles_dir)
+
+    return np.asarray(coords)
+'''
+
+
+def select_tiles_with_tissue_from_slide(slide_num, slide_info, dict_masked_pil_images, selected_tiles_dir,
+                                        tile_size, desired_magnification, scale_factor):
+    # Initialize deep zoom generator for the slide
+    image_dims = (slide_info['slide_width'], slide_info['slide_height'])
+    image_name = slide_info['slide_name']
+    slide = open_wsi(slide_info['slide_path'])
+    dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
+
+    # Find the deep zoom level corresponding to the requested magnification
+    dzg_level_x = get_x_zoom_level(slide_info['highest_zoom_level'],
+                                   slide_info['slide_magnification'], desired_magnification)
+    # dzg_level_x = dzg.level_count - 1
+    dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
+    dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
+    n_tiles = np.prod(dzg_level_x_tile_coords)
+
+    # Calculate patch size in the mask
+    dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
+    mask_patch_size = int(np.ceil(tile_size * (dzg_downscaling / scale_factor)))
+    # Deep zoom generator for the mask
+    dzg_mask = DeepZoomGenerator(openslide.ImageSlide(dict_masked_pil_images[image_name]), tile_size=mask_patch_size,
+                                 overlap=0)
+    dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
+    dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
+    dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
+
+    if dzg_mask_tile_coords != dzg_level_x_tile_coords:
+        print("Rounding error creates extra patches at the side(s) of the image " + slide_info['slide_name'])
+        grid_coord = (min(dzg_mask_tile_coords[0], dzg_level_x_tile_coords[0]),
+                      min(dzg_mask_tile_coords[1], dzg_level_x_tile_coords[1]))
+        print("Ignoring the image border. Maximum tile coordinates: " + str(grid_coord))
+        n_tiles = grid_coord[0] * grid_coord[1]
+    else:
+        grid_coord = dzg_level_x_tile_coords
+
+    coords = []
+    threshold = 0.90  # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
+    # in order to be selected. It should range between 0 and 1.
+    (cols, rows) = grid_coord
+
+    for row in range(rows):
+        for col in range(cols):
+            mask_tile = dzg_mask.get_tile(dzg_mask.level_count - 1, (col, row))
+            rgb_mask_tile = np.asarray(mask_tile)
+
+            pred = select_tile(rgb_mask_tile, threshold)
+
+            tile = dzg.get_tile(dzg_level_x, (col, row))
+
+            # we set the prediction to zero if the tile is not square -> we want only squared tiles
+            if tile.size[0] != tile.size[1]:
+                pred = 0
+
+            if pred == 1:
+                coord = (col, row)
+                coords.append(coord)
+
     print(f"{slide_info['slide_name']}: slide num = {slide_num+1}, num tiles selected = {len(coords)}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
           f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
           f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
           f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
 
     #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
-    np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
+    np.save(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'), coords)
 
-    #os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
-    #          os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+    os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
+              os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
 
     print(">> Tiles coords saved to \"%s\"" % selected_tiles_dir)
 
@@ -901,20 +977,173 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
   return x_norm
 
 
-def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scale_factor, tile_size, desired_magnification, path_to_save):
+def generate_tile_summaries(slide_info, segmented_image, tiles_coords, tile_summary_dir, tile_size, scale_factor, desired_magnification):
+
+  z = 300  # height of area at top of summary slide
+
+  # Initialize deep zoom generator for the slide
+  image_dims = (slide_info['slide_width'], slide_info['slide_height'])
+  slide = open_wsi(slide_info['slide_path'])
+  dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
+
+  # Find the deep zoom level corresponding to the requested magnification
+  dzg_level_x = get_x_zoom_level(slide_info['highest_zoom_level'],
+                                 slide_info['slide_magnification'], desired_magnification)
+  # dzg_level_x = dzg.level_count - 1
+  dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
+
+  # Calculate patch size in the mask
+  dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
+  mask_patch_size = int(np.ceil(tile_size * (dzg_downscaling / scale_factor)))
+  print(mask_patch_size)
+
+  # Deep zoom generator for the mask
+  dzg_mask = DeepZoomGenerator(openslide.ImageSlide(segmented_image), tile_size=mask_patch_size,
+                               overlap=0)
+  dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
+  dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
+  dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
+
+  np_segmented_image = pil_to_np_rgb(segmented_image)
+  summary = create_summary_pil_img(np_segmented_image, z, mask_patch_size, mask_patch_size, len(dzg_mask_tile_coords), len(dzg_mask_tile_coords))
+
+
+  '''
+  draw = ImageDraw.Draw(summary)
+  for coord in dzg_mask_tile_coords:
+      if coord in selected_tiles_coords:
+          tile_border(draw, t.r_s + z, t.r_e + z, t.c_s, t.c_e, border_color)
+
+  summary_txt = summary_title(tile_sum) + "\n" + summary_stats(tile_sum)
+
+  summary_font = ImageFont.truetype("arial.ttf", size=SUMMARY_TITLE_TEXT_SIZE)
+  draw.text((5, 5), summary_txt, SUMMARY_TITLE_TEXT_COLOR, font=summary_font)
+  draw_orig.text((5, 5), summary_txt, SUMMARY_TITLE_TEXT_COLOR, font=summary_font)
+
+  if DISPLAY_TILE_SUMMARY_LABELS:
+    count = 0
+    for t in tile_sum.tiles:
+      count += 1
+      label = "R%d\nC%d" % (t.r, t.c)
+      font = ImageFont.truetype("arial.ttf", size=TILE_LABEL_TEXT_SIZE)
+      # drop shadow behind text
+      draw.text(((t.c_s + 3), (t.r_s + 3 + z)), label, (0, 0, 0), font=font)
+      draw_orig.text(((t.c_s + 3), (t.r_s + 3 + z)), label, (0, 0, 0), font=font)
+
+      draw.text(((t.c_s + 2), (t.r_s + 2 + z)), label, SUMMARY_TILE_TEXT_COLOR, font=font)
+      draw_orig.text(((t.c_s + 2), (t.r_s + 2 + z)), label, SUMMARY_TILE_TEXT_COLOR, font=font)
+
+  if display:
+    summary.show()
+    summary_orig.show()
+  '''
+  filepath = os.path.join(tile_summary_dir, slide_info['slide_name'] + ".png")
+  summary.save(filepath)
+
+
+def create_summary_pil_img(np_img, title_area_height, row_tile_size, col_tile_size, num_row_tiles, num_col_tiles):
+  """
+  Create a PIL summary image including top title area and right side and bottom padding.
+  Args:
+    np_img: Image as a NumPy array.
+    title_area_height: Height of the title area at the top of the summary image.
+    row_tile_size: The tile size in rows.
+    col_tile_size: The tile size in columns.
+    num_row_tiles: The number of row tiles.
+    num_col_tiles: The number of column tiles.
+  Returns:
+    Summary image as a PIL image. This image contains the image data specified by the np_img input and also has
+    potentially a top title area and right side and bottom padding.
+  """
+  r = row_tile_size * num_row_tiles + title_area_height
+  c = col_tile_size * num_col_tiles
+  summary_img = np.zeros([r, c, np_img.shape[2]], dtype=np.uint8)
+  # add gray edges so that tile text does not get cut off
+  summary_img.fill(120)
+  # color title area white
+  summary_img[0:title_area_height, 0:summary_img.shape[1]].fill(255)
+  summary_img[title_area_height:np_img.shape[0] + title_area_height, 0:np_img.shape[1]] = np_img
+  summary = np_to_pil(summary_img)
+  return summary
+
+
+def summary_and_tiles_range(slides_info, segmented_images, tiles_coords, start_index, end_index, heatmap_dir,
+                            tile_size, scale_factor, desired_magnification):
+
+    for slide_num in range(start_index - 1, end_index):
+        if os.path.isfile(os.path.join(heatmap_dir, slides_info[slide_num]['slide_name'] + '.npy')):
+            print("Skipping slide " + slides_info[slide_num]['slide_name'])
+        else:
+            slide_info = slides_info[slide_num]
+            generate_tile_summaries(slide_info, segmented_images[slide_info['slide_name']],
+                                    tiles_coords[slide_info['slide_name']], heatmap_dir,
+                                    tile_size, scale_factor, desired_magnification)
+
+    return start_index, end_index
+
+
+def multiprocess_summary_and_tiles(slides_info, segmented_images, slides_tiles_coords, heatmap_dir, tile_size, scale_factor, desired_magnification):
+
+    timer = Time()
+
+    # how many processes to use
+    num_processes = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(num_processes)
+
+    num_train_images = len(slides_info)
+    if num_processes > num_train_images:
+        num_processes = num_train_images
+    images_per_process = num_train_images / num_processes
+
+    print("Number of processes: " + str(num_processes))
+    print("Number of images: " + str(num_train_images))
+
+    # each task specifies a range of slides
+    tasks = []
+    for num_process in range(1, num_processes + 1):
+        start_index = (num_process - 1) * images_per_process + 1
+        end_index = num_process * images_per_process
+        start_index = int(start_index)
+        end_index = int(end_index)
+        tasks.append((slides_info, segmented_images, slides_tiles_coords, start_index, end_index, heatmap_dir,
+                      tile_size, scale_factor, desired_magnification))
+        if start_index == end_index:
+            print("Task #" + str(num_process) + ": Process slide " + str(start_index))
+        else:
+            print("Task #" + str(num_process) + ": Process slides " + str(start_index) + " to " + str(end_index))
+
+    # start tasks
+    results = []
+    for t in tasks:
+        results.append(pool.apply_async(summary_and_tiles_range, t))
+
+    for result in results:
+        (start_ind, end_ind) = result.get()
+        if start_ind == end_ind:
+            print("Done saving summary for slide %d" % start_ind)
+        else:
+            print("Done saving summaries for slides %d through %d" % (start_ind, end_ind))
+
+    print(">> Time to summary for all images (multiprocess): %s" % str(timer.elapsed()))
+
+
+def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scale_factor, tile_size,
+                         desired_magnification, masked_images_dir, heatmap_dir):
     slides_tiles_coords = {}
     segmented_images = {}
-    if len(os.listdir(path_to_save)) == 0 or len(os.listdir(path_to_save)) < len(slides_info):
-        # Apply filters to down scaled images
+
+    # Apply filters to down scaled images
+    if len(os.listdir(masked_images_dir)) == 0 or len(os.listdir(masked_images_dir)) < len(slides_info):
         print(">> Apply filters to down scaled images:")
         segmented_images = multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, scale_factor,
-                                                                    path_to_save)
+                                                             masked_images_dir)
     else:
         print(">> Loading segmented images from disk...")
         for slide_info in slides_info:
-            np_segmented_image = np.load(os.path.join(path_to_save, slide_info['slide_name'] + '.npy'))
+            np_segmented_image = np.load(os.path.join(masked_images_dir, slide_info['slide_name'] + '.npy'))
             segmented_images[slide_info['slide_name']] = np_to_pil(np_segmented_image)
 
+    # Select tiles with tissue
     if len(os.listdir(selected_tiles_dir)) == 0 or len(os.listdir(selected_tiles_dir)) < len(slides_info):
 
         print(">> Select from images the tiles with tissue:")
@@ -923,7 +1152,15 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scal
     else:
         print(">> Loading tiles coords from disk...")
         for slide_info in slides_info:
+            print(slide_info['slide_name'])
             slides_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
             slides_tiles_coords[slide_info['slide_name']] = slides_coords
+            print(len(slides_tiles_coords[slide_info['slide_name']]))
+
+    # Save on disk a recap of the selected tiles for each slide
+    if len(os.listdir(heatmap_dir)) == 0 or len(os.listdir(heatmap_dir)) < len(slides_info):
+        print("Saving tiles summary on disk...")
+        multiprocess_summary_and_tiles(slides_info, segmented_images, slides_tiles_coords, heatmap_dir, tile_size,
+                                       scale_factor, desired_magnification)
 
     return slides_tiles_coords

@@ -6,9 +6,15 @@ from pathlib import Path
 from src.images import utils
 from src.images.features_extraction_methods.fine_tuning import fine_tuning
 from src.images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
+import tensorflow as tf
+
+USE_GPU = True
 
 
 def main():
+    if not USE_GPU:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
     # Parse arguments from command line
     parser = argparse.ArgumentParser()
 
@@ -33,6 +39,8 @@ def main():
 
     normal_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'numpy_normal'
     tumor_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'numpy_tumor'
+
+    heatmap_dir = Path('results') / 'images' / 'masked_images' / 'heatmap'
 
     if not os.path.exists(normal_images):
         sys.stderr.write(f"File \"{normal_images}\" not found")
@@ -75,6 +83,9 @@ def main():
     if not os.path.exists(numpy_tumor_dir):
         os.mkdir(numpy_tumor_dir)
 
+    if not os.path.exists(heatmap_dir):
+        os.mkdir(heatmap_dir)
+
     # Exploratory data analysis
     #TODO
 
@@ -94,26 +105,28 @@ def main():
     print("\nNormal images preprocessing:")
     normal_slides_tiles_coords = utils.preprocessing_images(normal_slides_info, normal_selected_tiles_dir,
                                                             os.path.join(results, "normal_filter_info.txt"),
-                                                            scale_factor, tile_size, desired_magnification, normal_masked_images_dir)
+                                                            scale_factor, tile_size, desired_magnification,
+                                                            normal_masked_images_dir, heatmap_dir)
 
     print("\nTumor images preprocessing:")
     tumor_slides_tiles_coords = utils.preprocessing_images(tumor_slides_info, tumor_selected_tiles_dir,
                                                            os.path.join(results, "tumor_filter_info.txt"),
-                                                           scale_factor, tile_size, desired_magnification, tumor_masked_images_dir)
+                                                           scale_factor, tile_size, desired_magnification,
+                                                           tumor_masked_images_dir, heatmap_dir)
     # features extraction
     print("\nImages feature extraction:")
     if args.method == 'fine_tuning':
         # TODO
         fine_tuning()
     elif args.method == 'fixed_feature_generator':
-        print("\nFixed feature generator:")
-        print("Extracting features from normal images:")
+        print(">> Fixed feature generator:")
+        print(">> Extracting features from normal images:")
         fixed_feature_generator(normal_slides_tiles_coords, normal_slides_info, numpy_normal_dir,
-                                tile_size, desired_magnification)
+                                tile_size, desired_magnification, USE_GPU)
 
-        print("\nExtracting features from tumor images:")
+        print(">> Extracting features from tumor images:")
         fixed_feature_generator(tumor_slides_tiles_coords, tumor_slides_info, numpy_tumor_dir,
-                                tile_size, desired_magnification)
+                                tile_size, desired_magnification, USE_GPU)
     else:
         sys.stderr.write("Invalid value for <feature extraction method> in config file")
         exit(1)

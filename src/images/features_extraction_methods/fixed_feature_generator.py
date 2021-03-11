@@ -6,7 +6,7 @@ import openslide.deepzoom
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-
+import os
 import tensorflow as tf
 import tensorflow.keras
 
@@ -17,7 +17,7 @@ from PIL import Image
 import colorcorrect
 from colorcorrect.util import from_pil, to_pil
 from colorcorrect.algorithm import stretch
-import os
+
 import itertools
 import multiprocessing
 from openslide.deepzoom import DeepZoomGenerator
@@ -26,8 +26,12 @@ from src.images.utils import Time
 
 
 def save_numpy_features(slide_info, slides_tiles_coords, tile_size, desired_magnification, path_to_save):
+    print(">> Image %s:" % (slide_info['slide_name']))
+    print(">> Loading pretrained model...")
     model = ResNet50(weights='imagenet', include_top=True)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
+
+    print(">> Pretrained model loaded")
 
     slide = utils.open_wsi(slide_info['slide_path'])
     zoom = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
@@ -37,26 +41,36 @@ def save_numpy_features(slide_info, slides_tiles_coords, tile_size, desired_magn
                                          desired_magnification)
 
     tiles = []
+    print(">> Getting tiles..")
+    #Qui si perde tempo - TODO: Da controllare :-)
     for coord in slides_tiles_coords:
+        print(coord)
         tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
         np_tile = utils.normalize_staining(tile)
         tiles.append(np_tile)
 
-    tiles = np.asarray(tiles)
-    #print(f'tiles: {tiles.shape}')
-    tiles = preprocess_input(tiles)  # Preprocesses a tensor or Numpy array encoding a batch of images
+    print(">> tiles loaded")
+    print("Num tiles = %d" % len(tiles))
 
+    tiles = np.asarray(tiles)
+    # print(f'tiles: {tiles.shape}')
+    print(">> Preprocessing numpy array of tiles...")
+    tiles = preprocess_input(tiles)  # Preprocesses a tensor or Numpy array encoding a batch of images
+    print(">> Numpy array of tiles preprocessed")
+
+    print(">> Prediction...")
     X = model.predict(tiles, batch_size=32, verbose=1)
+    print(">> Done")
     X = np.concatenate([slides_tiles_coords, X], axis=1)
     np.save(os.path.join(path_to_save, slide_info['slide_name'] + '_' + str(dzg_level_x) + '.npy'), X)
 
-
+'''
 def extract_tile_features(level, coord, zoom):
     print(f"Extracting coords {coord} of {zoom.tile_count}...")
 
     tile = zoom.get_tile(level, coord)
-    #tile = Image.fromarray(tile)
-    #if numpy.average(numpy.array(tile)) != 0:
+    # tile = Image.fromarray(tile)
+    # if numpy.average(numpy.array(tile)) != 0:
     try:
         tile = to_pil(stretch(from_pil(tile)))
     except:
@@ -79,13 +93,17 @@ def get_all_slides(lookup_dir):
                     }
                     images_list.append(svs_dict)
     return images_list
+'''
 
 
 def save_numpy_features_range(start_ind, end_ind, slides_info, tile_size, images_save_dir,
                               slides_tiles_coords, desired_magnification):
     for slide_num in range(start_ind - 1, end_ind):
-        save_numpy_features(slides_info[slide_num], slides_tiles_coords[slides_info[slide_num]['slide_name']],
-                            tile_size, desired_magnification, images_save_dir)
+        if os.path.isfile(os.path.join(images_save_dir, slides_info[slide_num]['slide_name'] + '.npy')):
+            print("Skipping slide " + slides_info[slide_num]['slide_name'])
+        else:
+            save_numpy_features(slides_info[slide_num], slides_tiles_coords[slides_info[slide_num]['slide_name']],
+                                tile_size, desired_magnification, images_save_dir)
     return start_ind, end_ind
 
 
@@ -94,7 +112,8 @@ def multiprocess_save_numpy_features(images_info, slides_tiles_coords, numpy_fea
     timer = Time()
 
     # how many processes to use
-    num_processes = multiprocessing.cpu_count()
+    #num_processes = multiprocessing.cpu_count()
+    num_processes = 1
     pool = multiprocessing.Pool(num_processes)
 
     num_train_images = len(images_info)
@@ -134,8 +153,24 @@ def multiprocess_save_numpy_features(images_info, slides_tiles_coords, numpy_fea
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
 
 
-def fixed_feature_generator(slides_tiles_coords, images_info, numpy_features_dir, tile_size, desired_magnification):
+def fixed_feature_generator(slides_tiles_coords, images_info, numpy_features_dir, tile_size, desired_magnification, use_gpu):
 
-    multiprocess_save_numpy_features(images_info, slides_tiles_coords, numpy_features_dir,
-                                     tile_size, desired_magnification)
+    if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
+        if use_gpu:
+            gpus = tf.config.experimental.list_physical_devices('GPU')
 
+            if gpus:
+                # Currently, memory growth needs to be the same across GPUs
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+
+            for slide_info in images_info:
+                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
+                    print("Skipping slide " + slide_info['slide_name'])
+                else:
+                    save_numpy_features(slide_info, slides_tiles_coords[slide_info['slide_name']], tile_size,
+                                        desired_magnification, numpy_features_dir)
+        else:
+            with tf.device('/cpu:0'):
+                multiprocess_save_numpy_features(images_info, slides_tiles_coords, numpy_features_dir,
+                                                 tile_size, desired_magnification)

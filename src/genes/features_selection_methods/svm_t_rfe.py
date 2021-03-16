@@ -3,7 +3,10 @@ import os
 import numpy
 import sys
 import pandas as pd
+import seaborn as sns
 from numpy.linalg import norm
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -27,25 +30,25 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     print(f'>> Number of genes removed: {len(removed_genes)}'
           f'\n>> Number of genes remained: {n_features}')
 
-    # TODO in questo modo applichiamo la z normalization ai gene expression data.
-    # TODO Tutte le operazioni successive quindi sono fatte sui dati normalizzati
-    # TODO in particolare:
-    # TODO - il welch t test è fatto sui dati normalizzati
-    # TODO - il ranking è fatto sui dati normalizzati
-    # TODO Ho provato a fare il ranking tenendo i dati non normalizzati ma il loop ad un certo punto si blocca (non riesce a fare il fit!!)
-    # TODO credo che per l'svm ci voglia una normalizzazione dei dati. Da verificare però.
-    # TODO come mai abbiamo scelto la z-normalization?
+    # in questo modo applichiamo la z normalization ai gene expression data.
+    # Tutte le operazioni successive quindi sono fatte sui dati normalizzati
+    # in particolare:
+    # - il welch t test è fatto sui dati normalizzati
+    # - il ranking è fatto sui dati normalizzati
+    # Ho provato a fare il ranking tenendo i dati non normalizzati ma il loop ad un certo punto si blocca (non riesce a fare il fit!!)
+    # credo che per l'svm ci voglia una normalizzazione dei dati. Da verificare però.
+    # come mai abbiamo scelto la z-normalization?
     # Z-Normalization
-
+    '''
     df_trasformed = df.copy()
     print("\n[DGEA pre-processing] Z-normalization:")
     for gene in tqdm(df.columns, desc=">> Compute Z-normalization for each gene...", file=sys.stdout):
         df_trasformed[gene] = stats.zscore(df[gene])
-
+    
     df_trasformed_0 = df_trasformed.loc[df_trasformed.index.str.endswith('_0')]
     df_trasformed_1 = df_trasformed.loc[df_trasformed.index.str.endswith('_1')]
 
-    '''
+
     #2.a.1 - Normalization with geometric mean and size factor : make no sense for FPKM data
     df_after_ratio, df_after_scaling, removed_genes = normalize_with_GeoMean_and_SizeFactor(df)
     n_features = len(df.columns)  # update number of features
@@ -72,10 +75,13 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     for gene in tqdm(df.columns, desc=">> Computing test for each gene...", file=sys.stdout):
         print(stats.describe(df[gene]))
     '''
+    df_0 = df.loc[df.index.str.endswith('_0')]
+    df_1 = df.loc[df.index.str.endswith('_1')]
+
 
     # Welch t test
     print("\n[DGEA statistical test] Welch t-test statistics:")
-    welch_dict = common.welch_t_test(df_trasformed_0, df_trasformed_1, params['alpha'])
+    welch_dict = common.welch_t_test(df_0, df_1, params['alpha'])
 
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
@@ -88,12 +94,6 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     plt.xlabel("p values Welch t-test")
     plt.show()
 
-    welch_t_bonferroni_genes_path = os.path.join(results_dir, "welch_t_bonferroni_genes.txt")
-    fp = open(welch_t_bonferroni_genes_path, "w")
-    for gene in welch_dict['genes_b']:
-        fp.write("%s\n" % gene)
-    fp.close()
-
     # Print t-statistics per selezionare i top che hanno t-statistics
     # più altro differente -> confronto con quelli del pvalue
     abs_t_statistics = [abs(x) for x in welch_dict['all_t_values']]
@@ -102,13 +102,19 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     plt.plot(x, sorted_t_statistics)
     plt.show()
 
+    welch_t_bonferroni_genes_path = os.path.join(results_dir, "welch_t_bonferroni_genes.txt")
+    fp = open(welch_t_bonferroni_genes_path, "w")
+    for gene, t_value in zip(welch_dict['genes_b'], welch_dict['t_values_b']):
+        fp.write("%s %f\n" % (gene, t_value))
+    fp.close()
+
     # selected gene with bigger statistics value (more differentially expressed)
     # -> it is the same of p_value selected?
     # are the performances better?
-    # TODO perchè abbiamo scelto 15 come valore di threshold per il t_value?
-    zipped = zip(df.columns, abs_t_statistics)  # creo lista di tuple (gene_name, t_value_abs)
-    selected_zipped = list(filter(lambda t: t[1] >= params['t_stat_threshold'],
-                                  zipped))  # filtro la lista in base al valore di t_value_abs
+    # perchè abbiamo scelto 15 come valore di threshold per il t_value?
+    zipped = zip(df.columns, welch_dict['all_t_values'])  # creo lista di tuple (gene_name, t_value)
+    selected_zipped = list(filter(lambda t: abs(t[1]) >= params['t_stat_threshold'],
+                                  zipped))  # filtro la lista in base al valore di t_value in valore assoluto
     selected_genes, selected_t_statistics = map(list, zip(*selected_zipped))  # unzip and return two lists
     print(f'>> Number of most significant genes: {len(selected_genes)}')
 
@@ -125,19 +131,24 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     df_reduced_1 = df_reduced.loc[df_reduced.index.str.endswith('_1')]
     '''
 
+
     # 2.a.2 Apply logarithmic transformation on gene expression data
     #       Description : x = Log(x+1), where x is the gene expression value
     print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
           f'\n>> Computing logarithmic transformation...')
     df = df.applymap(lambda x: math.log(x + 1, 10))
 
+
     # svm t rfe
     print("\n[DGEA svm-t-rfe]:")
     df_reduced = df[selected_genes]
     df_reduced_array = df_reduced.to_numpy()
+    print(df_reduced_array)
     n_features = len(df_reduced.columns)  # update number of features
     genes_name = [gene for gene in df_reduced.columns]  # create list of gene names
     y = numpy.array([x[-1:] for x in df_reduced.index])  # create numpy array of class labels
+
+    #print(y)
 
     ranked_genes = []
     ranked_t_statistics = []
@@ -149,7 +160,6 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     ranking_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
                          str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_ranked_genes.txt"
     ranking_genes_path = os.path.join(results_dir, ranking_genes_file)
-    file_genes = open(ranking_genes_path, "w")
 
     c_values_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
                     str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_cvalues.txt"
@@ -180,10 +190,10 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     i = 0
     pbar = tqdm(desc=">> Ranking genes...", total=df_reduced_array.shape[1], file=sys.stdout)
     while df_reduced_array.shape[1] > 0:
-        # TODO: aggiunta ricerca del miglior C
+        # aggiunta ricerca del miglior C
         if perform_grid_search:
-            pipe_grid = Pipeline([('scaler', StandardScaler()), ('svm', SVC(kernel='linear', class_weight='balanced'))])
-            cv = StratifiedKFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=1)
+            pipe_grid = Pipeline([('svm', SVC(kernel='linear', class_weight='balanced'))])
+            cv = StratifiedKFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=42)
             grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', n_jobs=-1, cv=cv, refit=True)
             grid = grid.fit(df_reduced_array, y)
             C = grid.best_params_['svm__C']
@@ -192,20 +202,21 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
             # weights = best_model.coef_[0]
         else:
             C = c_values[i]
-        # TODO: dato il miglior C trovato con la grid search, faccio quello che facevamo prima
-        pipe = Pipeline([('scaler', StandardScaler()), ('svm', SVC(kernel='linear', class_weight='balanced', C=C))])
+        # dato il miglior C trovato con la grid search, faccio quello che facevamo prima
+        pipe = Pipeline([('svm', SVC(kernel='linear', class_weight='balanced', C=C))])
         pipe = pipe.fit(df_reduced_array, y)
         model = pipe.named_steps['svm']
-        weights = [abs(x) for x in model.coef_[0]] # dal paper ho visto che considera sia weights che t_statistics in valore assoluto
+        #weights = [abs(x) for x in model.coef_[0]] # dal paper ho visto che considera sia weights che t_statistics in valore assoluto
+        weights = model.coef_[0]
         ranking_scores = []
         weights_norm = norm(weights)
         selected_t_statistics_norm = norm(selected_t_statistics)
         for j in range(len(weights)):
-            # TODO: divido per la norma del vettore -> fatto sia per weights che per selected_t_statistics. Corretto?!
-            r = params['theta'] * (weights[j] / weights_norm) + (1 - params['theta']) * (
-                    selected_t_statistics[j] / selected_t_statistics_norm)
+            # divido per la norma del vettore -> fatto sia per weights che per selected_t_statistics. Corretto?!
+            r = params['theta'] * (abs(weights[j] / weights_norm)) + (1 - params['theta']) * (
+                    abs(selected_t_statistics[j] / selected_t_statistics_norm))
             ranking_scores.append(r)
-        min_score = min(ranking_scores)  # TODO: sto prendendo il minimo
+        min_score = min(ranking_scores)  # sto prendendo il minimo
 
         indexes_to_remove = []
         for k in range(len(ranking_scores)):
@@ -217,26 +228,31 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
             del selected_t_statistics[unwanted_index]
             df_reduced_array = np.delete(df_reduced_array, unwanted_index, 1)
             ranked_genes.append(genes_name[unwanted_index])
-            file_genes.write("%s\n" % genes_name[unwanted_index])
             del genes_name[unwanted_index]
             pbar.update(1)
         i += 1
     pbar.close()
-    file_genes.close()
 
-    # TODO: salvo nel file i best C trovati
+    # salvo nel file i best C trovati
     if perform_grid_search:
         fp = open(path_to_c_values, "w")
         for c in c_values:
             fp.write("%f\n" % c)
         fp.close()
 
-    # TODO: prendo gli ultimi top ranked valori
-    top_ranked_genes = ranked_genes[:-params['top_ranked']+1:-1]  # TODO: ordino i geni dal primo top ranked all'ultimo top ranked. Corretto?
+    ranked_genes.reverse()
+    file_genes = open(ranking_genes_path, "w")
+    for gene_name in ranked_genes:
+        file_genes.write("%s\n" % gene_name)
+    file_genes.close()
+
+
+    # prendo gli ultimi top ranked valori
+    top_ranked_genes = ranked_genes[:params['top_ranked']]  # ordino i geni dal primo top ranked all'ultimo top ranked. Corretto?
     top_selected_t = ranked_t_statistics[:-params['top_ranked'] + 1:-1]
     df_final = df_reduced[top_ranked_genes]
     accuracy = []
-    # TODO: costruisco la param_grid per la ricerca dei migliori hyperparms
+    # costruisco la param_grid per la ricerca dei migliori hyperparms
     if params['kernel'] == 'rbf':
         # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
         C_range = [0.01, 0.1, 1]
@@ -246,54 +262,53 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
         C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
         param_grid = dict(svm__C=C_range)
 
-    # TODO: calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
-    # TODO: fino ad arrivare a considerare tutti i top ranked genes
-    # TODO: ho tolto la parte in cui calcolo i ranking scores per capire quale gene eliminare.
-    # TODO: Pensandoci, mi sembra che non serva rifare il calcolo per capire quale gene togliere
+    # calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
+    # fino ad arrivare a considerare tutti i top ranked genes
+    # ho tolto la parte in cui calcolo i ranking scores per capire quale gene eliminare.
+    # Pensandoci, mi sembra che non serva rifare il calcolo per capire quale gene togliere
     for num_selected in tqdm(range(1, params['top_ranked']+1), desc=">> Computing accuracies on top ranked...", file=sys.stdout):
-        # TODO: invece di fare un leave one out, faccio un k fold. Quindi teniamo fuori dal training più di un elemento.
-        # TODO: il tutto diventa più veloce. Il leave one out si fa quando si hanno molti pochi dati.
-        # TODO: Forse nel nostro caso non è necessario?! (Da pensare)
+        # invece di fare un leave one out, faccio un k fold. Quindi teniamo fuori dal training più di un elemento.
+        # il tutto diventa più veloce. Il leave one out si fa quando si hanno molti pochi dati.
+        # Forse nel nostro caso non è necessario?! (Da pensare)
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_final[selected_features].to_numpy()
-        # TODO: stratified enforce the class distribution in each split of the data to match the distribution in the complete training dataset
-        cv_outer = StratifiedKFold(n_splits=params['cv_outer'], shuffle=True, random_state=1)
+        # stratified enforce the class distribution in each split of the data to match the distribution in the complete training dataset
+        cv_outer = StratifiedKFold(n_splits=params['cv_outer'], shuffle=True, random_state=42)
         outer_results = []
         for train_ix, test_ix in cv_outer.split(df_selected_array, y):
             X_train, X_test = df_selected_array[train_ix, :], df_selected_array[test_ix, :]
             y_train, y_test = y[train_ix], y[test_ix]
             # configure the cross-validation procedure
-            # TODO: aggiunta ricerca del miglior C: questo rallenta il tutto ma mi sembra ancora accettabile
-            pipe_grid = Pipeline([('scaler', StandardScaler()), ('svm', SVC(kernel=params['kernel'], class_weight='balanced'))])
-            cv_inner = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=1)
+            # aggiunta ricerca del miglior C: questo rallenta il tutto ma mi sembra ancora accettabile
+            pipe_grid = Pipeline([('svm', SVC(kernel=params['kernel'], class_weight='balanced'))])
+            cv_inner = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=42)
             grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', cv=cv_inner, n_jobs=-1, refit=True)
             grid = grid.fit(X_train, y_train)
-            # TODO: dato il miglior C trovato con la grid search, faccio quello che facevamo prima
+            # dato il miglior C trovato con la grid search, faccio quello che facevamo prima
             if params['kernel'] == 'rbf':
-                '''
-                print("C")
-                print(grid.best_params_['C'])
-                print("gamma")
-                print(grid.best_params_['gamma'])
-                '''
-                pipe = Pipeline([('scaler', StandardScaler()),
-                                 ('svc', SVC(kernel=params['kernel'], class_weight='balanced', C=grid.best_params_['svm__C'], gamma=grid.best_params_['svm__gamma']))])
+                
+                #print("C")
+                #print(grid.best_params_['C'])
+                #print("gamma")
+                #print(grid.best_params_['gamma'])
+                
+                pipe = Pipeline([
+                                  ('svc', SVC(kernel=params['kernel'], class_weight='balanced', C=grid.best_params_['svm__C'], gamma=grid.best_params_['svm__gamma']))])
             else:
-                pipe = Pipeline([('scaler', StandardScaler()),
+                pipe = Pipeline([
                                  ('svc', SVC(kernel=params['kernel'], class_weight='balanced', C=grid.best_params_['svm__C']))])
             pipe.fit(X_train, y_train)
             pred = pipe.predict(X_test)
             acc = accuracy_score(y_test, pred)
+            #print(acc)
             outer_results.append(acc)
 
-        global_acc = mean(outer_results)  # TODO: considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
+        global_acc = mean(outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
         accuracy.append(global_acc)
         #print("global acc")
-        print(global_acc)
 
     x = np.arange(1, len(accuracy)+1)
 
-    fig = plt.figure(1, dpi=160)
     ax = plt.axes()
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -304,37 +319,7 @@ def genes_selection_svm_t_rfe(df, params, results_dir, config_dir):
     plt.ylabel("Prediction accuracy")
     plt.margins(x=0)
     plt.show()
-    plt.close(fig)
+    plt.close()
 
     # Typically, 50–100 genes have been selected in previous studies
 
-    '''
-       for i in tqdm(range(count_passi), desc="passi", file=sys.stdout):
-           for train_ix, test_ix in CV.split(df_reduced_list):
-               X_train, X_test = df_reduced_list[train_ix, :], df_reduced_list[test_ix, :]
-               y_train, y_test = y[train_ix], y[test_ix]
-               model = SVC(kernel="linear")
-               model.fit(X_train, y_train)
-               weights = model.coef_
-               pred = model.predict(X_test)
-               y_true.append(y_test[0])
-               y_pred.append(pred[0])
-           global_acc = accuracy_score(y_true, y_pred)
-           ranking_scores = []
-           for j in range(weights.shape[1]):
-               r = theta * weights[:, j] + (1 - theta) * t_statistcs_selected[j]
-               ranking_scores.append(r)
-           threshold = max(ranking_scores)
-           for k in range(len(ranking_scores)):
-               if ranking_scores[k] == threshold:
-                   t_statistcs_selected.remove(t_statistcs_selected[k])
-                   df_reduced_list = np.delete(df_reduced_list, k, 1)
-                   print(genes_name[k])
-                   file_genes.write("%s\n" % genes_name[k])
-                   genes_name.remove(genes_name[k])
-
-           accuracy.append(global_acc)
-           y_true = []
-           y_pred = []
-           print(global_acc)
-       '''

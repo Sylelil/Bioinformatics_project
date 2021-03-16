@@ -4,7 +4,9 @@ import sys
 from os import path
 from pathlib import Path
 
-from src.genes import utils
+from sklearn.model_selection import train_test_split
+import numpy as np
+from src.genes import methods
 from src.genes.features_selection_methods.pca import genes_extraction_pca
 from src.genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from src.genes.features_selection_methods.welch_t import genes_selection_welch_t
@@ -32,7 +34,7 @@ def main():
         exit(2)
 
     # Read configuration file
-    params = utils.read_config_file(args.cfg, args.method)
+    params = methods.read_config_file(args.cfg, args.method)
 
     path_genes = Path('datasets') / 'genes'
     if not os.path.exists(path_genes):
@@ -40,7 +42,7 @@ def main():
         exit(2)
 
     print("Reading gene expression data:")
-    df_normal, df_tumor = utils.read_gene_expression_data(path_genes)  # normal = 0, tumor = 1
+    df_normal, df_tumor = methods.read_gene_expression_data(path_genes)  # normal = 0, tumor = 1
 
     print("\nExploratory analysis:")
     # Compute number of samples
@@ -55,7 +57,7 @@ def main():
     print(df_patients)
 
     # Evaluate normality by skewness and kourt
-    n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2 = utils.eval_asymmetry_and_kurt(df_patients)
+    n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2 = methods.eval_asymmetry_and_kurt(df_patients)
 
     print("Percentage of genes with asymmetric distribution (verso sx): %.3f" % (100 * (n_skew_pos / n_features)))
     print("Percentage of genes with asymmetric distribution (verso dx): %.3f" % (100 * (n_skew_neg / n_features)))
@@ -64,6 +66,13 @@ def main():
 
     # Grafico a torta di skew and kurtosys
     # TODO
+
+    # divide dataset in training and test
+    '''
+    y = np.array([x[-1:] for x in df_patients])
+    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, train_size=0.70, random_state=0)
+    print(y_train)
+    '''
 
     print("\nDifferentially gene expression analysis [DGEA]")
     if args.method == 'pca':

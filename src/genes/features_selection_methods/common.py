@@ -121,6 +121,7 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
         'genes_bh': [],  # genes_benjamini_hochberg
         'genes': [],
         'p_values_b': [],  # pvalues bonferroni
+        't_values_b': [],  # tvalues bonferroni
         'all_p_values': [],
         'all_t_values': []
     }
@@ -138,6 +139,7 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
         if not np.isnan(pvalue) and pvalue <= alpha / len(data_frame_0.columns):
             dict['genes_b'].append(gene)
             dict['p_values_b'].append(pvalue)
+            dict['t_values_b'].append(tvalue)
 
         if not np.isnan(pvalue) and pvalue < alpha / (len(data_frame_0.columns) - i + 1):
             dict['genes_hh'].append(gene)

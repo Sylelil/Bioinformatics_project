@@ -27,7 +27,8 @@ docs/build
 scripts/venv
 venv/
 .idea/
-extracted_features/
 datasets/
+results/
+venv/
 .vscode/
 .ipynb_checkpoints/

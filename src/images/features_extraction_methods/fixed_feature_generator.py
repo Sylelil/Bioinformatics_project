@@ -44,8 +44,8 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     tiles = []
     print(">> Getting tiles..")
     #Qui si perde tempo - TODO: Da controllare :-)
-    slides_tiles_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
-    for coord in slides_tiles_coords:
+    slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+    for coord in slide_tiles_coords:
         #print(coord)
         tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
         np_tile = utils.normalize_staining(tile)
@@ -55,18 +55,19 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     print(">> tiles loaded")
     print("Num tiles = %d" % len(tiles))
 
-    dir_to_save = os.path.join(rand_tiles_dir, slide_info['slide_name'])
-    if not os.path.exists(dir_to_save):
-        os.mkdir(dir_to_save)
+    if rand_tiles_dir is not None:
+        dir_to_save = os.path.join(rand_tiles_dir, slide_info['slide_name'])
+        if not os.path.exists(dir_to_save):
+            os.mkdir(dir_to_save)
 
-    rand_tiles_indexes = [random.randint(0, len(tiles)-1) for _ in range(0, 10)]
-    #print(rand_tiles_indexes)
-    for index in rand_tiles_indexes:
-        np_tile = tiles[index]
-        coord = slides_tiles_coords[index]
-        #print(coord)
-        pil_tile = utils.np_to_pil(np_tile)
-        pil_tile.save(os.path.join(dir_to_save, str(coord[0]) + "_" + str(coord[1]) + ".png"))
+        rand_tiles_indexes = [random.randint(0, len(tiles)-1) for _ in range(0, 10)]
+        #print(rand_tiles_indexes)
+        for index in rand_tiles_indexes:
+            np_tile = tiles[index]
+            coord = slide_tiles_coords[index]
+            #print(coord)
+            pil_tile = utils.np_to_pil(np_tile)
+            pil_tile.save(os.path.join(dir_to_save, str(coord[0]) + "_" + str(coord[1]) + ".png"))
 
     tiles = np.asarray(tiles)
     print(tiles.shape)
@@ -80,7 +81,7 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     X = model.predict(tiles, batch_size=32, verbose=1)
     print(X.shape) # (num tiles, 2048)
     print(">> Done")
-    X = np.concatenate([slides_tiles_coords, X], axis=1)
+    X = np.concatenate([slide_tiles_coords, X], axis=1)
     np.save(os.path.join(path_to_save, slide_info['slide_name'] + '_' + str(dzg_level_x) + '.npy'), X)
 
 '''
@@ -169,7 +170,7 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
 
 
-def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir, rand_tiles_dir, tile_size, desired_magnification, use_gpu):
+def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir, tile_size, desired_magnification, use_gpu, path_rand_tiles=None):
 
     if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
         if use_gpu:
@@ -185,8 +186,8 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir,
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
                     save_numpy_features(slide_info, tile_size,
-                                        desired_magnification, numpy_features_dir, selected_tiles_dir, rand_tiles_dir)
+                                        desired_magnification, numpy_features_dir, selected_tiles_dir, path_rand_tiles)
         else:
             with tf.device('/cpu:0'):
                 multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir,
-                                                 tile_size, desired_magnification, rand_tiles_dir)
+                                                 tile_size, desired_magnification, path_rand_tiles)

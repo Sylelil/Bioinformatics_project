@@ -10,3 +10,4 @@ seaborn
 tensorflow
 tqdm
 colorcorrect
+seaborn

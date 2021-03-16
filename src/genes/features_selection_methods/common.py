@@ -107,7 +107,6 @@ def mann_whitney_u_test(data_frame_0, data_frame_1, alpha):
 
 
 def welch_t_test(data_frame_0, data_frame_1, alpha):
-    # TODO: la variabile i dovrebbe incrementarsi?
     """
     Description: Parametric statistical test
     :param data_frame_0:
@@ -149,6 +148,7 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
 
         dict['all_p_values'].append(pvalue)
         dict['all_t_values'].append(tvalue)
+        i+=1
 
     return dict
 

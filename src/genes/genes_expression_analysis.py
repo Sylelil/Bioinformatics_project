@@ -128,7 +128,7 @@ def main():
         pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
         cv = KFold(n_splits=params['cv_grid_search_acc'])
         clf = GridSearchCV(estimator=pipe_grid, param_grid=tuned_parameters, scoring='accuracy', cv=cv, n_jobs=-1, refit=True)
-        clf.fit(X_train_reduced, y_train)
+        clf.fit(X_train_reduced, y_train_sm)
         pred = clf.predict(X_test_reduced)
         print("accuracy= %f" % accuracy_score(y_test, pred))
         average_precision = average_precision_score(y_test, pred, pos_label=0)
@@ -155,7 +155,7 @@ def main():
         print('sensitivity: %f' % sensitivity_1)
         print('specificity: %f' % specificity_1)
 
-        print(classification_report_imbalanced)
+        print(classification_report_imbalanced(y_test, pred))
         plot_confusion_matrix(clf, X_test_reduced, y_test)
         plt.show()
         plot_roc_curve(clf, X_test_reduced, y_test)

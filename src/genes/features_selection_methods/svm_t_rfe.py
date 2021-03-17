@@ -26,16 +26,6 @@ from src.genes.features_selection_methods import common
 
 
 def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
-    '''
-    # TODO: SMOTE
-    print("\n[SMOTE]")
-    sm = SMOTE()
-    df_reduced, y = sm.fit_resample(df, y)
-    print(Counter(y))
-    y_str = np.array([str(x) for x in y])
-    df_reduced = df_reduced.reindex(y_str)
-    print(df_reduced)
-    '''
     # File names
     ranking_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
                          str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_ranked_genes.txt"
@@ -124,7 +114,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.show()
     plt.close()
 
-    num_selected = 175
+    num_selected = 90
     return ranked_genes[:num_selected]
 
 
@@ -249,7 +239,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         for train_ix, test_ix in cv_outer.split(df_selected_array, y):
             X_train, X_test = df_selected_array[train_ix, :], df_selected_array[test_ix, :]
             y_train, y_test = y[train_ix], y[test_ix]
-            # configure the cross-validation procedure
+            # configure the cross-validation procedure for grid search of best parameters
             pipe_grid = Pipeline([('svm', SVC(kernel=params['kernel']))])
             cv_inner = KFold(n_splits=params['cv_grid_search_acc'])
             grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', cv=cv_inner, n_jobs=-1, refit=True)

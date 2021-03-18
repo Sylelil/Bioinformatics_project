@@ -11,3 +11,4 @@ tensorflow
 tqdm
 colorcorrect
 seaborn
+imbalanced-learn

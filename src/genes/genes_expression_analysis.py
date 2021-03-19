@@ -42,8 +42,12 @@ def main():
     args = parser.parse_args()
 
     results_dir = Path('results') / 'genes'
+    extracted_features_training = Path('results') / 'genes' / 'extracted_features' / 'training'
+    extracted_features_test = Path('results') / 'genes' / 'extracted_features' / 'test'
     config_dir = Path('config') / 'genes'
     path_genes = Path('datasets') / 'genes'
+    path_to_csv_normal = Path('datasets') / 'csv' / 'normal'
+    path_to_csv_tumor = Path('datasets') / 'csv' / 'tumor'
 
     if not os.path.exists(path_genes):
         sys.stderr.write(f'{path_genes} does not exists')
@@ -59,12 +63,36 @@ def main():
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
 
+    if not os.path.exists(Path('datasets') / 'csv'):
+        os.mkdir(Path('datasets') / 'csv')
+
+    if not os.path.exists(Path('results') / 'genes' / 'extracted_features'):
+        os.mkdir(Path('results') / 'genes' / 'extracted_features')
+
+    if not os.path.exists(path_to_csv_normal):
+        os.mkdir(path_to_csv_normal)
+
+    if not os.path.exists(path_to_csv_tumor):
+        os.mkdir(path_to_csv_tumor)
+
+    if not os.path.exists(extracted_features_training):
+        os.mkdir(extracted_features_training)
+
+    if not os.path.exists(extracted_features_test):
+        os.mkdir(extracted_features_test)
+
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
     print("Reading gene expression data:")
     df_normal, df_tumor = methods.read_gene_expression_data(path_genes)  # normal = 0, tumor = 1
     df_patients = df_normal.append(df_tumor, sort=False)  # Merge normal data frame with tumor data frame
+
+    #df_normal.to_csv(os.path.join(path_to_csv_normal, "normal.csv"))
+    #df_tumor.to_csv(os.path.join(path_to_csv_tumor, "tumor.csv"))
+
+    #with open(os.path.join(path_to_csv_normal, "normal.txt"), 'w') as outfile:
+    #    df_normal.to_string(outfile)
 
     # divide dataset in training and test
     y = np.array([int(x[-1:]) for x in df_patients.index])
@@ -119,11 +147,27 @@ def main():
         genes_selection_welch_t(X_train, params)
     elif args.method == 'svm_t_rfe':
 
-        selected_features = genes_selection_svm_t_rfe(X_train_sm, y_train_sm, params, results_dir, config_dir)
+        selected_genes = genes_selection_svm_t_rfe(X_train_sm, y_train_sm, params, results_dir, config_dir)
+
+        selected_genes_path = os.path.join(results_dir, "selected_genes.txt")
+        fp = open(selected_genes_path, "w")
+        for gene in selected_genes:
+            fp.write("%s\n" % gene)
+        fp.close()
+
+        for index, row in X_train[selected_genes].iterrows():
+            row = np.asarray(row)
+            print(row.shape)
+            np.save(os.path.join(extracted_features_training, index + '.npy'), row)
+
+        for index, row in X_test[selected_genes].iterrows():
+            row = np.asarray(row)
+            print(row.shape)
+            np.save(os.path.join(extracted_features_test, index + '.npy'), row)
 
         tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
-        X_train_reduced = X_train_sm[selected_features].to_numpy()
-        X_test_reduced = X_test[selected_features].to_numpy()
+        X_train_reduced = X_train_sm[selected_genes].to_numpy()
+        X_test_reduced = X_test[selected_genes].to_numpy()
 
         pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
         cv = KFold(n_splits=params['cv_grid_search_acc'])

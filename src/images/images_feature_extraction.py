@@ -7,7 +7,7 @@ from src.images import preprocessing, slide_info, utils
 from src.images.features_extraction_methods.fine_tuning import fine_tuning
 from src.images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
 
-USE_GPU = False
+USE_GPU = True
 
 
 def main():
@@ -158,12 +158,14 @@ def main():
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
         print(">> Extracting features from normal images:")
+
         fixed_feature_generator(normal_slides_info, numpy_normal_dir, normal_selected_tiles_dir,
                                 tile_size, desired_magnification, USE_GPU) #, normal_rand_tiles_dir)
 
         print(">> Extracting features from tumor images:")
         fixed_feature_generator(tumor_slides_info, numpy_tumor_dir, tumor_selected_tiles_dir,
                                 tile_size, desired_magnification, USE_GPU) #, tumor_rand_tiles_dir)
+
     else:
         sys.stderr.write("Invalid value for <feature extraction method> in config file")
         exit(1)

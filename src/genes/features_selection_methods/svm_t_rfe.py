@@ -20,7 +20,7 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
-from numpy import mean
+from numpy import mean, std
 
 from src.genes.features_selection_methods import common
 
@@ -114,7 +114,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.show()
     plt.close()
 
-    num_selected = 90
+    num_selected = 200
     return ranked_genes[:num_selected]
 
 
@@ -218,6 +218,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
 
 def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params):
     accuracy = []
+    standard_deviation = []
 
     # costruisco la param_grid per la ricerca dei migliori hyperparms
     if params['kernel'] == 'rbf':
@@ -236,6 +237,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
         outer_results = []
         cv_outer = KFold(n_splits=params['cv_outer'])
+        #nested cross validation
         for train_ix, test_ix in cv_outer.split(df_selected_array, y):
             X_train, X_test = df_selected_array[train_ix, :], df_selected_array[test_ix, :]
             y_train, y_test = y[train_ix], y[test_ix]
@@ -250,6 +252,9 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
             outer_results.append(acc)
 
         global_acc = mean(outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
+        global_std = std(outer_results)
         accuracy.append(global_acc)
+        standard_deviation.append(global_std)
         print(global_acc)
+        print(global_std)
     return accuracy

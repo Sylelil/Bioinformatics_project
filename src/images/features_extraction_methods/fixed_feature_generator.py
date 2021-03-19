@@ -82,7 +82,7 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     print(X.shape) # (num tiles, 2048)
     print(">> Done")
     X = np.concatenate([slide_tiles_coords, X], axis=1)
-    np.save(os.path.join(path_to_save, slide_info['slide_name'] + '_' + str(dzg_level_x) + '.npy'), X)
+    np.save(os.path.join(path_to_save, slide_info['slide_name'] + '.npy'), X)
 
 '''
 def extract_tile_features(level, coord, zoom):
@@ -121,8 +121,8 @@ def save_numpy_features_range(start_ind, end_ind, slides_info, tile_size, images
         if os.path.isfile(os.path.join(images_save_dir, slides_info[slide_num]['slide_name'] + '.npy')):
             print("Skipping slide " + slides_info[slide_num]['slide_name'])
         else:
-            save_numpy_features(slides_info[slide_num], selected_tiles_dir,
-                                tile_size, desired_magnification, images_save_dir, rand_tiles_dir)
+            save_numpy_features(slides_info[slide_num], tile_size,
+                                desired_magnification, images_save_dir, selected_tiles_dir, rand_tiles_dir)
     return start_ind, end_ind
 
 
@@ -182,7 +182,7 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir,
                     tf.config.experimental.set_memory_growth(gpu, True)
 
             for slide_info in images_info:
-                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
+                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')) or slide_info['slide_name'] == "2a7bbafe-d499-4241-ba3d-a52ba0a5db3c_1":
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
                     save_numpy_features(slide_info, tile_size,

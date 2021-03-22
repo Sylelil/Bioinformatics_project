@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 import sys
 from collections import Counter
@@ -96,7 +97,7 @@ def main():
 
     # divide dataset in training and test
     y = np.array([int(x[-1:]) for x in df_patients.index])
-    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, train_size=0.70, random_state=42, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, test_size=0.30, shuffle=True)
 
     print("\nExploratory analysis:")
     # Compute number of samples
@@ -164,6 +165,13 @@ def main():
             row = np.asarray(row)
             print(row.shape)
             np.save(os.path.join(extracted_features_test, index + '.npy'), row)
+
+        # 2.a.2 Apply logarithmic transformation on gene expression data
+        #       Description : x = Log(x+1), where x is the gene expression value
+        print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
+              f'\n>> Computing logarithmic transformation...')
+        X_train_sm = X_train_sm.applymap(lambda x: math.log(x + 1, 10))
+        X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
 
         tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
         X_train_reduced = X_train_sm[selected_genes].to_numpy()

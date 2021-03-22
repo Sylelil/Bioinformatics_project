@@ -6,7 +6,7 @@ import openslide
 from PIL import Image
 from openslide.deepzoom import DeepZoomGenerator
 
-from src.images import utils
+from . import utils
 from skimage import img_as_bool
 from skimage.filters import median, gaussian
 from skimage.morphology import disk

@@ -2,7 +2,7 @@ import sys
 from openslide.deepzoom import DeepZoomGenerator
 from tqdm import tqdm
 import os
-from src.images import utils
+from . import utils
 
 
 def read_slides_info(lookup_dir):

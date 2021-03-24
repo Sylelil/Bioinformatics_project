@@ -125,7 +125,7 @@ def main():
     '''
     slide = {}
     for s in tumor_slides_info:
-        if s['slide_name'] == "86d18004-9478-4e46-83b4-4fbe445ccb70_1":
+        if s['slide_name'] == "2a7bbafe-d499-4241-ba3d-a52ba0a5db3c_1":
             slide = s
             print("ok")
             break
@@ -134,9 +134,11 @@ def main():
     print(scaled_h)
     print(scaled_w)
     preprocessing.apply_filters_to_image(slide, scaled_image, tumor_masked_images_dir)
+    preprocessing.select_tiles_with_tissue_from_slide(slide, tumor_masked_images_dir, tumor_selected_tiles_dir, tile_size, desired_magnification, scale_factor)
 
     exit()
     '''
+
     print("\nNormal images preprocessing:")
     preprocessing.preprocessing_images(normal_slides_info, normal_selected_tiles_dir,
                                        os.path.join(results, "normal_filter_info.txt"),

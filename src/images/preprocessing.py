@@ -180,7 +180,8 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
     if display:
         utils.display_img(otsu_mask, "Compl. Otsu mask")
 
-    median_filtering_otsu_mask = median(otsu_mask, disk(2))  # apply median filtering (radius = 2) on otsu mask (noise reduction)
+    median_filtering_otsu_mask = median(otsu_mask,
+                                        disk(2))  # apply median filtering (radius = 2) on otsu mask (noise reduction)
     string += utils.np_info(median_filtering_otsu_mask, "MEDIAN FILTERING")
     string += '\n'
     if display:
@@ -207,7 +208,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
     if display:
         utils.display_img(no_small_holes_otsu_mask, "Compl. Otsu mask(holes)")
 
-    no_small_holes_otsu_mask = img_as_bool(blurring_otsu_mask, force_copy=False)
+    no_small_holes_otsu_mask = img_as_bool(no_small_holes_otsu_mask, force_copy=False)
     segmented_image = utils.mask_rgb(rgb_pens, no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
 
     string += utils.np_info(segmented_image, "Mask RGB", utils.Time().elapsed())
@@ -215,7 +216,6 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
 
     if display:
         utils.display_img(segmented_image, "Segmented image", bg=True)
-
     pil_segmented_image = utils.np_to_pil(segmented_image)
 
     # print("Image " + slide_info['slide_name'] + " masked")

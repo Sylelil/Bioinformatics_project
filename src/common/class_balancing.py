@@ -1,5 +1,5 @@
 from imblearn.over_sampling import RandomOverSampler, SMOTE
-from  imblearn.combine import SMOTEENN
+from imblearn.combine import SMOTEENN
 from imblearn.under_sampling import ClusterCentroids
 
 

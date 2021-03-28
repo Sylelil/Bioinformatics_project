@@ -6,7 +6,7 @@ import openslide
 from PIL import Image
 from openslide.deepzoom import DeepZoomGenerator
 
-from src.images import utils
+from . import utils
 from skimage import img_as_bool
 from skimage.filters import median, gaussian
 from skimage.morphology import disk
@@ -145,12 +145,19 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
     string = "Slide %s:\n%-20s | Width: %d Height: %d\n" % (
         slide_info['slide_name'], "SVS", slide_info['slide_width'], slide_info['slide_height'])
 
-    scaled_w, scaled_h = scaled_image.size
     rgb = utils.pil_to_np_rgb(scaled_image)
     string += utils.np_info(rgb, "RGB", utils.Time().elapsed())
     string += '\n'
     if display:
         utils.display_img(rgb, "RGB")
+
+    mask_no_red_pen = utils.filter_red_pen(rgb)
+    mask_no_green_pen = utils.filter_green_pen(rgb)
+    mask_no_blue_pen = utils.filter_blue_pen(rgb)
+    mask_pens = mask_no_red_pen & mask_no_green_pen & mask_no_blue_pen
+    rgb_pens = utils.mask_rgb(rgb, mask_pens)
+    if display:
+        utils.display_img(rgb_pens, "Pen filters")
 
     # from RGB to grayscale
     grayscale = utils.filter_rgb_to_grayscale(rgb)
@@ -187,7 +194,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(blurring_otsu_mask, "Compl. Otsu mask(gaussian)")
     blurring_otsu_mask = img_as_bool(blurring_otsu_mask, force_copy=False)
 
-    min_size_obj = 420 # smallest allowable object
+    min_size_obj = 420  # smallest allowable object
     no_small_obj_otsu_mask = utils.filter_remove_small_objects(blurring_otsu_mask, min_size=min_size_obj)
     string += utils.np_info(no_small_obj_otsu_mask, "Remove Small Objs", utils.Time().elapsed())
     string += '\n'
@@ -202,7 +209,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(no_small_holes_otsu_mask, "Compl. Otsu mask(holes)")
 
     no_small_holes_otsu_mask = img_as_bool(no_small_holes_otsu_mask, force_copy=False)
-    segmented_image = utils.mask_rgb(rgb, no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
+    segmented_image = utils.mask_rgb(rgb_pens, no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
 
     string += utils.np_info(segmented_image, "Mask RGB", utils.Time().elapsed())
     string += '\n'
@@ -211,9 +218,9 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(segmented_image, "Segmented image", bg=True)
     pil_segmented_image = utils.np_to_pil(segmented_image)
 
-    #print("Image " + slide_info['slide_name'] + " masked")
+    # print("Image " + slide_info['slide_name'] + " masked")
 
-    #np.save(os.path.join(path_to_save, slide_info['slide_name'] + ".npy"), segmented_image)
+    # np.save(os.path.join(path_to_save, slide_info['slide_name'] + ".npy"), segmented_image)
     pil_segmented_image.save(os.path.join(masked_images_dir, slide_info['slide_name'] + ".png"))
     print("Masked image saved to %s" % (os.path.join(masked_images_dir, slide_info['slide_name'] + ".png")))
 
@@ -279,16 +286,15 @@ def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_i
         if os.path.isfile(os.path.join(selected_tiles_dir, slides_info[slide_num]['slide_name'] + '.npy')):
             print("Skipping slide " + slides_info[slide_num]['slide_name'])
         else:
-            select_tiles_with_tissue_from_slide(slide_num, slides_info[slide_num], masked_images_pil_dir,
+            select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir,
                                                 selected_tiles_dir, tile_size, desired_magnification, scale_factor)
     return start_index, end_index#, slides_tiles_coords
 
 
-def select_tiles_with_tissue_from_slide(slide_num, slide_info, masked_images_pil_dir, selected_tiles_dir,
+def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir,
                                         tile_size, desired_magnification, scale_factor):
     # Initialize deep zoom generator for the slide
     image_dims = (slide_info['slide_width'], slide_info['slide_height'])
-    image_name = slide_info['slide_name']
     slide = utils.open_wsi(slide_info['slide_path'])
     dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
 
@@ -481,3 +487,4 @@ def generate_tile_summaries(slide_info, segmented_image, tiles_coords, tile_summ
     '''
     filepath = os.path.join(tile_summary_dir, slide_info['slide_name'] + ".png")
     summary.save(filepath)
+

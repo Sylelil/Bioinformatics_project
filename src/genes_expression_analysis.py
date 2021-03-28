@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 import sys
 from collections import Counter
@@ -16,11 +17,11 @@ import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 
-from src.genes import methods
-from src.genes.features_selection_methods.pca import genes_extraction_pca
-from src.genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
-from src.genes.features_selection_methods.welch_t import genes_selection_welch_t
-from src.genes.features_selection_methods.welch_t_pca import genes_extraction_welch_t_pca
+from genes import methods
+from genes.features_selection_methods.pca import genes_extraction_pca
+from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
+from genes.features_selection_methods.welch_t import genes_selection_welch_t
+from genes.features_selection_methods.welch_t_pca import genes_extraction_welch_t_pca
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -96,7 +97,7 @@ def main():
 
     # divide dataset in training and test
     y = np.array([int(x[-1:]) for x in df_patients.index])
-    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, train_size=0.70, random_state=42, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, test_size=0.30, random_state=42, shuffle=True)
 
     print("\nExploratory analysis:")
     # Compute number of samples
@@ -134,6 +135,7 @@ def main():
     X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
     print(Counter(y_train_sm))
     X_train_sm["target"] = np.array([str(x) for x in y_train_sm])
+    print(list(X_train_sm["target"]))
     X_train_sm.index = list(X_train_sm["target"])
     del X_train_sm["target"]
     print(X_train_sm)
@@ -164,6 +166,13 @@ def main():
             row = np.asarray(row)
             print(row.shape)
             np.save(os.path.join(extracted_features_test, index + '.npy'), row)
+
+        # 2.a.2 Apply logarithmic transformation on gene expression data
+        #       Description : x = Log(x+1), where x is the gene expression value
+        print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
+              f'\n>> Computing logarithmic transformation...')
+        X_train_sm = X_train_sm.applymap(lambda x: math.log(x + 1, 10))
+        X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
 
         tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
         X_train_reduced = X_train_sm[selected_genes].to_numpy()

@@ -22,7 +22,7 @@ from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, Stratified
 import matplotlib.pyplot as plt
 from numpy import mean, std
 
-from src.genes.features_selection_methods import common
+from . import common
 
 
 def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
@@ -235,7 +235,8 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
     for num_selected in tqdm(range(1, params['top_ranked'] + 1), desc=">> Computing accuracies on top ranked...", file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
-        outer_results = []
+        test_outer_results = []
+        train_outer_results = []
         cv_outer = KFold(n_splits=params['cv_outer'])
         #nested cross validation
         for train_ix, test_ix in cv_outer.split(df_selected_array, y):
@@ -247,14 +248,19 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
             grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', cv=cv_inner, n_jobs=-1, refit=True)
             grid = grid.fit(X_train, y_train)  # Refit the estimator using the best found parameters on whole X_train
             best_model = grid.best_estimator_
-            pred = best_model.predict(X_test)
-            acc = accuracy_score(y_test, pred)
-            outer_results.append(acc)
+            y_test_pred = best_model.predict(X_test)
+            acc = accuracy_score(y_test, y_test_pred)
+            y_train_pred = best_model.predict(X_train)
+            train_acc = accuracy_score(y_train, y_train_pred)
+            test_outer_results.append(acc)
+            train_outer_results.append(train_acc)
 
-        global_acc = mean(outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
-        global_std = std(outer_results)
+        global_acc = mean(test_outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
+        global_std = std(test_outer_results)
+        global_train_acc = mean(train_outer_results)
+        global_train_std = std(train_outer_results)
         accuracy.append(global_acc)
         standard_deviation.append(global_std)
-        print(global_acc)
-        print(global_std)
+        print("test accuracy = " + str(global_acc) + " (" + str(global_std) + ")")
+        print("train accuracy = " + str(global_train_acc) + " (" + str(global_train_std) + ")")
     return accuracy

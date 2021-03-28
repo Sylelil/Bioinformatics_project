@@ -22,8 +22,7 @@ from colorcorrect.algorithm import stretch
 import itertools
 import multiprocessing
 from openslide.deepzoom import DeepZoomGenerator
-from src.images import utils
-from src.images.utils import Time
+from .. import utils
 
 
 def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_save, selected_tiles_dir, rand_tiles_dir):
@@ -128,7 +127,7 @@ def save_numpy_features_range(start_ind, end_ind, slides_info, tile_size, images
 
 def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir,
                                      tile_size, desired_magnification, rand_tiles_dir):
-    timer = Time()
+    timer = utils.Time()
 
     # how many processes to use
     num_processes = multiprocessing.cpu_count()
@@ -182,7 +181,7 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir,
                     tf.config.experimental.set_memory_growth(gpu, True)
 
             for slide_info in images_info:
-                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')) or slide_info['slide_name'] == "2a7bbafe-d499-4241-ba3d-a52ba0a5db3c_1":
+                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
                     save_numpy_features(slide_info, tile_size,

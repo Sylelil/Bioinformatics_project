@@ -1,97 +1,32 @@
 import argparse
 import os
 import sys
-#sys.path.insert(1, 'c:/Users/rosee/workspace_Polito/git/Bioinformatics_project/src/common/')
-#print("PYTHONPATH:", os.environ.get('PYTHONPATH'))
-#("PATH:", os.environ.get('PATH'))
 from os import path
 from pathlib import Path
 import tensorflow as tf
+from imblearn.metrics import classification_report_imbalanced
+from sklearn.model_selection import KFold
 from tensorflow import keras
 import numpy as np
 import pandas as pd
-from src.common import class_balancing, feature_concatenation
+from src.common import class_balancing, feature_concatenation, classification_methods
 import class_balancing, feature_concatenation, utils
+from imblearn.pipeline import make_pipeline as imb_make_pipeline
+from sklearn.pipeline import make_pipeline as sk_make_pipeline
+from sklearn.decomposition import PCA
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
 
 
-'''
-def get_data(lookup_dir):
-    features_list = []
-
-    for np_file in os.listdir(lookup_dir):
-        file_path = os.path.join(lookup_dir, np_file)
-        data = np.load(file_path)
-        print(data.shape)
-        np_features_list = list(data)
-        features_list.extend(np_features_list) # TODO
-
-    return np.array(features_list)
-'''
-
-
-'''
-def main():
-    normal_images_save_dir = Path('generated') / 'numpy_normal'
-    tumor_images_save_dir = Path('generated') / 'numpy_tumor'
-
-    if not os.path.exists(Path('generated')):
-        print("%s not existing." % Path('generated'))
-        exit()
-    if not os.path.exists(normal_images_save_dir):
-        print("%s not existing." % normal_images_save_dir)
-        exit()
-    if not os.path.exists(tumor_images_save_dir):
-        print("%s not existing." % tumor_images_save_dir)
-        exit()
-
-    # features:
-    normal_train_features = get_train_data(normal_images_save_dir)
-    normal_labels_list = np.zeros((len(normal_train_features),), dtype=int)
-
-    tumor_train_features = get_train_data(tumor_images_save_dir)
-    tumor_labels_list = np.ones((len(tumor_train_features),), dtype=int)
-
-    train_features = np.concatenate((normal_train_features, tumor_train_features))
-    train_labels = np.concatenate((normal_labels_list, tumor_labels_list))
-
-    print(train_features.shape)
-    print(train_labels.shape)
-
-    # creare il modello
-    model = keras.Sequential([
-        # keras.layers.Flatten(input_shape=(28, 28)),
-        keras.layers.Dense(2048, activation='relu'),
-        keras.layers.Dense(512, activation='relu'),
-        keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(2, activation='softmax')
-    ])
-
-    
-    #vgg16:
-    # model = keras.Sequential([
-    #     keras.layers.Dense(4096, activation='relu'),
-    #     keras.layers.BatchNormalization(),
-    #     keras.layers.Dense(4096, activation='relu'),
-    #     keras.layers.BatchNormalization(),
-    #     keras.layers.Dense(2, activation='softmax')
-    # ])
-    
-
-    model.compile(optimizer='adam',
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
-
-    model.fit(train_features, train_labels, epochs=10, shuffle=True, validation_split=0.5)
-'''
-
-
-def main():
-    # Parse arguments from command line
+def args_parse():
     parser = argparse.ArgumentParser()
-
+    parser.add_argument('--cfg',
+                        help='Configuration file name',
+                        required=True,
+                        type=str)
     parser.add_argument('--method',
-                        help='Feature extraction method',
-                        choices=['fine_tuning', 'fixed_feature_generator'],
+                        help='Classification method',
+                        choices=['svm', 'nn', 'pca_nn'],
                         required=True,
                         type=str)
     parser.add_argument('--balancing',
@@ -100,102 +35,58 @@ def main():
                         required=False,
                         type=str)
     args = parser.parse_args()
+    return args
+
+
+def main():
+    # Parse arguments from command line
+    args = args_parse()
+
+    # Read configuration file
+    params = utils.read_config_file(args.cfg, args.method)
 
     # Read features from file
-    print(">> Reading features from files...")
-    
-    tile_features_train_dir = Path('..')  / '..' / 'results' / 'images' / 'extracted_features' / 'training'
-    tile_features_test_dir = Path('..')  / '..' / 'results' / 'images' / 'extracted_features' / 'test'
-    gene_features_train_dir = Path('..')  / '..' / 'results' / 'genes' / 'extracted_features' / 'training'
-    gene_features_test_dir = Path('..')  / '..' / 'results' / 'genes' / 'extracted_features' / 'test'
-
-    if not os.path.exists(Path('..')  / '..' / 'results'):
-        print("%s not existing." % Path('results'))
-        exit()
-    # if not os.path.exists(tile_features_train_dir):
-    #     print("%s not existing." % tile_features_train_dir)
-    #     exit()
-    if not os.path.exists(tile_features_test_dir):
-        print("%s not existing." % tile_features_test_dir)
-        exit()
-    # if not os.path.exists(gene_features_train_dir):
-    #     print("%s not existing." % gene_features_train_dir)
-    #     exit()
-    # if not os.path.exists(gene_features_test_dir):
-    #     print("%s not existing." % gene_features_test_dir)
-    #     exit()
-
-    # get features:
-    # tile_features_train = utils.get_tile_data(tile_features_train_dir)
-    tile_features_test = utils.get_tile_data(tile_features_test_dir)
-    # gene_features_train = utils.get_gene_data(gene_features_train_dir)
-    # gene_features_test = utils.get_gene_data(gene_features_test_dir)
-
-    # print(f">> tile_features_train: {tile_features_train.shape}")
-    print(f">> tile_features_test: {tile_features_test.shape}")
-    print(tile_features_test.info(verbose=True))
-    # print(f">> gene_features_train: {gene_features_train.shape}")
-    # print(f">> gene_features_test: {gene_features_test.shape}")
-
-
-
-    # concatenation of tile and gene features:
+    tile_features_train, tile_features_test, gene_features_train, gene_features_test = utils.read_extracted_features()
 
     # TODO normalizzare geni e immagini prima di concatenarli?
 
-    if args.method == 'fine_tuning':
+    # concatenation of tile and gene features:
+    if args.method == 'nn':
         gene_copy_ratio = 20 # TODO vedere se 20 va bene (tiles dim: 2048, genes dim: 100->100*20=2000)
     else:
         gene_copy_ratio = 1
+    X_train, y_train = feature_concatenation.concatenate(tile_features_train, gene_features_train, gene_copy_ratio)
+    X_test, y_test = feature_concatenation.concatenate(tile_features_test, gene_features_test, gene_copy_ratio)
 
-    X_train = feature_concatenation.concatenate(tile_features_train, gene_features_train, gene_copy_ratio)
-    X_test = feature_concatenation.concatenate(tile_features_test, gene_features_test, gene_copy_ratio)
+    # prepare for training
+    estimators = []
 
     # balance the training dataset
     if args.balancing:
-        X_train, y_train = class_balancing.balance_dataset(X_train, y_train, args.balancing)
+        estimators.append(class_balancing.get_balancing_method(args.balancing, params))
 
-    if args.method == 'fixed_feature_generator':
-        # TODO classify data with SVM
-        pass
-    elif args.method == 'fine_tuning':
-        # TODO classify data with NN (?)
-        pass
+    # get classifier and parameter grid
+    classifier, param_grid = classification_methods.get_classifier_param_grid(args.method, params)
 
-'''
-    normal_labels_list = np.zeros((len(normal_tile_features),), dtype=int)
-    tumor_labels_list = np.ones((len(tumor_tile_features),), dtype=int)
-    
-    train_features = np.concatenate((normal_train_features, tumor_train_features))
-    train_labels = np.concatenate((normal_labels_list, tumor_labels_list))
+    # classification pipeline:
+    estimators.append(classifier)
 
-    print(train_features.shape)
-    print(train_labels.shape)
+    if args.balancing:
+        pipe = imb_make_pipeline(estimators)
+    else:
+        pipe = sk_make_pipeline(estimators)
 
-    # creare il modello
-    model = keras.Sequential([
-        # keras.layers.Flatten(input_shape=(28, 28)),
-        keras.layers.Dense(2048, activation='relu'),
-        keras.layers.Dense(512, activation='relu'),
-        keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(2, activation='softmax')
-    ])
+    cv = KFold(n_splits=params['cv_grid_search_rank'])
+    search = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=cv, n_jobs=-1, scoring=params['scoring'],
+                          refit=True)
+    search.fit(X_train, y_train)
+    print("Best parameter (CV score=%0.3f):" % search.best_score_)
+    print(search.best_params_)
 
-    # vgg16:
-    # model = keras.Sequential([
-    #     keras.layers.Dense(4096, activation='relu'),
-    #     keras.layers.BatchNormalization(),
-    #     keras.layers.Dense(4096, activation='relu'),
-    #     keras.layers.BatchNormalization(),
-    #     keras.layers.Dense(2, activation='softmax')
-    # ])
+    y_pred = search.predict(X_test)
 
-    model.compile(optimizer='adam',
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
+    print(classification_report_imbalanced(y_test, y_pred))
 
-    model.fit(train_features, train_labels, epochs=10, shuffle=True, validation_split=0.5)
-'''
 
 if __name__ == '__main__':
     main()

@@ -1,10 +1,18 @@
+import configparser
 import os
+import sys
+from sklearn import metrics
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
 
-def get_tile_data(lookup_dir):
+def __get_tile_data(lookup_dir):
+    """
+       Description: Read extracted tile features from files.
+       :param lookup_dir: Path of the lookup directory.
+       :return: Dataframe of features.
+    """
     all_tiles_features = []  # list of all tile features
     slide_data = None
 
@@ -46,7 +54,12 @@ def get_tile_data(lookup_dir):
     return df_tiles_features
 
 
-def get_gene_data(lookup_dir):
+def __get_gene_data(lookup_dir):
+    """
+       Description: Read extracted gene features from files.
+       :param lookup_dir: Path of the lookup directory.
+       :return: Dataframe of features.
+    """
     all_features = []  # list of all tile features
     data = None
 
@@ -80,61 +93,84 @@ def get_gene_data(lookup_dir):
     return df_gene_features
 
 
-def get_split_caseids():
+def read_extracted_features():
     """
-        Get train and test splits of caseids saved in 'assets\train_test_split' folder.
-        Returns:
-            train_caseids: list of caseids of train split.
-            test_caseids: list of caseids of test split.
+       Description: Read extracted features from results folders.
+       :return: Train and test splits of gene and tile data.
     """
-    lookup_dir = Path('..') / '..' / 'assets' / 'data_splits'
-    file_path_train = os.path.join(lookup_dir, 'train_caseids.npy')
-    file_path_val = os.path.join(lookup_dir, 'val_caseids.npy')
-    file_path_test = os.path.join(lookup_dir, 'test_caseids.npy')
-    train_caseids = np.load(file_path_train)
-    val_caseids = np.load(file_path_val)
-    test_caseids = np.load(file_path_test)
-    return train_caseids, val_caseids, test_caseids
+    print(">> Reading features from files...")
+
+    tile_features_train_dir = Path('..') / '..' / 'results' / 'images' / 'extracted_features' / 'training'
+    tile_features_test_dir = Path('..') / '..' / 'results' / 'images' / 'extracted_features' / 'test'
+    gene_features_train_dir = Path('..') / '..' / 'results' / 'genes' / 'extracted_features' / 'training'
+    gene_features_test_dir = Path('..') / '..' / 'results' / 'genes' / 'extracted_features' / 'test'
+
+    if not os.path.exists(Path('..') / '..' / 'results'):
+        print("%s not existing." % Path('results'))
+        exit()
+    if not os.path.exists(tile_features_train_dir):
+        print("%s not existing." % tile_features_train_dir)
+        exit()
+    if not os.path.exists(tile_features_test_dir):
+        print("%s not existing." % tile_features_test_dir)
+        exit()
+    if not os.path.exists(gene_features_train_dir):
+        print("%s not existing." % gene_features_train_dir)
+        exit()
+    if not os.path.exists(gene_features_test_dir):
+        print("%s not existing." % gene_features_test_dir)
+        exit()
+
+    # get features:
+    tile_features_train = __get_tile_data(tile_features_train_dir)
+    tile_features_test = __get_tile_data(tile_features_test_dir)
+    gene_features_train = __get_gene_data(gene_features_train_dir)
+    gene_features_test = __get_gene_data(gene_features_test_dir)
+
+    print(f">> tile_features_train: {tile_features_train.shape}")
+    print(f">> tile_features_test: {tile_features_test.shape}")
+    print(f">> gene_features_train: {gene_features_train.shape}")
+    print(f">> gene_features_test: {gene_features_test.shape}")
+
+    return tile_features_train, tile_features_test, gene_features_train, gene_features_test
 
 
-def get_split_data(lookup_dir):
+def read_config_file(config_file_path, method):
     """
-       Split data according to splits saved in 'assets\train_test_split' folder.
-       Args:
-            lookup_dir: lookup directory with data to be split.
-        Returns:
-            X_train, X_val, X_test, y_train, y_val, y_test: train, validation and test subsets of data and labels
+       Description: Read configuration parameters.
+       :param config_file_path: Path of the configuration file.
+       :param method: Classification method.
+       :return: Dictionary of parameters
     """
-    X_train = []
-    X_val = []
-    X_test = []
-    y_train = []
-    y_val = []
-    y_test = []
+    params = {}
+    config = configparser.ConfigParser()
+    config.read(config_file_path)
 
-    # get splitted caseids
-    train_caseids, val_caseids, test_caseids = get_split_caseids()
+    scoring = config['general']['scoring']
+    if scoring == 'matthews_corrcoef':
+        params['scoring'] = metrics.matthews_corrcoef
 
-    # get data with caseid and label
-    for np_file in os.listdir(lookup_dir):
-        file_path = os.path.join(lookup_dir, np_file)
-        data = np.load(file_path)
-        filename = os.path.splitext(np_file)[0]
-        caseid = filename[:-2]
-        label = filename[-1]
+    random_state = config['general']['random_state']
+    if random_state == 'None' or random_state == '':
+        params['random_state'] = None
+    else:
+        params['random_state'] = config.getint('general', 'random_state')
 
-        # add data to corresponding split
-        if caseid in train_caseids:
-            X_train.append(data)
-            y_train.append(label)
-        elif caseid in val_caseids:
-            X_val.append(data)
-            y_val.append(label)
-        elif caseid in test_caseids:
-            X_test.append(data)
-            y_test.append(label)
+    if method == 'svm':
+        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
+        params['cv_grid_search_rank'] = config.getint('svm', 'cv_grid_search_rank')
+        if config['svm']['kernel'] == 'linear' or config['svm']['kernel'] == 'rbf':
+            params['kernel'] = config['svm']['kernel']
         else:
-            print(f"error: caseid {caseid} not found in splits.")
-            exit()
+            sys.stderr.write("Invalid value for <kernel> in config file")
+            exit(1)
+    elif method == 'nn':
+        pass  # TODO
+    elif method == 'pca_nn':
+        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
+        pass  # TODO
+    else:
+        sys.stderr.write("Invalid value for <classification method> in config file")
+        exit(1)
 
-    return np.array(X_train), np.array(X_val), np.array(X_test), np.array(y_train), np.array(y_val), np.array(y_test)
+    return params

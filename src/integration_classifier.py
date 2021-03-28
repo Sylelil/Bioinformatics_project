@@ -9,8 +9,7 @@ from sklearn.model_selection import KFold
 from tensorflow import keras
 import numpy as np
 import pandas as pd
-from src.common import class_balancing, feature_concatenation, classification_methods
-import class_balancing, feature_concatenation, utils
+from src.common import class_balancing, feature_concatenation, classification_methods, utils
 from imblearn.pipeline import make_pipeline as imb_make_pipeline
 from sklearn.pipeline import make_pipeline as sk_make_pipeline
 from sklearn.decomposition import PCA
@@ -46,7 +45,7 @@ def main():
     params = utils.read_config_file(args.cfg, args.method)
 
     # Read features from file
-    tile_features_train, tile_features_test, gene_features_train, gene_features_test = utils.read_extracted_features()
+    tile_features_train, tile_features_test, gene_features_train, gene_features_test = feature_concatenation.read_extracted_features()
 
     # TODO normalizzare geni e immagini prima di concatenarli?
 

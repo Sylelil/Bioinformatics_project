@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -128,6 +131,7 @@ def read_extracted_features():
     print(f">> gene_features_test: {gene_features_test.shape}")
 
     return tile_features_train, tile_features_test, gene_features_train, gene_features_test
+
 
 def concatenate(tile_features, gene_features, gene_copy_ratio=1):
     """

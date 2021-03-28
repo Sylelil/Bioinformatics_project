@@ -58,7 +58,7 @@ def get_split_data(lookup_dir):
     return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test)
 
 
-def __split_data(lookup_dir, test_size, val_size):
+def __split_data(lookup_dir, test_size):
     """
        Split data into random train, test subsets according to specified sizes with stratification.
        Saves splitted caseids into three files in 'assets\train_test_split' folder.

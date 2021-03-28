@@ -15,6 +15,7 @@ from sklearn.metrics import accuracy_score, precision_score, average_precision_s
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 import numpy as np
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 from genes import methods
@@ -128,7 +129,22 @@ def main():
     # Grafico a torta di skew and kurtosys
     # TODO
 
+    # 2.a.2 Apply logarithmic transformation on gene expression data
+    #       Description : x = Log(x+1), where x is the gene expression value
+    print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
+          f'\n>> Computing logarithmic transformation...')
+    X_train = X_train.applymap(lambda x: math.log(x + 1, 10))
+    X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
+
+    scaler = StandardScaler()
+    train_scaled_features = scaler.fit_transform(X_train.values)
+    X_train = pd.DataFrame(train_scaled_features, index=X_train.index, columns=X_train.columns)
     print(X_train)
+
+    test_scaled_features = scaler.transform(X_test.values)
+    X_test = pd.DataFrame(test_scaled_features, index=X_test.index, columns=X_test.columns)
+    print(X_test)
+
     # TODO: SMOTE
     print("\n[SMOTE]")
     sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
@@ -166,13 +182,6 @@ def main():
             row = np.asarray(row)
             print(row.shape)
             np.save(os.path.join(extracted_features_test, index + '.npy'), row)
-
-        # 2.a.2 Apply logarithmic transformation on gene expression data
-        #       Description : x = Log(x+1), where x is the gene expression value
-        print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
-              f'\n>> Computing logarithmic transformation...')
-        X_train_sm = X_train_sm.applymap(lambda x: math.log(x + 1, 10))
-        X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
 
         tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
         X_train_reduced = X_train_sm[selected_genes].to_numpy()

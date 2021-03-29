@@ -4,7 +4,7 @@ import pandas as pd
 
 def __get_tile_data(lookup_dir):
     """
-       Description: Read extracted tile features from files.
+       Description: Private function. Read extracted tile features from files.
        :param lookup_dir: Path of the lookup directory.
        :return: Dataframe of features.
     """
@@ -51,7 +51,7 @@ def __get_tile_data(lookup_dir):
 
 def __get_gene_data(lookup_dir):
     """
-       Description: Read extracted gene features from files.
+       Description: Private function. Read extracted gene features from files.
        :param lookup_dir: Path of the lookup directory.
        :return: Dataframe of features.
     """
@@ -128,6 +128,7 @@ def read_extracted_features():
     print(f">> gene_features_test: {gene_features_test.shape}")
 
     return tile_features_train, tile_features_test, gene_features_train, gene_features_test
+
 
 def concatenate(tile_features, gene_features, gene_copy_ratio=1):
     """

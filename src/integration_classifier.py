@@ -60,7 +60,7 @@ def main():
     # prepare for training
     estimators = []
 
-    # balance the training dataset
+    # get class balancing method
     if args.balancing:
         estimators.append(class_balancing.get_balancing_method(args.balancing, params))
 

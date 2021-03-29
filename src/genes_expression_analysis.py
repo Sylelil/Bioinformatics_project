@@ -5,28 +5,15 @@ import sys
 from collections import Counter
 from os import path
 from pathlib import Path
-import seaborn as sns
-from imblearn.metrics import classification_report_imbalanced, sensitivity_score, specificity_score
 from imblearn.over_sampling import SMOTE
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.metrics import accuracy_score, precision_score, average_precision_score, recall_score, \
-    plot_confusion_matrix, plot_roc_curve, roc_curve, precision_recall_fscore_support
-from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 import numpy as np
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-
 from genes import methods
-from genes.features_selection_methods.pca import genes_extraction_pca
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from genes.features_selection_methods.welch_t import genes_selection_welch_t
-from genes.features_selection_methods.welch_t_pca import genes_extraction_welch_t_pca
-import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.common.split_data import get_split_data
+from common import split_data
 
 
 def main():
@@ -39,19 +26,17 @@ def main():
 
     parser.add_argument('--method',
                         help='Feature extraction method',
-                        choices=['pca', 'svm_t_rfe', 'welch_t', 'welch_t_pca'],
+                        choices=['welch_t', 'svm_t_rfe'],
                         required=True,
                         type=str)
 
     args = parser.parse_args()
 
-    results_dir = Path('results') / 'genes'
-    extracted_features_training = Path('results') / 'genes' / 'extracted_features' / 'training'
-    extracted_features_test = Path('results') / 'genes' / 'extracted_features' / 'test'
+    welch_t_results_dir = Path('results') / 'genes' / 'welch_t'
+    svm_t_rfe_results_dir = Path('results') / 'genes' / 'svm_t_rfe'
+    splits_dir = Path('assets') / 'data_splits'
     config_dir = Path('config') / 'genes'
     path_genes = Path('datasets') / 'genes'
-    path_to_csv_normal = Path('datasets') / 'csv' / 'normal'
-    path_to_csv_tumor = Path('datasets') / 'csv' / 'tumor'
 
     if not os.path.exists(path_genes):
         sys.stderr.write(f'{path_genes} does not exists')
@@ -61,44 +46,37 @@ def main():
         sys.stderr.write("Invalid path for config file")
         exit(2)
 
+    if not os.path.exists(splits_dir):
+        sys.stderr.write(f'{splits_dir} does not exists')
+        exit(2)
+
+    if not os.path.exists(Path('config')):
+        os.mkdir(Path('config'))
+
+    if not os.path.exists(Path('results')):
+        os.mkdir(Path('results'))
+
+    if not os.path.exists(Path('results') / 'genes'):
+        os.mkdir(Path('results'))
+
+    if not os.path.exists(welch_t_results_dir):
+        os.mkdir(welch_t_results_dir)
+
+    if not os.path.exists(svm_t_rfe_results_dir):
+        os.mkdir(svm_t_rfe_results_dir)
+
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
-
-    if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
-
-    if not os.path.exists(Path('datasets') / 'csv'):
-        os.mkdir(Path('datasets') / 'csv')
-
-    if not os.path.exists(Path('results') / 'genes' / 'extracted_features'):
-        os.mkdir(Path('results') / 'genes' / 'extracted_features')
-
-    if not os.path.exists(path_to_csv_normal):
-        os.mkdir(path_to_csv_normal)
-
-    if not os.path.exists(path_to_csv_tumor):
-        os.mkdir(path_to_csv_tumor)
-
-    if not os.path.exists(extracted_features_training):
-        os.mkdir(extracted_features_training)
-
-    if not os.path.exists(extracted_features_test):
-        os.mkdir(extracted_features_test)
 
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
+    # get splitted caseids
+    print("Getting splitted caseids:")
+    train_caseids, test_caseids = split_data.__get_split_caseids(splits_dir)
 
-    print("Reading gene expression data:")
-    df_normal, df_tumor = methods.read_gene_expression_data(path_genes)  # normal = 0, tumor = 1
-    df_patients = df_normal.append(df_tumor, sort=False)  # Merge normal data frame with tumor data frame
-
-    # divide dataset in training and test
-    y = np.array([int(x[-1:]) for x in df_patients.index])
-    X_train, X_test, y_train, y_test = train_test_split(df_patients, y, test_size=0.30, random_state=42, shuffle=True)
-
-
-    #X_train, X_test, y_train, y_test = get_split_data(path_genes)
+    print("\nReading gene expression data:")
+    X_train, X_test, y_train, y_test = methods.get_genes_split_data(path_genes, train_caseids, test_caseids)
 
     print("\nExploratory analysis:")
     # Compute number of samples
@@ -113,118 +91,63 @@ def main():
           f'>> Tumor samples = {len(X_test_1)}\n>> Normal samples = {len(X_test_0)}\n')
 
     # Compute number of features
-    n_features = len(df_patients.columns)
-    print(f">> Number of features (genes): {n_features}")
-    print(df_patients)
-    '''
+    n_features = len(X_train.columns)
+    print(f">> Number of features (genes): {n_features}\n")
+
     # Evaluate normality by skewness and kourt
-    n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2 = methods.eval_asymmetry_and_kurt(X_train)
+    methods.eval_asymmetry_and_kurt(X_train)
 
-    print("Percentage of genes with asymmetric distribution (verso sx): %.3f" % (100 * (n_skew_pos / n_features)))
-    print("Percentage of genes with asymmetric distribution (verso dx): %.3f" % (100 * (n_skew_neg / n_features)))
-    print("Percentage of genes with platykurtic distribution: %.3f" % (100 * (n_kurt_2 / n_features)))
-    print("Percentage of genes with leptokurtic distribution: %.3f" % (100 * (n_kurt_1 / n_features)))
-    '''
-
-    # Grafico a torta di skew and kurtosys
-    # TODO
-
-    # 2.a.2 Apply logarithmic transformation on gene expression data
-    #       Description : x = Log(x+1), where x is the gene expression value
-    print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
+    # Apply logarithmic transformation on gene expression data
+    # Description : x = Log(x+1), where x is the gene expression value
+    print(f'\nLogarithmic transformation on gene expression data:'
           f'\n>> Computing logarithmic transformation...')
     X_train = X_train.applymap(lambda x: math.log(x + 1, 10))
     X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
+    print(">> Done")
 
+    print("\nStandard scaler on gene expression data:")
     scaler = StandardScaler()
     train_scaled_features = scaler.fit_transform(X_train.values)
     X_train = pd.DataFrame(train_scaled_features, index=X_train.index, columns=X_train.columns)
-    print(X_train)
+    print(">> Training features scaled")
 
     test_scaled_features = scaler.transform(X_test.values)
     X_test = pd.DataFrame(test_scaled_features, index=X_test.index, columns=X_test.columns)
-    print(X_test)
+    print(">> Test features scaled")
 
-    # TODO: SMOTE
-    print("\n[SMOTE]")
+    # SMOTE
+    print("\nSMOTE")
+    print(">> Oversampling training data")
     sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
     X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
     print(Counter(y_train_sm))
     X_train_sm["target"] = np.array([str(x) for x in y_train_sm])
-    print(list(X_train_sm["target"]))
     X_train_sm.index = list(X_train_sm["target"])
     del X_train_sm["target"]
     print(X_train_sm)
 
     print("\nDifferentially gene expression analysis [DGEA]")
-    if args.method == 'pca':
-        genes_extraction_pca(X_train, params)
-    elif args.method == 'welch_t_pca':
-        genes_extraction_welch_t_pca(X_train, params)
-    elif args.method == 'welch_t':
-        genes_selection_welch_t(X_train, params)
+    if args.method == 'welch_t':
+        selected_genes = genes_selection_welch_t(X_train, params, welch_t_results_dir)
+        selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
+                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + \
+                              "_welch_t_selected_genes.txt"
+        selected_genes_path = os.path.join(welch_t_results_dir, selected_genes_file)
+        print("\nSaving selected gene features on disk...")
+        methods.save_selected_genes(X_train[selected_genes], X_test[selected_genes], selected_genes,
+                                    welch_t_results_dir, selected_genes_path)
     elif args.method == 'svm_t_rfe':
 
-        selected_genes = genes_selection_svm_t_rfe(X_train_sm, y_train_sm, params, results_dir, config_dir)
-
-        selected_genes_path = os.path.join(results_dir, "selected_genes.txt")
-        fp = open(selected_genes_path, "w")
-        for gene in selected_genes:
-            fp.write("%s\n" % gene)
-        fp.close()
-
-        for index, row in X_train[selected_genes].iterrows():
-            row = np.asarray(row)
-            print(row.shape)
-            np.save(os.path.join(extracted_features_training, index + '.npy'), row)
-
-        for index, row in X_test[selected_genes].iterrows():
-            row = np.asarray(row)
-            print(row.shape)
-            np.save(os.path.join(extracted_features_test, index + '.npy'), row)
-
-        tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
-        X_train_reduced = X_train_sm[selected_genes].to_numpy()
-        X_test_reduced = X_test[selected_genes].to_numpy()
-
-        pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
-        cv = KFold(n_splits=params['cv_grid_search_acc'])
-        clf = GridSearchCV(estimator=pipe_grid, param_grid=tuned_parameters, scoring='accuracy', cv=cv, n_jobs=-1, refit=True)
-        clf.fit(X_train_reduced, y_train_sm)
-        pred = clf.predict(X_test_reduced)
-        print("accuracy= %f" % accuracy_score(y_test, pred))
-        average_precision = average_precision_score(y_test, pred, pos_label=0)
-        precision = precision_score(y_test, pred, average='binary', pos_label=0)
-        recall = recall_score(y_test, pred, average='binary', pos_label=0)
-        sensitivity = sensitivity_score(y_test, pred, average='binary', pos_label=0)
-        specificity = specificity_score(y_test, pred, average='binary', pos_label=0)
-        print("\npos_label = 0")
-        print('Average precision-recall score: %f' % average_precision)
-        print('Precision score: %f' % precision)
-        print('Recall score: %f' % recall)
-        print('sensitivity: %f' % sensitivity)
-        print('specificity: %f' % specificity)
-
-        average_precision_1 = average_precision_score(y_test, pred, pos_label=1)
-        precision_1 = precision_score(y_test, pred, average='binary', pos_label=1)
-        recall_1 = recall_score(y_test, pred, average='binary', pos_label=1)
-        sensitivity_1 = sensitivity_score(y_test, pred, average='binary', pos_label=1)
-        specificity_1 = specificity_score(y_test, pred, average='binary', pos_label=1)
-        print("\npos_label = 1")
-        print('Average precision-recall score: %f' % average_precision_1)
-        print('Precision score: %f' % precision_1)
-        print('Recall score: %f' % recall_1)
-        print('sensitivity: %f' % sensitivity_1)
-        print('specificity: %f' % specificity_1)
-
-        print(classification_report_imbalanced(y_test, pred))
-        plot_confusion_matrix(clf, X_test_reduced, y_test)
-        plt.show()
-        plot_roc_curve(clf, X_test_reduced, y_test)
-        plt.show()
-
+        selected_genes = genes_selection_svm_t_rfe(X_train_sm, y_train_sm, params, svm_t_rfe_results_dir, config_dir)
+        selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
+                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + \
+                              "_svm_t_rfe_selected_genes.txt"
+        selected_genes_path = os.path.join(svm_t_rfe_results_dir, selected_genes_file)
+        print("\nSaving selected gene features on disk...")
+        methods.save_selected_genes(X_train[selected_genes], X_test[selected_genes], selected_genes,
+                                    svm_t_rfe_results_dir, selected_genes_path)
     else:
-        sys.stderr.write("Invalid value for <feature extraction method> in config file")
+        sys.stderr.write("Invalid value for <feature extraction method>")
         exit(1)
 
 

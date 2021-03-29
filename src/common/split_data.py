@@ -53,13 +53,12 @@ def read_split_data_from_files(lookup_dir):
     return X_train, X_test, y_train, y_test
 
 
-def __get_split_caseids():
+def __get_split_caseids(lookup_dir):
     """
         Description: Private function. Get train and test splits of caseids saved in 'assets\train_test_split' folder.
         :return: numpy arrays of caseids of train and test split.
     """
     print('>> Retrieving split caseids...')
-    lookup_dir = Path('') / '..' / 'assets' / 'data_splits'
     file_path_train = os.path.join(lookup_dir, 'train_caseids.npy')
     file_path_test = os.path.join(lookup_dir, 'test_caseids.npy')
     train_caseids = np.load(file_path_train)
@@ -68,7 +67,7 @@ def __get_split_caseids():
     return train_caseids, test_caseids
 
 
-def get_split_data(lookup_dir, path_to_save=None):
+def get_split_data(lookup_dir, splits_dir, path_to_save=None):
     """
         Description: Retrieve split data according to lists of caseids saved in 'assets\train_test_split' folder.
         :param lookup_dir: lookup directory with data to be split.
@@ -86,7 +85,7 @@ def get_split_data(lookup_dir, path_to_save=None):
     y_test = []
 
     # get splitted caseids
-    train_caseids, test_caseids = __get_split_caseids()
+    train_caseids, test_caseids = __get_split_caseids(splits_dir)
 
     # get data with caseid and label
     print('>> Retrieving data based on caseid splits...')
@@ -129,14 +128,16 @@ def __split_caseids(lookup_dir, test_size, path_to_save):
     labels = []
     for np_file in os.listdir(lookup_dir):
         filename = os.path.splitext(np_file)[0]
-        caseids.append(filename[:-2])
+        caseids.append(filename)
         labels.append(filename[-1])
 
+    '''
     # check if there are duplicates
     duplicates = [k for k, v in Counter(caseids).items() if v > 1]
     if len(duplicates) >= 1:
         print(f"error: found {len(duplicates)} duplicated caseids: {duplicates}")
         exit()
+        '''
 
     print('>> Splitting caseids...')
     # split train and test

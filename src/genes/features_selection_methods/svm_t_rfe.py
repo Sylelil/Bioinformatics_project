@@ -21,8 +21,6 @@ from sklearn.svm import SVC
 from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
-
-
 from . import common
 
 
@@ -142,7 +140,6 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
     pbar = tqdm(desc=">> Ranking genes...", total=df_array.shape[1], file=sys.stdout)
     while df_array.shape[1] > 0:
         # ricerca del miglior C
-
         if perform_grid_search:
             pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
             cv = KFold(n_splits=params['cv_grid_search_rank'])
@@ -157,23 +154,6 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
             clf = SVC(kernel='linear', C=C)
             clf.fit(df_array, y)
             weights = clf.coef_[0]
-
-        '''
-        if perform_grid_search:
-            pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
-            cv = KFold(n_splits=params['cv_grid_search_rank'])
-            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', n_jobs=-1, cv=cv,
-                                refit=True)
-            grid = grid.fit(df_array, y)
-            C = grid.best_params_['svm__C']
-            c_values.append(C)
-        else:
-            C = c_values[i]
-        pipe = Pipeline([('svm', SVC(kernel='linear', C=C))])
-        pipe = pipe.fit(df_array, y)
-        model = pipe.named_steps['svm']
-        weights = model.coef_[0]
-        '''
 
         ranking_scores = []
         weights_norm = norm(weights)
@@ -256,6 +236,6 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         global_train_std = std(train_outer_results)
         accuracy.append(global_acc)
         standard_deviation.append(global_std)
-        print("test accuracy = " + str(global_acc) + " (" + str(global_std) + ")")
-        print("train accuracy = " + str(global_train_acc) + " (" + str(global_train_std) + ")")
+        print("\ntest accuracy = " + str(global_acc) + " (" + str(global_std) + ")")
+        print("train accuracy = " + str(global_train_acc) + " (" + str(global_train_std) + ")\n")
     return accuracy

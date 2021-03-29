@@ -2,6 +2,8 @@ import configparser
 import os
 import statistics
 import sys
+from pathlib import Path
+
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -10,6 +12,28 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from tqdm import tqdm
 from scipy import stats
+
+
+def get_genes_split_data(lookup_dir, train_caseids, test_caseids):
+    """
+        Description: Retrieve split data according to lists of caseids saved in 'assets\data_splits' folder.
+        :param lookup_dir: lookup directory with data to be split.
+        :param path_to_save: directory for saving data (default=None).
+        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
+    """
+
+    if not os.path.exists(lookup_dir):
+        print("%s not existing." % lookup_dir)
+        exit()
+
+    df = read_gene_expression_data(lookup_dir)
+    X_train = df.loc[train_caseids]
+    X_test = df.loc[test_caseids]
+    y_train = np.array([int(x[-1:]) for x in train_caseids])
+    y_test = np.array([int(x[-1:]) for x in test_caseids])
+    print('>> Done')
+
+    return X_train, X_test, y_train, y_test
 
 
 def read_gene_expression_data(path):
@@ -25,7 +49,8 @@ def read_gene_expression_data(path):
                 data_frame_0 = data_frame_0.append(patient_df)
             else:
                 data_frame_1 = data_frame_1.append(patient_df)
-    return data_frame_0, data_frame_1
+    df_patients = data_frame_0.append(data_frame_1, sort=False)  # Merge normal data frame with tumor data frame
+    return df_patients
 
 
 def eval_asymmetry_and_kurt(df):
@@ -34,7 +59,7 @@ def eval_asymmetry_and_kurt(df):
     n_kurt_1 = 0
     n_kurt_2 = 0
 
-    for gene in tqdm(df.columns, desc=">> Evaluate asymmetry and kurt...", file=sys.stdout):
+    for gene in tqdm(df.columns, desc="Evaluate asymmetry and kurt...", file=sys.stdout):
         if stats.skew(df[gene]) > 0.5:
             n_skew_pos += 1
         elif stats.skew(df[gene]) < -0.5:
@@ -44,26 +69,23 @@ def eval_asymmetry_and_kurt(df):
         elif stats.kurtosis(df[gene]) < 0:
             n_kurt_2 += 1
 
+    print(">> Percentage of genes with asymmetric distribution (verso sx): %.3f" % (100 * (n_skew_pos / len(df.columns))))
+    print(">> Percentage of genes with asymmetric distribution (verso dx): %.3f" % (100 * (n_skew_neg / len(df.columns))))
+    print(">> Percentage of genes with platykurtic distribution: %.3f" % (100 * (n_kurt_2 / len(df.columns))))
+    print(">> Percentage of genes with leptokurtic distribution: %.3f" % (100 * (n_kurt_1 / len(df.columns))))
     return n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2
 
 
-def read_config_file(config_file_path, features_extraction_method):
+def read_config_file(config_file_path, section):
     params = {}
     config = configparser.ConfigParser()
     config.read(config_file_path)
 
-    if features_extraction_method == 'pca':
-        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-
-    elif features_extraction_method == 'welch_t_pca':
-        params['alpha'] = config.getfloat('welch_t_test', 'alpha')
-        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-
-    elif features_extraction_method == 'welch_t':
+    if section == 'welch_t':
         params['alpha'] = config.getfloat('welch_t_test', 'alpha')
 
-    elif features_extraction_method == 'svm_t_rfe':
-        params['alpha'] = config.getfloat('welch_t_test', 'alpha')
+    elif section == 'svm_t_rfe':
+        params['alpha'] = config.getfloat('svm_t_rfe', 'alpha')
         params['theta'] = config.getfloat('svm_t_rfe', 'theta')
         params['cv_grid_search_rank'] = config.getint('svm_t_rfe', 'cv_grid_search_rank')
         params['cv_grid_search_acc'] = config.getint('svm_t_rfe', 'cv_grid_search_acc')
@@ -75,11 +97,57 @@ def read_config_file(config_file_path, features_extraction_method):
         else:
             sys.stderr.write("Invalid value for <kernel> in config file")
             exit(1)
+
+    elif section == 'svm':
+        params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
     else:
-        sys.stderr.write("Invalid value for <feature extraction method> in config file")
+        sys.stderr.write("Invalid value for <section> in config file")
         exit(1)
 
     return params
+
+
+def load_selected_genes(selected_features_dir):
+    X = []
+    y = []
+    for patient_file in tqdm(os.listdir(selected_features_dir), desc=">> Reading selected genes...", file=sys.stdout):
+        patient_features = np.load(os.path.join(selected_features_dir, patient_file))
+        case_id = os.path.splitext(patient_file)[0]
+        target = case_id[-1:]
+        X.append(patient_features)
+        y.append(int(target))
+
+    return X, y
+
+
+def save_selected_genes(X_train, X_test, selected_genes, results_dir, selected_genes_path):
+
+    fp = open(selected_genes_path, "w")
+    for gene in selected_genes:
+        fp.write("%s\n" % gene)
+    fp.close()
+
+    if not os.path.exists(os.path.join(results_dir, Path('extracted_features'))):
+        os.mkdir(os.path.join(results_dir, Path('extracted_features')))
+
+    extracted_features_training = os.path.join(results_dir, Path('selected_features') / 'training')
+    if not os.path.exists(extracted_features_training):
+        os.mkdir(extracted_features_training)
+
+    extracted_features_test = os.path.join(results_dir, Path('selected_features') / 'test')
+    if not os.path.exists(extracted_features_test):
+        os.mkdir(extracted_features_test)
+
+    for index, row in X_train[selected_genes].iterrows():
+        row = np.asarray(row)
+        np.save(os.path.join(extracted_features_training, index + '.npy'), row)
+
+    for index, row in X_test[selected_genes].iterrows():
+        row = np.asarray(row)
+        np.save(os.path.join(extracted_features_test, index + '.npy'), row)
+
+    print(">> training features saved to " + extracted_features_training)
+    print(">> testing features saved to " + extracted_features_test)
 
 
 def tsne_pca(X_train, y_train):

@@ -26,6 +26,8 @@ from genes.features_selection_methods.welch_t_pca import genes_extraction_welch_
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from src.common.split_data import get_split_data
+
 
 def main():
     # Parse arguments from command line
@@ -86,19 +88,17 @@ def main():
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
+
     print("Reading gene expression data:")
     df_normal, df_tumor = methods.read_gene_expression_data(path_genes)  # normal = 0, tumor = 1
     df_patients = df_normal.append(df_tumor, sort=False)  # Merge normal data frame with tumor data frame
 
-    #df_normal.to_csv(os.path.join(path_to_csv_normal, "normal.csv"))
-    #df_tumor.to_csv(os.path.join(path_to_csv_tumor, "tumor.csv"))
-
-    #with open(os.path.join(path_to_csv_normal, "normal.txt"), 'w') as outfile:
-    #    df_normal.to_string(outfile)
-
     # divide dataset in training and test
     y = np.array([int(x[-1:]) for x in df_patients.index])
     X_train, X_test, y_train, y_test = train_test_split(df_patients, y, test_size=0.30, random_state=42, shuffle=True)
+
+
+    #X_train, X_test, y_train, y_test = get_split_data(path_genes)
 
     print("\nExploratory analysis:")
     # Compute number of samples

@@ -115,16 +115,13 @@ def get_split_data(lookup_dir, path_to_save=None):
     return X_train, X_test, y_train, y_test
 
 
-
-def __split_caseids(lookup_dir, test_size):
+def __split_caseids(lookup_dir, test_size, path_to_save):
     """
         Description: Private function. Split caseids into random train, test subsets according to specified sizes with stratification.
         Save splitted caseids into three files in 'assets\train_test_split' folder.
         :param lookup_dir: lookup directory with data to be split.
         :param test_size: float or int size of test subset.
     """
-
-    path_to_save = Path('') / '..' / 'assets' / 'data_splits'
 
     print('>> Reading data...')
     # read case ids and labels of all samples
@@ -144,7 +141,7 @@ def __split_caseids(lookup_dir, test_size):
     print('>> Splitting caseids...')
     # split train and test
     caseids_train, caseids_test, _, _ = train_test_split(caseids, labels, test_size=test_size,
-                                                                            stratify=labels, random_state=42)
+                                                                          stratify=labels, random_state=42)
 
     # save in files
     print(f'>> Saving splits in {path_to_save} directory...')
@@ -152,37 +149,3 @@ def __split_caseids(lookup_dir, test_size):
     np.save(os.path.join(path_to_save, 'test_caseids.npy'), caseids_test)
     print('>> Done')
 
-
-def main():
-    # Parse arguments from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dir',
-                        help='Lookup directory with data of all patients',
-                        required=True,
-                        type=str)
-    parser.add_argument('--testsizeabsolute',
-                        help='Size of test split as number of samples',
-                        required=False,
-                        type=int,
-                        default=None)
-    parser.add_argument('--testsizepercent',
-                        help='Size of test split as percentage',
-                        required=False,
-                        type=float,
-                        default=None)
-    args = parser.parse_args()
-
-    # get int or float test size from arguments
-    if args.testsizeabsolute > 0:
-        test_size = args.testsizeabsolute
-    elif args.testsizepercent > 0:
-        test_size = args.testsizepercent
-    else:
-        raise argparse.ArgumentTypeError('Argument error: insert valid --testsizeabsolute or --testsizepercent')
-
-    # split caseids and save on file:
-    __split_caseids(args.dir, test_size)
-
-
-if __name__ == '__main__':
-    main()

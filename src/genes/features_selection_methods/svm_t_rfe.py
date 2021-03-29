@@ -22,6 +22,7 @@ from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, Stratified
 import matplotlib.pyplot as plt
 from numpy import mean, std
 
+
 from . import common
 
 
@@ -79,12 +80,6 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     selected_genes, selected_t_statistics = map(list, zip(*selected_zipped))  # unzip and return two lists
     print(f'>> Number of most significant genes: {len(selected_genes)}')
     df_reduced = df[selected_genes]
-
-    # 2.a.2 Apply logarithmic transformation on gene expression data
-    #       Description : x = Log(x+1), where x is the gene expression value
-    print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
-          f'\n>> Computing logarithmic transformation...')
-    df_reduced = df_reduced.applymap(lambda x: math.log(x + 1, 10))
 
     # svm t rfe
     print("\n[DGEA svm-t-rfe]:")

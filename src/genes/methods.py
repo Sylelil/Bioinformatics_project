@@ -127,8 +127,8 @@ def save_selected_genes(X_train, X_test, selected_genes, results_dir, selected_g
         fp.write("%s\n" % gene)
     fp.close()
 
-    if not os.path.exists(os.path.join(results_dir, Path('extracted_features'))):
-        os.mkdir(os.path.join(results_dir, Path('extracted_features')))
+    if not os.path.exists(os.path.join(results_dir, Path('selected_features'))):
+        os.mkdir(os.path.join(results_dir, Path('selected_features')))
 
     extracted_features_training = os.path.join(results_dir, Path('selected_features') / 'training')
     if not os.path.exists(extracted_features_training):

@@ -9,7 +9,7 @@ def read_slides_info(lookup_dir):
     """
         Description: read directory containing Whole slide images
         :param lookup_dir: path to directory
-        :return: list of dictionaries containing slides info, #TODO
+        :return: list of dictionaries containing slides info
     """
     slides_info = []
 

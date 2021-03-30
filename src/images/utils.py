@@ -127,7 +127,7 @@ def np_info(np_arr, name=None, elapsed=None):
     mean = np_arr.mean()
     is_binary = "T" if (np.unique(np_arr).size == 2) else "F"
     return "%-20s | Time: %-14s Min: %6.2f  Max: %6.2f  Mean: %6.2f  Binary: %s  Type: %-7s Shape: %s" % (
-            name, str(elapsed), min, max, mean, is_binary, np_arr.dtype, np_arr.shape)
+        name, str(elapsed), min, max, mean, is_binary, np_arr.dtype, np_arr.shape)
 
 
 def filter_rgb_to_grayscale(np_img, output_type="uint8"):
@@ -283,11 +283,11 @@ def filter_green(rgb, red_upper_thresh, green_lower_thresh, blue_lower_thresh, o
 
     result = ~(r & g & b)
     if output_type == "bool":
-      pass
+        pass
     elif output_type == "float":
-      result = result.astype(float)
+        result = result.astype(float)
     else:
-      result = result.astype("uint8") * 255
+        result = result.astype("uint8") * 255
 
     return result
 
@@ -324,75 +324,76 @@ def filter_green_pen(rgb, output_type="bool"):
              filter_green(rgb, red_upper_thresh=123, green_lower_thresh=122, blue_lower_thresh=136)
 
     if output_type == "bool":
-      pass
+        pass
     elif output_type == "float":
-      result = result.astype(float)
+        result = result.astype(float)
     else:
-      result = result.astype("uint8") * 255
+        result = result.astype("uint8") * 255
     return result
 
 
 def filter_blue(rgb, red_upper_thresh, green_upper_thresh, blue_lower_thresh, output_type="bool",
                 display_np_info=False):
-  """
-  Create a mask to filter out blueish colors, where the mask is based on a pixel being below a
-  red channel threshold value, below a green channel threshold value, and above a blue channel threshold value.
-  Args:
-    rgb: RGB image as a NumPy array.
-    red_upper_thresh: Red channel upper threshold value.
-    green_upper_thresh: Green channel upper threshold value.
-    blue_lower_thresh: Blue channel lower threshold value.
-    output_type: Type of array to return (bool, float, or uint8).
-    display_np_info: If True, display NumPy array info and filter time.
-  Returns:
-    NumPy array representing the mask.
-  """
-  if display_np_info:
-    t = Time()
-  r = rgb[:, :, 0] < red_upper_thresh
-  g = rgb[:, :, 1] < green_upper_thresh
-  b = rgb[:, :, 2] > blue_lower_thresh
-  result = ~(r & g & b)
-  if output_type == "bool":
-    pass
-  elif output_type == "float":
-    result = result.astype(float)
-  else:
-    result = result.astype("uint8") * 255
+    """
+    Create a mask to filter out blueish colors, where the mask is based on a pixel being below a
+    red channel threshold value, below a green channel threshold value, and above a blue channel threshold value.
+    Args:
+      rgb: RGB image as a NumPy array.
+      red_upper_thresh: Red channel upper threshold value.
+      green_upper_thresh: Green channel upper threshold value.
+      blue_lower_thresh: Blue channel lower threshold value.
+      output_type: Type of array to return (bool, float, or uint8).
+      display_np_info: If True, display NumPy array info and filter time.
+    Returns:
+      NumPy array representing the mask.
+    """
+    if display_np_info:
+        t = Time()
+    r = rgb[:, :, 0] < red_upper_thresh
+    g = rgb[:, :, 1] < green_upper_thresh
+    b = rgb[:, :, 2] > blue_lower_thresh
 
-  return result
+    result = ~(r & g & b)
+    if output_type == "bool":
+        pass
+    elif output_type == "float":
+        result = result.astype(float)
+    else:
+        result = result.astype("uint8") * 255
+
+    return result
 
 
 def filter_blue_pen(rgb, output_type="bool"):
-  """
-  Create a mask to filter out blue pen marks from a slide.
-  Args:
-    rgb: RGB image as a NumPy array.
-    output_type: Type of array to return (bool, float, or uint8).
-  Returns:
-    NumPy array representing the mask.
-  """
-  t = Time()
-  result = filter_blue(rgb, red_upper_thresh=60, green_upper_thresh=120, blue_lower_thresh=190) & \
-           filter_blue(rgb, red_upper_thresh=120, green_upper_thresh=170, blue_lower_thresh=200) & \
-           filter_blue(rgb, red_upper_thresh=175, green_upper_thresh=210, blue_lower_thresh=230) & \
-           filter_blue(rgb, red_upper_thresh=145, green_upper_thresh=180, blue_lower_thresh=210) & \
-           filter_blue(rgb, red_upper_thresh=37, green_upper_thresh=95, blue_lower_thresh=160) & \
-           filter_blue(rgb, red_upper_thresh=30, green_upper_thresh=65, blue_lower_thresh=130) & \
-           filter_blue(rgb, red_upper_thresh=130, green_upper_thresh=155, blue_lower_thresh=180) & \
-           filter_blue(rgb, red_upper_thresh=40, green_upper_thresh=35, blue_lower_thresh=85) & \
-           filter_blue(rgb, red_upper_thresh=30, green_upper_thresh=20, blue_lower_thresh=65) & \
-           filter_blue(rgb, red_upper_thresh=90, green_upper_thresh=90, blue_lower_thresh=140) & \
-           filter_blue(rgb, red_upper_thresh=60, green_upper_thresh=60, blue_lower_thresh=120) & \
-           filter_blue(rgb, red_upper_thresh=110, green_upper_thresh=110, blue_lower_thresh=175)
-  if output_type == "bool":
-    pass
-  elif output_type == "float":
-    result = result.astype(float)
-  else:
-    result = result.astype("uint8") * 255
+    """
+    Create a mask to filter out blue pen marks from a slide.
+    Args:
+      rgb: RGB image as a NumPy array.
+      output_type: Type of array to return (bool, float, or uint8).
+    Returns:
+      NumPy array representing the mask.
+    """
+    t = Time()
+    result = filter_blue(rgb, red_upper_thresh=60, green_upper_thresh=120, blue_lower_thresh=190) & \
+             filter_blue(rgb, red_upper_thresh=120, green_upper_thresh=170, blue_lower_thresh=200) & \
+             filter_blue(rgb, red_upper_thresh=175, green_upper_thresh=210, blue_lower_thresh=230) & \
+             filter_blue(rgb, red_upper_thresh=145, green_upper_thresh=180, blue_lower_thresh=210) & \
+             filter_blue(rgb, red_upper_thresh=37, green_upper_thresh=95, blue_lower_thresh=160) & \
+             filter_blue(rgb, red_upper_thresh=30, green_upper_thresh=65, blue_lower_thresh=130) & \
+             filter_blue(rgb, red_upper_thresh=130, green_upper_thresh=155, blue_lower_thresh=180) & \
+             filter_blue(rgb, red_upper_thresh=40, green_upper_thresh=35, blue_lower_thresh=85) & \
+             filter_blue(rgb, red_upper_thresh=30, green_upper_thresh=20, blue_lower_thresh=65) & \
+             filter_blue(rgb, red_upper_thresh=90, green_upper_thresh=90, blue_lower_thresh=140) & \
+             filter_blue(rgb, red_upper_thresh=60, green_upper_thresh=60, blue_lower_thresh=120) & \
+             filter_blue(rgb, red_upper_thresh=110, green_upper_thresh=110, blue_lower_thresh=175)
+    if output_type == "bool":
+        pass
+    elif output_type == "float":
+        result = result.astype(float)
+    else:
+        result = result.astype("uint8") * 255
 
-  return result
+    return result
 
 
 def filter_remove_small_objects(np_img, min_size=3000, avoid_overmask=False, overmask_thresh=95, output_type="uint8"):
@@ -471,19 +472,19 @@ def np_to_pil(np_img):
 
 
 def mask_percent(np_img):
-  """
+    """
   Determine the percentage of a NumPy array that is masked (how many of the values are 0 values).
   Args:
     np_img: Image as a NumPy array.
   Returns:
     The percentage of the NumPy array that is masked.
   """
-  if (len(np_img.shape) == 3) and (np_img.shape[2] == 3):
-    np_sum = np_img[:, :, 0] + np_img[:, :, 1] + np_img[:, :, 2]
-    mask_percentage = 100 - np.count_nonzero(np_sum) / np_sum.size * 100
-  else:
-    mask_percentage = 100 - np.count_nonzero(np_img) / np_img.size * 100
-  return mask_percentage
+    if (len(np_img.shape) == 3) and (np_img.shape[2] == 3):
+        np_sum = np_img[:, :, 0] + np_img[:, :, 1] + np_img[:, :, 2]
+        mask_percentage = 100 - np.count_nonzero(np_sum) / np_sum.size * 100
+    else:
+        mask_percentage = 100 - np.count_nonzero(np_img) / np_img.size * 100
+    return mask_percentage
 
 
 def display_img(np_img, text=None, size=48, color=(255, 0, 0),
@@ -587,18 +588,18 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Values in reference implementation for use with eigendecomposition approach, natural log,
     # and `light_intensity=240`.
-    #stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
-    #max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
+    # stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
+    # max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
 
     # SVD w/ log10, and `light_intensity=255`.
     stain_ref = (np.array([0.54598845, 0.322116, 0.72385198, 0.76419107, 0.42182333, 0.55879629])
-                 .reshape(3,2))
-    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2,1)
+                 .reshape(3, 2))
+    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2, 1)
 
     # Convert RGB to OD.
     # Note: The original paper used log10, and the reference implementation used the natural log.
-    #OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
-    OD = -np.log10(x/light_intensity + 1e-8)
+    # OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
+    OD = -np.log10(x / light_intensity + 1e-8)
 
     # Remove data with OD intensity less than beta.
     # I.e. remove transparent pixels.
@@ -608,14 +609,14 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Calculate eigenvectors.
     # Note: We can either use eigenvector decomposition, or SVD.
-    #eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
+    # eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
     U, s, V = np.linalg.svd(OD_thresh, full_matrices=False)
 
     # Extract two largest eigenvectors.
     # Note: We swap the sign of the eigvecs here to be consistent
     # with other implementations.  Both +/- eigvecs are valid, with
     # the same eigenvalue, so this is okay.
-    #top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
+    # top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
     top_eigvecs = V[0:2, :].T * -1  # shape (C, 2)
 
     # Project thresholded optical density values onto plane spanned by
@@ -628,21 +629,21 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Find robust extremes (a and 100-a percentiles) of the angle.
     min_angle = np.percentile(angles, alpha)
-    max_angle = np.percentile(angles, 100-alpha)
+    max_angle = np.percentile(angles, 100 - alpha)
 
     # Convert min/max vectors (extremes) back to optimal stains in OD space.
     # This computes a set of axes for each angle onto which we can project
     # the top eigenvectors.  This assumes that the projected values have
     # been normalized to unit length.
     extreme_angles = np.array(
-      [[np.cos(min_angle), np.cos(max_angle)],
-       [np.sin(min_angle), np.sin(max_angle)]]
+        [[np.cos(min_angle), np.cos(max_angle)],
+         [np.sin(min_angle), np.sin(max_angle)]]
     )  # shape (2,2)
     stains = np.dot(top_eigvecs, extreme_angles)  # shape (C, 2)
 
     # Merge vectors with hematoxylin first, and eosin second, as a heuristic.
     if stains[0, 0] < stains[0, 1]:
-      stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
+        stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
 
     # Calculate saturations of each stain.
     # Note: Here, we solve
@@ -667,35 +668,9 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # not return the correct values due to the initital values being outside of [0,255].
     # To fix this, we round to the nearest integer, and then clip to [0,255], which is the
     # same behavior as Matlab.
-    #x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
-    x_norm = 10**(-OD_norm) * light_intensity - 1e-8  # log10 approach
+    # x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
+    x_norm = 10 ** (-OD_norm) * light_intensity - 1e-8  # log10 approach
     x_norm = np.clip(np.round(x_norm), 0, 255).astype(np.uint8)
     x_norm = x_norm.astype(np.uint8)
-    x_norm = x_norm.T.reshape(h,w,c)
+    x_norm = x_norm.T.reshape(h, w, c)
     return x_norm
-
-
-def create_summary_pil_img(np_img, title_area_height, row_tile_size, col_tile_size, num_row_tiles, num_col_tiles):
-    """
-    reate a PIL summary image including top title area and right side and bottom padding.
-    Args:
-      np_img: Image as a NumPy array.
-      title_area_height: Height of the title area at the top of the summary image.
-      row_tile_size: The tile size in rows.
-      col_tile_size: The tile size in columns.
-      num_row_tiles: The number of row tiles.
-      num_col_tiles: The number of column tiles.
-    Returns:
-      Summary image as a PIL image. This image contains the image data specified by the np_img input and also has
-      potentially a top title area and right side and bottom padding.
-    """
-    r = row_tile_size * num_row_tiles + title_area_height
-    c = col_tile_size * num_col_tiles
-    summary_img = np.zeros([r, c, np_img.shape[2]], dtype=np.uint8)
-    # add gray edges so that tile text does not get cut off
-    summary_img.fill(120)
-    # color title area white
-    summary_img[0:title_area_height, 0:summary_img.shape[1]].fill(255)
-    summary_img[title_area_height:np_img.shape[0] + title_area_height, 0:np_img.shape[1]] = np_img
-    summary = np_to_pil(summary_img)
-    return summary

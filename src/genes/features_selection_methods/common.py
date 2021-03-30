@@ -1,7 +1,5 @@
-import os
 import statistics
 import sys
-
 import pandas as pd
 from tqdm import tqdm
 from scipy import stats

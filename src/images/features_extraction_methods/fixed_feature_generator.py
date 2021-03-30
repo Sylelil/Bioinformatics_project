@@ -1,25 +1,9 @@
-import random
-import sys
-
-import numpy
-import openslide
-import openslide.deepzoom
-from pathlib import Path
 import numpy as np
-from tqdm import tqdm
 import os
 import tensorflow as tf
-import tensorflow.keras
-
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.applications.resnet50 import ResNet50
-from PIL import Image
-import colorcorrect
-from colorcorrect.util import from_pil, to_pil
-from colorcorrect.algorithm import stretch
-
-import itertools
 import multiprocessing
 from openslide.deepzoom import DeepZoomGenerator
 from .. import utils
@@ -45,10 +29,8 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     #Qui si perde tempo - TODO: Da controllare :-)
     slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
     for coord in slide_tiles_coords:
-        #print(coord)
         tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
         np_tile = utils.normalize_staining(tile)
-        #print(np_tile.shape)
         tiles.append(np_tile)
 
     print(">> tiles loaded")

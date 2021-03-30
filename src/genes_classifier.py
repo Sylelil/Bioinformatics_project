@@ -46,8 +46,8 @@ def main():
     params = methods.read_config_file(args.cfg, args.classification_method)
 
     if args.classification_method == "svm":
-        training_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'training'
-        test_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'test'
+        training_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'numpy_train'
+        test_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'numpy_test'
         if not os.listdir(training_selected_genes_dir) or len(os.listdir(training_selected_genes_dir)) == 0:
             print("Directory " + str(training_selected_genes_dir) + " doesn't exists or is empty")
             exit(1)

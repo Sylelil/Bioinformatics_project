@@ -35,8 +35,6 @@ def main():
     normal_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'normal_coords'
     tumor_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'tumor_coords'
 
-    heatmap_dir = Path('results') / 'images' / 'masked_images' / 'heatmap'
-
     normal_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'img_tumor'
 
@@ -90,9 +88,6 @@ def main():
     if not os.path.exists(tumor_masked_images_dir):
         os.mkdir(tumor_masked_images_dir)
 
-    if not os.path.exists(heatmap_dir):
-        os.mkdir(heatmap_dir)
-
     if not os.path.exists(low_res_normal_images_dir):
         os.mkdir(low_res_normal_images_dir)
 
@@ -121,35 +116,19 @@ def main():
     tile_size = 224
     scale_factor = 32
     # Images preprocessing
-    '''
-    slide = {}
-    for s in tumor_slides_info:
-        if s['slide_name'] == "2a7bbafe-d499-4241-ba3d-a52ba0a5db3c_1":
-            slide = s
-            print("ok")
-            break
-
-    scaled_image, scaled_w, scaled_h = utils.from_wsi_to_scaled_pillow_image(slide['slide_path'], scale_factor)
-    print(scaled_h)
-    print(scaled_w)
-    preprocessing.apply_filters_to_image(slide, scaled_image, tumor_masked_images_dir)
-    preprocessing.select_tiles_with_tissue_from_slide(slide, tumor_masked_images_dir, tumor_selected_tiles_dir, tile_size, desired_magnification, scale_factor)
-
-    exit()
-    '''
 
     print("\nNormal images preprocessing:")
     preprocessing.preprocessing_images(normal_slides_info, selected_tiles_dir,
                                        os.path.join(results, "normal_filter_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
-                                       heatmap_dir, low_res_normal_images_dir, normal_masked_images_dir)
+                                       low_res_normal_images_dir, normal_masked_images_dir)
 
     print("\nTumor images preprocessing:")
 
     preprocessing.preprocessing_images(tumor_slides_info, selected_tiles_dir,
                                        os.path.join(results, "tumor_filter_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
-                                       heatmap_dir, low_res_tumor_images_dir, tumor_masked_images_dir)
+                                       low_res_tumor_images_dir, tumor_masked_images_dir)
 
     normal_slides_info.extend(tumor_slides_info)
     train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(normal_slides_info, splits_dir)

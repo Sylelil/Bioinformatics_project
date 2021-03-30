@@ -47,8 +47,6 @@ def main():
     # Read features from file
     tile_features_train, tile_features_test, gene_features_train, gene_features_test = feature_concatenation.read_extracted_features()
 
-    # TODO normalizzare geni e immagini prima di concatenarli?
-
     # concatenation of tile and gene features:
     if args.method == 'nn':
         gene_copy_ratio = 20 # TODO vedere se 20 va bene (tiles dim: 2048, genes dim: 100->100*20=2000)
@@ -81,6 +79,8 @@ def main():
     search.fit(X_train, y_train)
     print("Best parameter (CV score=%0.3f):" % search.best_score_)
     print(search.best_params_)
+
+    # TODO NESTED CV
 
     y_pred = search.predict(X_test)
 

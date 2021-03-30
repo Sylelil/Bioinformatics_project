@@ -71,12 +71,8 @@ def main():
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
-    # get splitted caseids
-    print("Getting splitted caseids:")
-    train_caseids, test_caseids = split_data.__get_split_caseids(splits_dir)
-
     print("\nReading gene expression data:")
-    X_train, X_test, y_train, y_test = methods.get_genes_split_data(path_genes, train_caseids, test_caseids)
+    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(path_genes, splits_dir)
 
     print("\nExploratory analysis:")
     # Compute number of samples

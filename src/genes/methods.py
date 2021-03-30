@@ -14,28 +14,6 @@ from tqdm import tqdm
 from scipy import stats
 
 
-def get_genes_split_data(lookup_dir, train_caseids, test_caseids):
-    """
-        Description: Retrieve split data according to lists of caseids saved in 'assets\data_splits' folder.
-        :param lookup_dir: lookup directory with data to be split.
-        :param path_to_save: directory for saving data (default=None).
-        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
-    """
-
-    if not os.path.exists(lookup_dir):
-        print("%s not existing." % lookup_dir)
-        exit()
-
-    df = read_gene_expression_data(lookup_dir)
-    X_train = df.loc[train_caseids]
-    X_test = df.loc[test_caseids]
-    y_train = np.array([int(x[-1:]) for x in train_caseids])
-    y_test = np.array([int(x[-1:]) for x in test_caseids])
-    print('>> Done')
-
-    return X_train, X_test, y_train, y_test
-
-
 def read_gene_expression_data(path):
     data_frame_0 = pd.DataFrame()
     data_frame_1 = pd.DataFrame()

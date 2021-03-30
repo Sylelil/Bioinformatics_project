@@ -5,6 +5,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 import pickle
 from collections import Counter
+from src.genes.methods import read_gene_expression_data
 
 
 def save_split_data_files(X_train, X_test, y_train, y_test, path_to_save):
@@ -67,12 +68,13 @@ def __get_split_caseids(lookup_dir):
     return train_caseids, test_caseids
 
 
-def get_split_data(lookup_dir, splits_dir, path_to_save=None):
+def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
     """
-        Description: Retrieve split data according to lists of caseids saved in 'assets\train_test_split' folder.
+        Description: Retrieve split data according to lists of caseids saved in splits_dir.
         :param lookup_dir: lookup directory with data to be split.
+        :param splits_dir: directory with lists of splits.
         :param path_to_save: directory for saving data (default=None).
-        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
+        :return: X_train, X_test, y_train, y_test: train and test datasets (lists) and labels (numpy arrays)
     """
 
     if not os.path.exists(lookup_dir):
@@ -84,28 +86,57 @@ def get_split_data(lookup_dir, splits_dir, path_to_save=None):
     y_train = []
     y_test = []
 
-    # get splitted caseids
+    # get split caseids
     train_caseids, test_caseids = __get_split_caseids(splits_dir)
 
     # get data with caseid and label
     print('>> Retrieving data based on caseid splits...')
     for np_file in os.listdir(lookup_dir):
         file_path = os.path.join(lookup_dir, np_file)
-        data = np.load(file_path)
+        data = np.load(file_path) # TODO SLIDE INFO
         filename = os.path.splitext(np_file)[0]
         caseid = filename[:-2]
         label = filename[-1]
 
         # add data to corresponding split
-        if caseid in train_caseids:
+        if filename in train_caseids:
             X_train.append(data)
             y_train.append(label)
-        elif caseid in test_caseids:
+        elif filename in test_caseids:
             X_test.append(data)
             y_test.append(label)
         else:
             print(f"error: caseid {caseid} not found in splits.")
             exit()
+    print('>> Done')
+
+    if path_to_save:
+        save_split_data_files(X_train, X_test, y_train, y_test, path_to_save)
+
+    return X_train, X_test, y_train, y_test
+
+
+def get_genes_split_data(lookup_dir, splits_dir, path_to_save=None):
+    """
+        Description: Retrieve split data according to lists of caseids saved in splits_dir.
+        :param lookup_dir: lookup directory with data to be split.
+        :param path_to_save: directory for saving data (default=None).
+        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
+    """
+
+    if not os.path.exists(lookup_dir):
+        print("%s not existing." % lookup_dir)
+        exit()
+
+    # get split caseids
+    train_caseids, test_caseids = __get_split_caseids(splits_dir)
+
+    # get data with caseid and label
+    df = read_gene_expression_data(lookup_dir)
+    X_train = df.loc[train_caseids]
+    X_test = df.loc[test_caseids]
+    y_train = np.array([int(x[-1:]) for x in train_caseids])
+    y_test = np.array([int(x[-1:]) for x in test_caseids])
     print('>> Done')
 
     if path_to_save:

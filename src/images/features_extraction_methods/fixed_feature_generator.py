@@ -25,7 +25,7 @@ from openslide.deepzoom import DeepZoomGenerator
 from .. import utils
 
 
-def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_save, selected_tiles_dir, rand_tiles_dir):
+def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_save, selected_tiles_dir):
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")
     model = ResNet50(weights='imagenet', include_top=True)
@@ -54,20 +54,6 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     print(">> tiles loaded")
     print("Num tiles = %d" % len(tiles))
 
-    if rand_tiles_dir is not None:
-        dir_to_save = os.path.join(rand_tiles_dir, slide_info['slide_name'])
-        if not os.path.exists(dir_to_save):
-            os.mkdir(dir_to_save)
-
-        rand_tiles_indexes = [random.randint(0, len(tiles)-1) for _ in range(0, 10)]
-        #print(rand_tiles_indexes)
-        for index in rand_tiles_indexes:
-            np_tile = tiles[index]
-            coord = slide_tiles_coords[index]
-            #print(coord)
-            pil_tile = utils.np_to_pil(np_tile)
-            pil_tile.save(os.path.join(dir_to_save, str(coord[0]) + "_" + str(coord[1]) + ".png"))
-
     tiles = np.asarray(tiles)
     print(tiles.shape)
 
@@ -83,50 +69,19 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
     X = np.concatenate([slide_tiles_coords, X], axis=1)
     np.save(os.path.join(path_to_save, slide_info['slide_name'] + '.npy'), X)
 
-'''
-def extract_tile_features(level, coord, zoom):
-    print(f"Extracting coords {coord} of {zoom.tile_count}...")
 
-    tile = zoom.get_tile(level, coord)
-    # tile = Image.fromarray(tile)
-    # if numpy.average(numpy.array(tile)) != 0:
-    try:
-        tile = to_pil(stretch(from_pil(tile)))
-    except:
-        print("error in stretching")
-    tile = np.array(tile)
-    return tile
-
-
-def get_all_slides(lookup_dir):
-    images_list = []  # formato: {"dir": abc/def/sani/ecc, "file": file.svs
-
-    for _dir in os.listdir(lookup_dir):
-        current_dir = os.path.join(lookup_dir, _dir)
-        if os.path.isdir(current_dir):
-            for file in os.listdir(current_dir):
-                if file.endswith('.svs'):
-                    svs_dict = {
-                        'dir': current_dir,
-                        'file': file
-                    }
-                    images_list.append(svs_dict)
-    return images_list
-'''
-
-
-def save_numpy_features_range(start_ind, end_ind, slides_info, tile_size, images_save_dir, desired_magnification, selected_tiles_dir, rand_tiles_dir):
+def save_numpy_features_range(start_ind, end_ind, slides_info, tile_size, images_save_dir, desired_magnification, selected_tiles_dir):
     for slide_num in range(start_ind - 1, end_ind):
         if os.path.isfile(os.path.join(images_save_dir, slides_info[slide_num]['slide_name'] + '.npy')):
             print("Skipping slide " + slides_info[slide_num]['slide_name'])
         else:
             save_numpy_features(slides_info[slide_num], tile_size,
-                                desired_magnification, images_save_dir, selected_tiles_dir, rand_tiles_dir)
+                                desired_magnification, images_save_dir, selected_tiles_dir)
     return start_ind, end_ind
 
 
 def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir,
-                                     tile_size, desired_magnification, rand_tiles_dir):
+                                     tile_size, desired_magnification):
     timer = utils.Time()
 
     # how many processes to use
@@ -148,7 +103,7 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
         end_index = num_process * images_per_process
         start_index = int(start_index)
         end_index = int(end_index)
-        tasks.append((start_index, end_index, images_info, tile_size, numpy_features_dir, desired_magnification, selected_tiles_dir, rand_tiles_dir))
+        tasks.append((start_index, end_index, images_info, tile_size, numpy_features_dir, desired_magnification, selected_tiles_dir))
         if start_index == end_index:
             print("Task #" + str(num_process) + ": Process slide " + str(start_index))
         else:
@@ -169,7 +124,7 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
 
 
-def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir, tile_size, desired_magnification, use_gpu, path_rand_tiles=None):
+def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir, tile_size, desired_magnification, use_gpu):
 
     if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
         if use_gpu:
@@ -185,8 +140,8 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir,
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
                     save_numpy_features(slide_info, tile_size,
-                                        desired_magnification, numpy_features_dir, selected_tiles_dir, path_rand_tiles)
+                                        desired_magnification, numpy_features_dir, selected_tiles_dir)
         else:
             with tf.device('/cpu:0'):
                 multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir,
-                                                 tile_size, desired_magnification, path_rand_tiles)
+                                                 tile_size, desired_magnification)

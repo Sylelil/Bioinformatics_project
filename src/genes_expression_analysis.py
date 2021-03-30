@@ -72,7 +72,8 @@ def main():
     params = methods.read_config_file(args.cfg, args.method)
 
     print("\nReading gene expression data:")
-    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(path_genes, splits_dir)
+    df = methods.read_gene_expression_data(path_genes)
+    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, splits_dir)
 
     print("\nExploratory analysis:")
     # Compute number of samples

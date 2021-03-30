@@ -32,7 +32,7 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scal
     '''
 
     # Select tiles with tissue
-    if len(os.listdir(selected_tiles_dir)) == 0 or len(os.listdir(selected_tiles_dir)) < len(slides_info):
+    if len(os.listdir(selected_tiles_dir)) == 0: # or len(os.listdir(selected_tiles_dir)) < len(slides_info):
 
         print(">> Select from images the tiles with tissue:")
         multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir,

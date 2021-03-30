@@ -5,8 +5,6 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 import pickle
 from collections import Counter
-from src.genes.methods import read_gene_expression_data
-from src.images.slide_info import read_slides_info
 
 
 def save_split_data_files(X_train, X_test, y_train, y_test, path_to_save):
@@ -69,7 +67,7 @@ def __get_split_caseids(lookup_dir):
     return train_caseids, test_caseids
 
 
-def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
+def get_images_split_data(slides_info, splits_dir, path_to_save=None):
     """
         Description: Retrieve split data according to lists of caseids saved in splits_dir.
         :param lookup_dir: lookup directory with data to be split.
@@ -77,10 +75,6 @@ def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
         :param path_to_save: directory for saving data (default=None).
         :return: X_train, X_test, y_train, y_test: train and test datasets (lists)
     """
-
-    if not os.path.exists(lookup_dir):
-        print("%s not existing." % lookup_dir)
-        exit()
 
     X_train = []
     X_test = []
@@ -92,7 +86,6 @@ def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
 
     # get data with caseid and label
     print('>> Retrieving data based on caseid splits...')
-    slides_info = read_slides_info(lookup_dir)
     for slide in slides_info:
         filename = slide['slide_name']
         label = filename[-1]
@@ -115,7 +108,7 @@ def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
     return X_train, X_test, y_train, y_test
 
 
-def get_genes_split_data(lookup_dir, splits_dir, path_to_save=None):
+def get_genes_split_data(df, splits_dir, path_to_save=None):
     """
         Description: Retrieve split data according to lists of caseids saved in splits_dir.
         :param lookup_dir: lookup directory with data to be split.
@@ -123,15 +116,10 @@ def get_genes_split_data(lookup_dir, splits_dir, path_to_save=None):
         :return: X_train, X_test, y_train, y_test: train and test datasets and labels
     """
 
-    if not os.path.exists(lookup_dir):
-        print("%s not existing." % lookup_dir)
-        exit()
-
     # get split caseids
     train_caseids, test_caseids = __get_split_caseids(splits_dir)
 
     # get data with caseid and label
-    df = read_gene_expression_data(lookup_dir)
     X_train = df.loc[train_caseids]
     X_test = df.loc[test_caseids]
     y_train = np.array([int(x[-1:]) for x in train_caseids])

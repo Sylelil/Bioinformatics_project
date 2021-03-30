@@ -25,7 +25,6 @@ colab/whoosh_index/
 # Documentation build
 docs/build
 scripts/venv
-venv/
 .idea/
 datasets/
 results/

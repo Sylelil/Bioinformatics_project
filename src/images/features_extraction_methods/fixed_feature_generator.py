@@ -29,7 +29,7 @@ from src.images.utils import Time
 def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_save, selected_tiles_dir, rand_tiles_dir):
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")
-    model = ResNet50(weights='imagenet', include_top=True)
+    model = ResNet50(weights='imagenet', include_top=False)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
 
     print(">> Pretrained model loaded")
@@ -43,7 +43,7 @@ def save_numpy_features(slide_info, tile_size, desired_magnification, path_to_sa
 
     tiles = []
     print(">> Getting tiles..")
-    #Qui si perde tempo - TODO: Da controllare :-)
+    # TODO Qui si perde tempo - Da controllare :-)
     slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
     for coord in slide_tiles_coords:
         #print(coord)

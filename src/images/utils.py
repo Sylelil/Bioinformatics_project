@@ -309,11 +309,13 @@ def display_img(np_img, text=None, size=48, color=(255, 0, 0),
         result = result.convert('RGB')
     draw = ImageDraw.Draw(result)
     if text is not None:
-        font = ImageFont.truetype("arial.ttf", size)
+        # arial si spacca male al di fuori di Windows
+        # font = ImageFont.truetype("arial.ttf", size)
+
         if bg:
-            (x, y) = draw.textsize(text, font)
+            (x, y) = draw.textsize(text) #, font)
             draw.rectangle([(0, 0), (x + 5, y + 4)], fill=background, outline=border)
-        draw.text((2, 0), text, color, font=font)
+        draw.text((2, 0), text, color) #, font=font)
     result.show()
 
 

@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import pickle
 from collections import Counter
 from src.genes.methods import read_gene_expression_data
+from src.images.slide_info import read_slides_info
 
 
 def save_split_data_files(X_train, X_test, y_train, y_test, path_to_save):
@@ -74,7 +75,7 @@ def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
         :param lookup_dir: lookup directory with data to be split.
         :param splits_dir: directory with lists of splits.
         :param path_to_save: directory for saving data (default=None).
-        :return: X_train, X_test, y_train, y_test: train and test datasets (lists) and labels (numpy arrays)
+        :return: X_train, X_test, y_train, y_test: train and test datasets (lists)
     """
 
     if not os.path.exists(lookup_dir):
@@ -91,22 +92,20 @@ def get_images_split_data(lookup_dir, splits_dir, path_to_save=None):
 
     # get data with caseid and label
     print('>> Retrieving data based on caseid splits...')
-    for np_file in os.listdir(lookup_dir):
-        file_path = os.path.join(lookup_dir, np_file)
-        data = np.load(file_path) # TODO SLIDE INFO
-        filename = os.path.splitext(np_file)[0]
-        caseid = filename[:-2]
+    slides_info = read_slides_info(lookup_dir)
+    for slide in slides_info:
+        filename = slide['slide_name']
         label = filename[-1]
 
         # add data to corresponding split
         if filename in train_caseids:
-            X_train.append(data)
+            X_train.append(slide)
             y_train.append(label)
         elif filename in test_caseids:
-            X_test.append(data)
+            X_test.append(slide)
             y_test.append(label)
         else:
-            print(f"error: caseid {caseid} not found in splits.")
+            print(f"error: caseid {filename} not found in splits.")
             exit()
     print('>> Done')
 

@@ -32,3 +32,6 @@ results/
 venv/
 .vscode/
 .ipynb_checkpoints/
+assets/
+results/**/numpy_normal
+results/**/numpy_tumor

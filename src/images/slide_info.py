@@ -35,6 +35,7 @@ def read_slides_info(lookup_dir):
                         'slide_magnification': slide_magnification,
                         'slide_width': width,
                         'slide_height': height,
+                        'label': 0 if str(lookup_dir).endswith("normal") else 1,
                     }
                     slides_info.append(slide_info_dict)
 

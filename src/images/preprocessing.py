@@ -214,8 +214,9 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
     #print("Image " + slide_info['slide_name'] + " masked")
 
     #np.save(os.path.join(path_to_save, slide_info['slide_name'] + ".npy"), segmented_image)
-    pil_segmented_image.save(os.path.join(masked_images_dir, slide_info['slide_name'] + ".png"))
-    print("Masked image saved to %s" % (os.path.join(masked_images_dir, slide_info['slide_name'] + ".png")))
+    if masked_images_dir is not None:
+        pil_segmented_image.save(os.path.join(masked_images_dir, slide_info['slide_name'] + ".png"))
+        print("Masked image saved to %s" % (os.path.join(masked_images_dir, slide_info['slide_name'] + ".png")))
 
     return string#, pil_segmented_image
 

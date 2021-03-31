@@ -9,7 +9,7 @@ from images.features_extraction_methods.fixed_feature_generator import fixed_fea
 from common import split_data
 
 USE_GPU = True
-
+BASE_DIR = Path('..') / '..'
 
 def main():
     if not USE_GPU:
@@ -27,24 +27,24 @@ def main():
     args = parser.parse_args()
 
     # Paths
-    results = Path('results') / 'images'
-    normal_images = Path('datasets') / 'images' / 'normal'
-    tumor_images = Path('datasets') / 'images' / 'tumor'
+    results = BASE_DIR / 'results' / 'images'
+    normal_images = BASE_DIR / 'datasets' / 'images' / 'normal'
+    tumor_images = BASE_DIR / 'datasets' / 'images' / 'tumor'
 
-    selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'coords'
-    normal_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'normal_coords'
-    tumor_selected_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'tumor_coords'
+    selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'coords'
+    normal_selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'normal_coords'
+    tumor_selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'tumor_coords'
 
-    normal_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'img_normal'
-    tumor_masked_images_dir = Path('results') / 'images' / 'masked_images' / 'img_tumor'
+    normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
+    tumor_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_tumor'
 
-    low_res_normal_images_dir = Path('results') / 'images' / 'low_res_images' / 'img_normal'
-    low_res_tumor_images_dir = Path('results') / 'images' / 'low_res_images' / 'img_tumor'
+    low_res_normal_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 'img_normal'
+    low_res_tumor_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 'img_tumor'
 
-    normal_rand_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'rand_normal'
-    tumor_rand_tiles_dir = Path('results') / 'images' / 'selected_tiles' / 'rand_tumor'
+    normal_rand_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'rand_normal'
+    tumor_rand_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'rand_tumor'
 
-    splits_dir = Path('assets') / 'data_splits'
+    splits_dir = BASE_DIR / 'assets' / 'data_splits'
 
     if not os.path.exists(normal_images):
         sys.stderr.write(f"File \"{normal_images}\" not found")
@@ -61,17 +61,17 @@ def main():
     if not path.exists(results):
         os.mkdir(results)
 
-    if not os.path.exists(Path('results') / 'images'):
-        os.mkdir(Path('results') / 'images')
+    if not os.path.exists(BASE_DIR / 'results' / 'images'):
+        os.mkdir(BASE_DIR / 'results' / 'images')
 
-    if not os.path.exists(Path('results') / 'images' / 'selected_tiles'):
-        os.mkdir(Path('results') / 'images' / 'selected_tiles')
+    if not os.path.exists(BASE_DIR / 'results' / 'images' / 'selected_tiles'):
+        os.mkdir(BASE_DIR / 'results' / 'images' / 'selected_tiles')
 
-    if not os.path.exists(Path('results') / 'images' / 'masked_images'):
-        os.mkdir(Path('results') / 'images' / 'masked_images')
+    if not os.path.exists(BASE_DIR / 'results' / 'images' / 'masked_images'):
+        os.mkdir(BASE_DIR / 'results' / 'images' / 'masked_images')
 
-    if not os.path.exists(Path('results') / 'images' / 'low_res_images'):
-        os.mkdir(Path('results') / 'images' / 'low_res_images')
+    if not os.path.exists(BASE_DIR / 'results' / 'images' / 'low_res_images'):
+        os.mkdir(BASE_DIR / 'results' / 'images' / 'low_res_images')
 
     if not os.path.exists(normal_selected_tiles_dir):
         os.mkdir(normal_selected_tiles_dir)
@@ -138,14 +138,14 @@ def main():
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
         # TODO
-        extracted_features_train_dir = Path('results') / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_train'
-        extracted_features_test_dir = Path('results') / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_test'
+        extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_train'
+        extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_test'
 
-        if not os.path.exists(Path('results') / 'images' / 'fine_tuning'):
-            os.mkdir(Path('results') / 'images' / 'fine_tuning')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning')
 
-        if not os.path.exists(Path('results') / 'images' / 'fine_tuning' / 'extracted_features'):
-            os.mkdir(Path('results') / 'images' / 'fine_tuning' / 'extracted_features')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features')
 
         if not os.path.exists(extracted_features_train_dir):
             os.mkdir(extracted_features_train_dir)
@@ -153,19 +153,19 @@ def main():
         if not os.path.exists(extracted_features_test_dir):
             os.mkdir(extracted_features_test_dir)
 
-        fine_tuning()
+        fine_tuning(normal_slides_info, tumor_slides_info, normal_selected_tiles_dir, tumor_selected_tiles_dir)
 
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
 
-        extracted_features_train_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_train'
-        extracted_features_test_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_test'
+        extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_train'
+        extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_test'
 
-        if not os.path.exists(Path('results') / 'images' / 'fixed_feature_generator'):
-            os.mkdir(Path('results') / 'images' / 'fixed_feature_generator')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fixed_feature_generator'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fixed_feature_generator')
 
-        if not os.path.exists(Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features'):
-            os.mkdir(Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fixed_feature_generator' / 'extracted_features'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fixed_feature_generator' / 'extracted_features')
 
         if not os.path.exists(extracted_features_train_dir):
             os.mkdir(extracted_features_train_dir)

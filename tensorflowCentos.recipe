@@ -1,0 +1,9 @@
+BootStrap: docker
+From: cris/bioinf:1.0
+
+%runscript
+    echo "Hello world"
+    whoami
+
+%post
+    

@@ -2,9 +2,9 @@ import os
 
 
 def main():
-    os.system('python src/genes/genes_select_svm_t_rfe.py')
+    os.system('python src/genes_feature_extraction.py')
 
-    os.system('python src/images/fixed_feature_generator.py')
+    os.system('python src/images_feature_extraction.py')
 
 
 if __name__ == '__main__':

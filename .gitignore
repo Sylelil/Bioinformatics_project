@@ -27,8 +27,14 @@ docs/build
 scripts/venv
 venv/
 .idea/
-generated/
+extracted_features/
 datasets/
-preprocessed/
+results/
+generated/
+venv/
 .vscode/
 .ipynb_checkpoints/
+assets/
+results/**/numpy_normal
+results/**/numpy_tumor
+generated

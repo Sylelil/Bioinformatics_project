@@ -2,14 +2,14 @@ import sys
 from openslide.deepzoom import DeepZoomGenerator
 from tqdm import tqdm
 import os
-from src.images import utils
+from . import utils
 
 
 def read_slides_info(lookup_dir):
     """
         Description: read directory containing Whole slide images
         :param lookup_dir: path to directory
-        :return: list of dictionaries containing slides info, #TODO
+        :return: list of dictionaries containing slides info
     """
     slides_info = []
 

@@ -1,28 +1,15 @@
-import math
 import os
-from collections import Counter
-
-import numpy
 import sys
-import pandas as pd
-import seaborn as sns
-from imblearn.metrics import classification_report_imbalanced
-from imblearn.over_sampling import SMOTE, ADASYN
 from numpy.linalg import norm
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, RobustScaler
 from tqdm import tqdm
-from scipy import stats
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, KFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
-
-from src.genes.features_selection_methods import common
+from . import common
 
 
 def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
@@ -79,12 +66,6 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     selected_genes, selected_t_statistics = map(list, zip(*selected_zipped))  # unzip and return two lists
     print(f'>> Number of most significant genes: {len(selected_genes)}')
     df_reduced = df[selected_genes]
-
-    # 2.a.2 Apply logarithmic transformation on gene expression data
-    #       Description : x = Log(x+1), where x is the gene expression value
-    print(f'\n[DGEA pre-processing] Logarithmic transformation on gene expression data:'
-          f'\n>> Computing logarithmic transformation...')
-    df_reduced = df_reduced.applymap(lambda x: math.log(x + 1, 10))
 
     # svm t rfe
     print("\n[DGEA svm-t-rfe]:")
@@ -147,7 +128,6 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
     pbar = tqdm(desc=">> Ranking genes...", total=df_array.shape[1], file=sys.stdout)
     while df_array.shape[1] > 0:
         # ricerca del miglior C
-
         if perform_grid_search:
             pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
             cv = KFold(n_splits=params['cv_grid_search_rank'])
@@ -162,23 +142,6 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
             clf = SVC(kernel='linear', C=C)
             clf.fit(df_array, y)
             weights = clf.coef_[0]
-
-        '''
-        if perform_grid_search:
-            pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
-            cv = KFold(n_splits=params['cv_grid_search_rank'])
-            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', n_jobs=-1, cv=cv,
-                                refit=True)
-            grid = grid.fit(df_array, y)
-            C = grid.best_params_['svm__C']
-            c_values.append(C)
-        else:
-            C = c_values[i]
-        pipe = Pipeline([('svm', SVC(kernel='linear', C=C))])
-        pipe = pipe.fit(df_array, y)
-        model = pipe.named_steps['svm']
-        weights = model.coef_[0]
-        '''
 
         ranking_scores = []
         weights_norm = norm(weights)
@@ -235,7 +198,8 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
     for num_selected in tqdm(range(1, params['top_ranked'] + 1), desc=">> Computing accuracies on top ranked...", file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
-        outer_results = []
+        test_outer_results = []
+        train_outer_results = []
         cv_outer = KFold(n_splits=params['cv_outer'])
         #nested cross validation
         for train_ix, test_ix in cv_outer.split(df_selected_array, y):
@@ -247,14 +211,19 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
             grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', cv=cv_inner, n_jobs=-1, refit=True)
             grid = grid.fit(X_train, y_train)  # Refit the estimator using the best found parameters on whole X_train
             best_model = grid.best_estimator_
-            pred = best_model.predict(X_test)
-            acc = accuracy_score(y_test, pred)
-            outer_results.append(acc)
+            y_test_pred = best_model.predict(X_test)
+            acc = accuracy_score(y_test, y_test_pred)
+            y_train_pred = best_model.predict(X_train)
+            train_acc = accuracy_score(y_train, y_train_pred)
+            test_outer_results.append(acc)
+            train_outer_results.append(train_acc)
 
-        global_acc = mean(outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
-        global_std = std(outer_results)
+        global_acc = mean(test_outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
+        global_std = std(test_outer_results)
+        global_train_acc = mean(train_outer_results)
+        global_train_std = std(train_outer_results)
         accuracy.append(global_acc)
         standard_deviation.append(global_std)
-        print(global_acc)
-        print(global_std)
+        print("\ntest accuracy = " + str(global_acc) + " (" + str(global_std) + ")")
+        print("train accuracy = " + str(global_train_acc) + " (" + str(global_train_std) + ")\n")
     return accuracy

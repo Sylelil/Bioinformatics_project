@@ -28,9 +28,11 @@ def read_config_file(config_file_path, method):
     else:
         params['random_state'] = config.getint('general', 'random_state')
 
+    params['cv_inner_n_splits'] = config.getint('general', 'cv_inner_n_splits')
+    params['cv_outer_n_splits'] = config.getint('general', 'cv_outer_n_splits')
+
     if method == 'svm':
         params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-        params['cv_grid_search_rank'] = config.getint('svm', 'cv_grid_search_rank')
         if config['svm']['kernel'] == 'linear' or config['svm']['kernel'] == 'rbf':
             params['kernel'] = config['svm']['kernel']
         else:

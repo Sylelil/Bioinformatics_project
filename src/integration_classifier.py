@@ -6,6 +6,7 @@ from pathlib import Path
 import tensorflow as tf
 from imblearn.metrics import classification_report_imbalanced
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 import numpy as np
 import pandas as pd
@@ -46,29 +47,34 @@ def main():
     params = utils.read_config_file(args.cfg, args.method)
 
     # Read features from file
-    tile_features_train, tile_features_test, gene_features_train, gene_features_test = feature_concatenation.read_extracted_features()
+    tile_features_train, tile_features_test, gene_features_train, gene_features_test = utils.read_extracted_features()
 
     # concatenation of tile and gene features:
+    print('>> Concatenating gene and tile features...')
     if args.method == 'nn':
         gene_copy_ratio = 20 # TODO vedere se 20 va bene (tiles dim: 2048, genes dim: 100->100*20=2000)
     else:
         gene_copy_ratio = 1
-    X_train, y_train = feature_concatenation.concatenate(tile_features_train, gene_features_train, gene_copy_ratio)
-    X_test, y_test = feature_concatenation.concatenate(tile_features_test, gene_features_test, gene_copy_ratio)
+    X_train, y_train, train_info = feature_concatenation.concatenate(tile_features_train, gene_features_train, gene_copy_ratio)
+    X_test, y_test, test_info = feature_concatenation.concatenate(tile_features_test, gene_features_test, gene_copy_ratio)
+    print('>> Done')
 
     # prepare for training
+    print(f">> Starting training procedure with {args.method}...")
     estimators = []
 
-    # get class balancing method
+    # add scaler
+    estimators.append(StandardScaler())
+
+    # add class balancing method
     if args.balancing:
         estimators.append(class_balancing.get_balancing_method(args.balancing, params))
 
-    # get classifier and parameter grid
+    # add classifier and parameter grid
     classifier, param_grid = classification_methods.get_classifier_param_grid(args.method, params)
-
-    # classification pipeline:
     estimators.append(classifier)
 
+    # create pipeline
     if args.balancing:
         pipe = imb_make_pipeline(estimators)
     else:
@@ -78,8 +84,8 @@ def main():
     train_outer_results = []   # TODO CI SERVE??
     best_hyperparams = []
 
+    print(">> Performing nested cross validation for unbiased error estimation...")
     cv_outer = KFold(n_splits=params['cv_outer_n_splits'], shuffle=True, random_state=params['random_state'])
-
     # nested cross validation for unbiased error estimation:
     for train_ix, test_ix in tqdm(cv_outer.split(X_train, y_train)):
         # split data in k_outer folds (one is test, the rest is trainval) for outer loop
@@ -115,15 +121,21 @@ def main():
     print(best_hyperparams)
 
     # simple cross validation to find the best model:
-    cv = KFold(n_splits=params['cv_inner_n_splits'], shuffle=True, random_state=params['random_state'])
+    print(">> Performing simple cross validation to find the best model...")
+    cv = KFold(n_splits=params['cv_simple_n_splits'], shuffle=True, random_state=params['random_state'])
     search = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=cv, n_jobs=-1, scoring=params['scoring'], refit=True)
     search.fit(X_train, y_train)
     best_model = search.best_estimator_
+
+    # predict on test
+    print(">> Predicting on test...")
     y_pred = best_model.predict(X_test)
     final_test_score = params['scoring'](y_test, y_pred)
     print(f"Final test score {params['scoring'].__name__} = {final_test_score}")
     print('Imbalanced classification report:')
     print(classification_report_imbalanced(y_test, y_pred))
+
+    print('>> Done')
 
 
 if __name__ == '__main__':

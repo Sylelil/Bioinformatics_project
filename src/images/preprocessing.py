@@ -14,14 +14,16 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scal
                          desired_magnification, images_dir, masked_images_dir):
 
     # Apply filters to down scaled images
-    if len(os.listdir(masked_images_dir)) == 0 or len(os.listdir(masked_images_dir)) < len(slides_info):
+    if len(os.listdir(masked_images_dir)) < len(slides_info):
         print(">> Apply filters to down scaled images:")
         multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, scale_factor, images_dir, masked_images_dir)
     else:
         print(">> Masked images already available on disk")
 
     # Select tiles with tissue
-    if len(os.listdir(selected_tiles_dir)) == 0:
+    print("Len selected tiles dir: ", len(os.listdir(selected_tiles_dir)))
+    print("Len slides_info: ", len(slides_info))
+    if True:
 
         print(">> Select from images the tiles with tissue:")
         multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir,

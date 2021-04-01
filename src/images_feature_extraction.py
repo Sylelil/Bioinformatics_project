@@ -3,13 +3,16 @@ import os
 import sys
 from os import path
 from pathlib import Path
+
+import config.images.config as cfg
+from config.images.config import BASE_DIR
 from images import preprocessing, slide_info, utils
 from images.features_extraction_methods.fine_tuning import fine_tuning
 from images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
 from common import split_data
 
 USE_GPU = True
-BASE_DIR = Path('..') / '..'
+
 
 def main():
     if not USE_GPU:
@@ -31,9 +34,7 @@ def main():
     normal_images = BASE_DIR / 'datasets' / 'images' / 'normal'
     tumor_images = BASE_DIR / 'datasets' / 'images' / 'tumor'
 
-    selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'coords'
-    normal_selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'normal_coords'
-    tumor_selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'tumor_coords'
+    selected_tiles_dir = cfg.selected_tiles_dir
 
     normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_tumor'
@@ -72,12 +73,6 @@ def main():
 
     if not os.path.exists(BASE_DIR / 'results'/ 'images' / 'low_res_images'):
         os.mkdir(BASE_DIR / 'results' / 'images' / 'low_res_images')
-
-    if not os.path.exists(normal_selected_tiles_dir):
-        os.mkdir(normal_selected_tiles_dir)
-
-    if not os.path.exists(tumor_selected_tiles_dir):
-        os.mkdir(tumor_selected_tiles_dir)
 
     if not os.path.exists(selected_tiles_dir):
         os.mkdir(selected_tiles_dir)
@@ -138,14 +133,14 @@ def main():
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
         # TODO
-        extracted_features_train_dir = Path('results') / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_train'
-        extracted_features_test_dir = Path('results') / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_test'
+        extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_train'
+        extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_test'
 
-        if not os.path.exists(Path('results') / 'images' / 'fine_tuning'):
-            os.mkdir(Path('results') / 'images' / 'fine_tuning')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning')
 
-        if not os.path.exists(Path('results') / 'images' / 'fine_tuning' / 'extracted_features'):
-            os.mkdir(Path('results') / 'images' / 'fine_tuning' / 'extracted_features')
+        if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features'):
+            os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features')
 
         if not os.path.exists(extracted_features_train_dir):
             os.mkdir(extracted_features_train_dir)
@@ -153,7 +148,8 @@ def main():
         if not os.path.exists(extracted_features_test_dir):
             os.mkdir(extracted_features_test_dir)
 
-        fine_tuning(normal_slides_info, tumor_slides_info, normal_selected_tiles_dir, tumor_selected_tiles_dir)
+        print(train_slides_info[0])
+        fine_tuning(train_slides_info, test_slides_info, y_train, y_test)
 
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
@@ -185,6 +181,10 @@ def main():
         sys.stderr.write("Invalid value for <feature extraction method> in config file")
         exit(1)
 
+# def read_config_file(config_file_path, method):
+
 
 if __name__ == '__main__':
     main()
+
+

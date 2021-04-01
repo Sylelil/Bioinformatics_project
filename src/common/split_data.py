@@ -98,8 +98,8 @@ def get_images_split_data(slides_info, splits_dir, path_to_save=None):
             X_test.append(slide)
             y_test.append(label)
         else:
-            print(f"error: caseid {filename} not found in splits.")
-            exit()
+            print(f"warning: caseid {filename} not found in splits.")
+            # exit()
     print('>> Done')
 
     if path_to_save:

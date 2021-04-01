@@ -609,6 +609,11 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # taking an average over all channels for a given pixel.
     OD_thresh = OD[np.all(OD >= beta, 1), :]  # shape (K, C)
 
+    # TODO
+    # Ci sono casi in cui np.all ritorna un np.array vuoto, e questo fa spaccare il programma
+    # applichiamo questa soluzione temporanea
+    if len(OD_thresh) == 0:
+        return sample
     # Calculate eigenvectors.
     # Note: We can either use eigenvector decomposition, or SVD.
     # eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans

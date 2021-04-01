@@ -9,6 +9,8 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
+import tensorflow.keras.layers as layers
+
 from src.images import utils
 import config.images.config as cfg
 import random
@@ -29,7 +31,7 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-    batch_size = 500
+    batch_size = 100
     train_gen = feed_slides_generator(train_slides_info, y_train, batch_size, mode="train")
     eval_gen = feed_slides_generator(test_slides_info, y_test, batch_size, mode="eval")
     test_gen = feed_slides_generator(test_slides_info, y_test, batch_size, mode="eval")
@@ -98,6 +100,14 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
                 tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
                 np_tile = utils.normalize_staining(tile)
                 tiles.append(np_tile)
+                if mode == 'train' and current_label == '1':
+                    data_augmentation = tf.keras.Sequential([
+                        layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+                        layers.experimental.preprocessing.RandomRotation(0.2),
+                    ])
+                    augmented_tile = data_augmentation(np.expand_dims(np_tile, axis=0))
+                    tiles.append(np.squeeze(augmented_tile.numpy(), axis=0))
+
             data = np.concatenate((data, tiles))
 
             labels = [*labels, *(float(current_label) for s in range(len(tiles)))]
@@ -107,10 +117,12 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
         print("Extracted ", num_tiles_prefetch, " slides")
         print("The data len is ", len(data), " while batch_size is ", batch_size)
         while len(data) > batch_size:
-            print("Yielding ", len(np.array(data[batch_size:])), len(np.array(labels[batch_size:]).reshape(-1, 1)))
-            yield np.array(data[batch_size:]), np.array(labels[batch_size:]).reshape(-1, 1)
-            np.delete(data, np.s_[batch_size:], 0)
-            del labels[batch_size:]
+            print("Yielding ", len(np.array(data[:batch_size])), len(np.array(labels[:batch_size]).reshape(-1, 1)))
+            yield np.array(data[:batch_size]), np.array(labels[:batch_size]).reshape(-1, 1)
+            data = np.delete(data, np.s_[:batch_size], 0)
+            print("data is now ", len(data))
+            del labels[:batch_size]
+            print("labels is now ", len(labels))
 
         slide_num += num_tiles_prefetch
         if slide_num > len(slides_info):

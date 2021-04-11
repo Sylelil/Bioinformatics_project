@@ -133,8 +133,9 @@ def main():
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
         # TODO
-        extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_train'
-        extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'numpy_test'
+        extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'train'
+        extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'test'
+
 
         if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning'):
             os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning')
@@ -154,8 +155,8 @@ def main():
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
 
-        extracted_features_train_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_train'
-        extracted_features_test_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'numpy_test'
+        extracted_features_train_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'train'
+        extracted_features_test_dir = Path('results') / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'test'
 
         if not os.path.exists(Path('results') / 'images' / 'fixed_feature_generator'):
             os.mkdir(Path('results') / 'images' / 'fixed_feature_generator')

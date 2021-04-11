@@ -3,12 +3,15 @@ import os
 import sys
 from pathlib import Path
 
+import imblearn
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn import metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.metrics import make_scorer
 from tqdm import tqdm
 from scipy import stats
 
@@ -43,34 +46,13 @@ def load_selected_genes(selected_features_dir):
     return X, y
 
 
-def save_selected_genes(X_train, X_test, selected_genes, results_dir, selected_genes_path):
+def save_selected_genes(X, selected_genes, extracted_features_dir):
 
-    fp = open(selected_genes_path, "w")
-    for gene in selected_genes:
-        fp.write("%s\n" % gene)
-    fp.close()
-
-    if not os.path.exists(os.path.join(results_dir, Path('selected_features'))):
-        os.mkdir(os.path.join(results_dir, Path('selected_features')))
-
-    extracted_features_training = os.path.join(results_dir, Path('selected_features') / 'training')
-    if not os.path.exists(extracted_features_training):
-        os.mkdir(extracted_features_training)
-
-    extracted_features_test = os.path.join(results_dir, Path('selected_features') / 'test')
-    if not os.path.exists(extracted_features_test):
-        os.mkdir(extracted_features_test)
-
-    for index, row in X_train[selected_genes].iterrows():
+    for index, row in X[selected_genes].iterrows():
         row = np.asarray(row)
-        np.save(os.path.join(extracted_features_training, index + '.npy'), row)
+        np.save(os.path.join(extracted_features_dir, index + '.npy'), row)
 
-    for index, row in X_test[selected_genes].iterrows():
-        row = np.asarray(row)
-        np.save(os.path.join(extracted_features_test, index + '.npy'), row)
-
-    print(">> training features saved to " + extracted_features_training)
-    print(">> testing features saved to " + extracted_features_test)
+    print(">> Features saved to " + extracted_features_dir)
 
 
 def read_config_file(config_file_path, section):
@@ -82,6 +64,7 @@ def read_config_file(config_file_path, section):
         params['alpha'] = config.getfloat('welch_t_test', 'alpha')
 
     elif section == 'svm_t_rfe':
+        params['random_state'] = config.getint('svm_t_rfe', 'random_state')
         params['alpha'] = config.getfloat('svm_t_rfe', 'alpha')
         params['theta'] = config.getfloat('svm_t_rfe', 'theta')
         params['cv_grid_search_rank'] = config.getint('svm_t_rfe', 'cv_grid_search_rank')
@@ -89,14 +72,35 @@ def read_config_file(config_file_path, section):
         params['cv_outer'] = config.getint('svm_t_rfe', 'cv_outer')
         params['top_ranked'] = config.getint('svm_t_rfe', 'top_ranked')
         params['t_stat_threshold'] = config.getfloat('svm_t_rfe', 't_stat_threshold')
+        if config['svm_t_rfe']['scoring'] == 'accuracy':
+            params['scoring'] = make_scorer(metrics.accuracy_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'matt_coef':
+            params['scoring'] = make_scorer(metrics.matthews_corrcoef)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'recall':
+            params['scoring'] = make_scorer(metrics.recall_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'precision':
+            params['scoring'] = make_scorer(metrics.precision_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'f1_score':
+            params['scoring'] = make_scorer(metrics.f1_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'sensitivity':
+            params['scoring'] = make_scorer(imblearn.metrics.sensitivity_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        elif config['svm_t_rfe']['scoring'] == 'specificity':
+            params['scoring'] = make_scorer(imblearn.metrics.specificity_score)
+            params['scoring_name'] = config['svm_t_rfe']['scoring']
+        else:
+            sys.stderr.write("Invalid value for <scoring> in config file")
+            exit(1)
         if config['svm_t_rfe']['kernel'] == 'linear' or config['svm_t_rfe']['kernel'] == 'rbf':
             params['kernel'] = config['svm_t_rfe']['kernel']
         else:
             sys.stderr.write("Invalid value for <kernel> in config file")
             exit(1)
-
-    elif section == 'svm':
-        params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
     else:
         sys.stderr.write("Invalid value for <section> in config file")
         exit(1)

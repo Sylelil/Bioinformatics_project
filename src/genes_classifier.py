@@ -32,7 +32,7 @@ def main():
 
     parser.add_argument('--classification_method',
                         help='Method to classify patients according to gene expression values',
-                        choices=['svm', 'mlp'],
+                        choices=['svm', 'nn'],
                         required=True,
                         type=str)
 
@@ -103,7 +103,7 @@ def main():
         plot_roc_curve(clf, X_test, y_test)
         plt.show()
 
-    elif args.classification_method == "mlp":
+    elif args.classification_method == "nn":
         # TODO
         pass
     else:

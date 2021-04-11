@@ -4,6 +4,7 @@
 *.pyc
 *.pyo
 *.egg*
+*.svs
 local_settings.py
 project_cfg.py
 *.swp

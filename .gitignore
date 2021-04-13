@@ -31,7 +31,6 @@ extracted_features/
 datasets/
 results/
 generated/
-venv/
 .vscode/
 .ipynb_checkpoints/
 assets/

@@ -1,8 +1,8 @@
 import os
 import sys
 from numpy.linalg import norm
-from sklearn.metrics import accuracy_score
-from sklearn.pipeline import Pipeline
+from sklearn import metrics
+from sklearn.metrics import accuracy_score, make_scorer
 from tqdm import tqdm
 import numpy as np
 from sklearn.svm import SVC
@@ -10,15 +10,30 @@ from sklearn.model_selection import GridSearchCV, KFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
 from . import common
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
 
 
 def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
+
     # File names
     ranking_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                         str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_ranked_genes.txt"
+                         str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
+                         params['scoring_name'] + "_ranked_genes.txt"
 
     c_values_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                    str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_cvalues.txt"
+                    str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
+                    params['scoring_name'] + "_cvalues.txt"
+
+    scores_plot = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
+                  str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
+                  params['scoring_name'] + "_scores.png"
+
+    welch_t_p_values_plot = str(params['alpha']) + "_welch_t_p_values.png"
+
+    sorted_t_stats_plot = str(params['alpha']) + "_ sorted_t_stats.png"
 
     # Pre-filtering: Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
@@ -45,6 +60,8 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.hist(welch_dict['all_p_values'])
     plt.xlabel("p values Welch t-test")
     plt.show()
+    plt.close()
+    #plt.savefig(os.path.join(results_dir, welch_t_p_values_plot))
 
     # Print t-statistics per selezionare i top che hanno t-statistics
     abs_t_statistics = [abs(x) for x in welch_dict['all_t_values']]
@@ -52,6 +69,8 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     x = np.linspace(0, 30000, len(sorted_t_statistics))
     plt.plot(x, sorted_t_statistics)
     plt.show()
+    plt.close()
+    #plt.savefig(os.path.join(results_dir, sorted_t_stats_plot))
 
     welch_t_bonferroni_genes_path = os.path.join(results_dir, "welch_t_bonferroni_genes.txt")
     fp = open(welch_t_bonferroni_genes_path, "w")
@@ -69,8 +88,9 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # svm t rfe
     print("\n[DGEA svm-t-rfe]:")
-    # Rank
     path_to_c_values = os.path.join(config_dir, c_values_file)
+
+    # Rank
     ranked_genes = ranking_genes(df_reduced, y, selected_t_statistics, params, path_to_c_values)
 
     ranking_genes_path = os.path.join(results_dir, ranking_genes_file)
@@ -90,10 +110,11 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     ax.set_xlim(0, len(x))
     plt.plot(x, accuracy)
     plt.xlabel("Number of top ranked genes")
-    plt.ylabel("Prediction accuracy")
+    plt.ylabel(params['scoring_name'])
     plt.margins(x=0)
     plt.show()
     plt.close()
+    #plt.savefig(os.path.join(results_dir, scores_plot))
 
     num_selected = 200
     return ranked_genes[:num_selected]
@@ -129,9 +150,12 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
     while df_array.shape[1] > 0:
         # ricerca del miglior C
         if perform_grid_search:
-            pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
-            cv = KFold(n_splits=params['cv_grid_search_rank'])
-            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', n_jobs=-1, cv=cv, refit=True)
+            scaler = StandardScaler()
+            smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+            svm = SVC(kernel=params['kernel'])
+            imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+            cv = KFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
+            grid = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
             grid.fit(df_array, y)  # Refit the estimator using the best found parameters on the whole dataset
             C = grid.best_params_['svm__C']
             c_values.append(C)
@@ -139,9 +163,12 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
             weights = best_model.coef_[0]
         else:
             C = c_values[i]
-            clf = SVC(kernel='linear', C=C)
-            clf.fit(df_array, y)
-            weights = clf.coef_[0]
+            scaler = StandardScaler()
+            smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+            svm = SVC(kernel=params['kernel'], C=C)
+            imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+            imba_pipeline.fit(df_array, y)
+            weights = imba_pipeline['svm'].coef_[0]
 
         ranking_scores = []
         weights_norm = norm(weights)
@@ -180,8 +207,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
 
 
 def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params):
-    accuracy = []
-    standard_deviation = []
+    scores_list = []
 
     # costruisco la param_grid per la ricerca dei migliori hyperparms
     if params['kernel'] == 'rbf':
@@ -195,35 +221,26 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
 
     # calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
     # fino ad arrivare a considerare tutti i top ranked genes
-    for num_selected in tqdm(range(1, params['top_ranked'] + 1), desc=">> Computing accuracies on top ranked...", file=sys.stdout):
+    for num_selected in tqdm(range(1, params['top_ranked'] + 1), desc=">> Computing scores on top ranked...", file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
-        test_outer_results = []
-        train_outer_results = []
-        cv_outer = KFold(n_splits=params['cv_outer'])
-        #nested cross validation
-        for train_ix, test_ix in cv_outer.split(df_selected_array, y):
-            X_train, X_test = df_selected_array[train_ix, :], df_selected_array[test_ix, :]
-            y_train, y_test = y[train_ix], y[test_ix]
-            # configure the cross-validation procedure for grid search of best parameters
-            pipe_grid = Pipeline([('svm', SVC(kernel=params['kernel']))])
-            cv_inner = KFold(n_splits=params['cv_grid_search_acc'])
-            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring='accuracy', cv=cv_inner, n_jobs=-1, refit=True)
-            grid = grid.fit(X_train, y_train)  # Refit the estimator using the best found parameters on whole X_train
-            best_model = grid.best_estimator_
-            y_test_pred = best_model.predict(X_test)
-            acc = accuracy_score(y_test, y_test_pred)
-            y_train_pred = best_model.predict(X_train)
-            train_acc = accuracy_score(y_train, y_train_pred)
-            test_outer_results.append(acc)
-            train_outer_results.append(train_acc)
 
-        global_acc = mean(test_outer_results)  # considero l'accuratezza globale come la media delle accuratezze ottenute durante il k-fold
-        global_std = std(test_outer_results)
-        global_train_acc = mean(train_outer_results)
-        global_train_std = std(train_outer_results)
-        accuracy.append(global_acc)
-        standard_deviation.append(global_std)
-        print("\ntest accuracy = " + str(global_acc) + " (" + str(global_std) + ")")
-        print("train accuracy = " + str(global_train_acc) + " (" + str(global_train_std) + ")\n")
-    return accuracy
+        scaler = StandardScaler()
+        smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+        svm = SVC(kernel=params['kernel'])
+        imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+
+        # define search
+        cv_inner = KFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+        search = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv_inner)
+        # configure the cross-validation procedure
+        cv_outer = KFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
+        # execute the nested cross-validation
+        scores = cross_val_score(search, df_selected_array, y, scoring=params['scoring'], cv=cv_outer)
+        # report performance
+        print(scores)
+        mean_score = mean(scores)
+        scores_list.append(mean_score)
+        print("\n" + params['scoring_name'] + " score " + str(mean_score))
+        print(params['scoring_name'] + " std: " + str(std(scores)))
+    return scores_list

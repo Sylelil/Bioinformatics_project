@@ -14,7 +14,7 @@ def main():
 
     parser.add_argument('--classification_method',
                         help='Method to classify patients according to features extracted from images',
-                        choices=['svm', 'mlp'],
+                        choices=['svm', 'nn'],
                         required=True,
                         type=str)
 
@@ -29,7 +29,7 @@ def main():
     if args.classification_method == "svm":
         # TODO
         pass
-    elif args.classification_method == "mlp":
+    elif args.classification_method == "nn":
         # TODO
         pass
     else:

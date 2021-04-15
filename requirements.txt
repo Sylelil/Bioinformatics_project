@@ -8,6 +8,7 @@ scikit-learn
 scipy
 seaborn
 tensorflow
+tensorflow_addons
 tqdm
 colorcorrect
 imbalanced-learn

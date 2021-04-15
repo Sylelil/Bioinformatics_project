@@ -10,6 +10,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
 import tensorflow.keras.layers as layers
+import tensorflow_addons as tfa
 
 from src.images import utils
 import config.images.config as cfg
@@ -52,28 +53,37 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
     for layer in base_model.layers:
         layer.trainable = False
 
+    # non effettuiamo il freeze dell'ultimo strato convoluzionale
+    for layer in base_model.layers[-cfg.NUM_TRAINABLE_LAYERS:]:
+        layer.trainable = True
+
+    for layer in base_model.layers:
+        print("{}: {}".format(layer.name, layer.trainable))
+
+    metric = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2, name='MatthewsCorrelationCoefficient')
     print("[INFO] compiling model...")
     opt = SGD(learning_rate=1e-4, momentum=0.9)
     model.compile(loss="binary_crossentropy", optimizer=opt,
-                  metrics=["accuracy"])
+                  metrics=[metric, 'accuracy'])
 
     print("[INFO] training head...")
-    H = model.fit(
+    history = model.fit(
         x=train_gen,
         steps_per_epoch=train_len // batch_size,
         validation_data=eval_gen,
         validation_steps=val_len // batch_size,
-        epochs=10,
+        epochs=1,
         shuffle=True
     )
 
-    model.save("fine_tuned")
+    model.save(cfg.FINE_TUNED_MODEL_NAME)
 
-    predIdxs = model.predict(x=test_gen, steps=(val_len // batch_size) + 1)
-    predIdxs = np.argmax(predIdxs, axis=1)
+    plot_training(history, 10)
 
-    # print(classification_report({}, predIdxs))
-    plot_training(H, 10)
+    #predIdxs = model.predict(x=test_gen, steps=(val_len // batch_size) + 1)
+    #predIdxs = np.argmax(predIdxs, axis=1)
+
+    #print(classification_report({}, predIdxs))
 
 
 def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
@@ -100,7 +110,15 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
 
             for coord in slide_tiles_coords:
                 tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
-                np_tile = utils.normalize_staining(tile)
+                # noinspection PyBroadException
+                try:
+                    np_tile = utils.normalize_staining(tile)
+                except IndexError:
+                    print("IndexError, skipping tile")
+                    continue
+                except:
+                    print("Unknown error, skipping tile")
+                    continue
                 tiles.append(np_tile)
                 if mode == 'train' and current_label == cfg.NORMAL_LABEL:
                     for _ in range(cfg.MULTIPLIER):
@@ -112,12 +130,16 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
                             layers.experimental.preprocessing.RandomRotation(0.2),
                             layers.experimental.preprocessing.RandomZoom(0.4),
                         ])
+
+                        # TODO: controllo per evitare OOM. Avrebbe senso toglierlo probabilmente in quanto limita il data augmentation
+                        if len(tiles) > 3500:
+                            break
                         augmented_tile = data_augmentation(np.expand_dims(np_tile, axis=0))
                         tiles.append(np.squeeze(augmented_tile.numpy(), axis=0))
 
             data = np.concatenate((data, tiles))
 
-            labels = [*labels, *(float(current_label) for s in range(len(tiles)))]
+            labels = [*labels, *(-1 if float(current_label) == 0 else 1 for s in range(len(tiles)))]
             print("Extracted ", len(slide_tiles_coords), " tiles")
             print("Now data is ", len(data), " and labels is ", len(labels))
             tiles = []
@@ -149,7 +171,7 @@ def get_ds_len(slides_info):
     for slide in slides_info:
         coords_path = os.path.join(cfg.selected_tiles_dir, slide['slide_name'] + '.npy')
         slide_tiles_coords = np.load(coords_path)
-        multiplier = cfg.MULTIPLIER if int(slide["label"]) == cfg.NORMAL_LABEL else 1  # Moltiplichiamo il numero di tile per il moltiplicatore per correggere la classe sbilanciata
+        multiplier = (1+cfg.MULTIPLIER) if int(slide["label"]) == cfg.NORMAL_LABEL else 1  # Moltiplichiamo il numero di tile per il moltiplicatore per correggere la classe sbilanciata
         print("label is ", "normal" if int(slide["label"]) == cfg.NORMAL_LABEL else "tumor", "; then multiplier is ", multiplier)
         acc += multiplier * len(slide_tiles_coords)
 

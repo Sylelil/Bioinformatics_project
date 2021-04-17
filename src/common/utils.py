@@ -5,11 +5,11 @@ from sklearn import metrics
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
+from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 
 
-def __get_tile_data(lookup_dir):
+def get_tile_features(lookup_dir):
     """
        Description: Private function. Read extracted tile features from files.
        :param lookup_dir: Path of the lookup directory.
@@ -18,7 +18,7 @@ def __get_tile_data(lookup_dir):
     all_tiles_features = []  # list of all tile features
     slide_data = None
 
-    for np_file in os.listdir(lookup_dir):
+    for np_file in tqdm(os.listdir(lookup_dir)):
         file_path = os.path.join(lookup_dir, np_file)
         filename = os.path.splitext(np_file)[0]
         caseid = filename[:-2]
@@ -45,18 +45,21 @@ def __get_tile_data(lookup_dir):
         slide_data_list = list(slide_data_caseid_label)
         all_tiles_features.extend(slide_data_list)
 
+    print(f'list shape: ({len(all_tiles_features)}, {len(all_tiles_features[0])})')
+
     # convert to dataframe
     col_names = ['coord0', 'coord1']
     col_names.extend([f'feat_t_{x}' for x in range(slide_data.shape[1] - 2)])
     col_names.extend(['caseid', 'label'])
+    print(">> Converting to dataframe...")
     df_tiles_features = pd.DataFrame(all_tiles_features, columns=col_names).set_index('caseid')
 
-    print(df_tiles_features.shape)
+    print(f'shape: {df_tiles_features.shape}')
 
     return df_tiles_features
 
 
-def __get_gene_data(lookup_dir):
+def get_gene_features(lookup_dir):
     """
        Description: Private function. Read extracted gene features from files.
        :param lookup_dir: Path of the lookup directory.
@@ -65,7 +68,7 @@ def __get_gene_data(lookup_dir):
     all_features = []  # list of all tile features
     data = None
 
-    for np_file in os.listdir(lookup_dir):
+    for np_file in tqdm(os.listdir(lookup_dir)):
         file_path = os.path.join(lookup_dir, np_file)
         filename = os.path.splitext(np_file)[0]
         caseid = filename[:-2]
@@ -83,14 +86,14 @@ def __get_gene_data(lookup_dir):
 
         # add to list of all tile features
         data_list = list(data_caseid_label)
-        all_features.extend(data_list)
+        all_features.append(data_list)
 
     # convert to dataframe
     col_names = [f'feat_g_{x}' for x in range(data.shape[0])]
     col_names.extend(['caseid', 'label'])
     df_gene_features = pd.DataFrame(all_features, columns=col_names).set_index('caseid')
 
-    print(df_gene_features.shape)
+    print(f'shape: {df_gene_features.shape}')
 
     return df_gene_features
 
@@ -100,14 +103,13 @@ def read_extracted_features():
        Description: Read extracted features from results folders.
        :return: Train and test splits of gene and tile data.
     """
-    print(">> Reading features from files...")
 
-    tile_features_train_dir = Path('..') / '..' / 'results' / 'images' / 'extracted_features' / 'training'
-    tile_features_test_dir = Path('..') / '..' / 'results' / 'images' / 'extracted_features' / 'test'
-    gene_features_train_dir = Path('..') / '..' / 'results' / 'genes' / 'extracted_features' / 'training'
-    gene_features_test_dir = Path('..') / '..' / 'results' / 'genes' / 'extracted_features' / 'test'
+    tile_features_train_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images' / 'training'
+    tile_features_test_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images' / 'test'
+    gene_features_train_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'genes' / 'training'
+    gene_features_test_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'genes' / 'test'
 
-    if not os.path.exists(Path('..') / '..' / 'results'):
+    if not os.path.exists(Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results'):
         print("%s not existing." % Path('results'))
         exit()
     if not os.path.exists(tile_features_train_dir):
@@ -124,20 +126,21 @@ def read_extracted_features():
         exit()
 
     # get features:
-    tile_features_train = __get_tile_data(tile_features_train_dir)
-    tile_features_test = __get_tile_data(tile_features_test_dir)
-    gene_features_train = __get_gene_data(gene_features_train_dir)
-    gene_features_test = __get_gene_data(gene_features_test_dir)
+    print(">> Reading gene features for training ...")
+    gene_features_train = get_gene_features(gene_features_train_dir)
+    print(">> Reading gene features for training ...")
+    gene_features_test = get_gene_features(gene_features_test_dir)
+    print(">> Reading tile features for testing ...")
+    tile_features_test = get_tile_features(tile_features_test_dir)
+    print(">> Reading tile features for training ...")
+    tile_features_train = get_tile_features(tile_features_train_dir)
 
-    print(f">> tile_features_train: {tile_features_train.shape}")
-    print(f">> tile_features_test: {tile_features_test.shape}")
-    print(f">> gene_features_train: {gene_features_train.shape}")
-    print(f">> gene_features_test: {gene_features_test.shape}")
+    print('>> Done')
 
     return tile_features_train, tile_features_test, gene_features_train, gene_features_test
 
 
-def read_config_file(config_file_path, method):
+def read_config_file(config_file_path):
     """
        Description: Read configuration parameters.
        :param config_file_path: Path of the configuration file.
@@ -151,6 +154,8 @@ def read_config_file(config_file_path, method):
     scoring = config['general']['scoring']
     if scoring == 'matthews_corrcoef':
         params['scoring'] = metrics.matthews_corrcoef
+    if scoring == 'accuracy':
+        params['scoring'] = metrics.accuracy_score
 
     random_state = config['general']['random_state']
     if random_state == 'None' or random_state == '':
@@ -158,24 +163,14 @@ def read_config_file(config_file_path, method):
     else:
         params['random_state'] = config.getint('general', 'random_state')
 
+    params['batchsize'] = config.getint('general', 'batchsize')
+
     params['cv_inner_n_splits'] = config.getint('crossvalidation', 'cv_inner_n_splits')
     params['cv_outer_n_splits'] = config.getint('crossvalidation', 'cv_outer_n_splits')
     params['cv_n_splits'] = config.getint('crossvalidation', 'cv_n_splits')
 
-    if method == 'svm':
-        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-        if config['svm']['kernel'] == 'linear' or config['svm']['kernel'] == 'rbf':
-            params['kernel'] = config['svm']['kernel']
-        else:
-            sys.stderr.write("Invalid value for <kernel> in config file")
-            exit(1)
-    elif method == 'nn':
-        pass  # TODO
-    elif method == 'pca_nn':
-        params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-        pass  # TODO
-    else:
-        sys.stderr.write("Invalid value for <classification method> in config file")
-        exit(1)
+    params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
+    params['n_components'] = config.getint('pca', 'n_components')
+
 
     return params

@@ -221,7 +221,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
 
     # calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
     # fino ad arrivare a considerare tutti i top ranked genes
-    for num_selected in tqdm(range(1, params['top_ranked'] + 1), desc=">> Computing scores on top ranked...", file=sys.stdout):
+    for num_selected in tqdm(range(1, params['top_ranked'] + 1), file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
 
@@ -238,7 +238,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         # execute the nested cross-validation
         scores = cross_val_score(search, df_selected_array, y, scoring=params['scoring'], cv=cv_outer)
         # report performance
-        print(scores)
+        # print(scores)
         mean_score = mean(scores)
         scores_list.append(mean_score)
         print("\n" + params['scoring_name'] + " score " + str(mean_score))

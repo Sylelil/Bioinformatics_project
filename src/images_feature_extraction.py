@@ -115,6 +115,7 @@ def main():
     print("\nNormal images preprocessing:")
     preprocessing.preprocessing_images(normal_slides_info, selected_tiles_dir,
                                        os.path.join(results, "normal_filter_info.txt"),
+                                       os.path.join(results, "normal_tiles_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
                                        low_res_normal_images_dir, normal_masked_images_dir)
 
@@ -122,11 +123,13 @@ def main():
 
     preprocessing.preprocessing_images(tumor_slides_info, selected_tiles_dir,
                                        os.path.join(results, "tumor_filter_info.txt"),
+                                       os.path.join(results, "normal_tiles_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
                                        low_res_tumor_images_dir, tumor_masked_images_dir)
 
     print("\nSplitting data:")
     slides_info = normal_slides_info + tumor_slides_info
+    print(f'>> Tot data: {len(slides_info)}')
     train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, splits_dir)
 
     # Compute number of samples

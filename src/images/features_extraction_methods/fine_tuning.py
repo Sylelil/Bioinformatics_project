@@ -19,6 +19,7 @@ import random
 
 def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
 
+    timer = utils.Time()
     seed = random.randint(0, 100)
 
     random.Random(seed).shuffle(train_slides_info)
@@ -80,6 +81,8 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
 
     plot_training(history, 10)
 
+    print(">> Time to perform fine tuning: %s" % str(timer.elapsed()))
+
     #predIdxs = model.predict(x=test_gen, steps=(val_len // batch_size) + 1)
     #predIdxs = np.argmax(predIdxs, axis=1)
 
@@ -95,6 +98,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
     while True:
         tiles = []
         for i in range(num_slides_prefetch):
+            print(f"Slide {slides_info[slide_num+i]['slide_name']} (slide num {slide_num+i}):")
             current_slide = slides_info[slide_num+i]
             current_label = labels_info[slide_num+i]
 

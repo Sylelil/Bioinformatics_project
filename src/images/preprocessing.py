@@ -21,15 +21,17 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scal
         print(">> Masked images already available on disk")
 
     # Select tiles with tissue
-    print("Len selected tiles dir: ", len(os.listdir(selected_tiles_dir)))
-    print("Len slides_info: ", len(slides_info))
-    if True:
+    skipped = 0
+    for slide in slides_info:
+        if os.path.isfile(os.path.join(selected_tiles_dir, slide['slide_name'] + '.npy')):
+            skipped +=1
 
+    if skipped == len(slides_info):
+        print(">> Selected tiles already available on disk")
+    else:
         print(">> Select from images the tiles with tissue:")
         multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir,
                                               tile_size, desired_magnification, scale_factor)
-    else:
-        print(">> Selected tiles already available on disk")
 
 
 def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, scale_factor, images_dir, masked_images_dir):
@@ -236,6 +238,7 @@ def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, 
 
     for result in results:
         (start_ind, end_ind) = result.get()
+
         if start_ind == end_ind:
             print("Done converting slide %d" % start_ind)
         else:

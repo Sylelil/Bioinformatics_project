@@ -125,17 +125,29 @@ def main():
                                        scale_factor, tile_size, desired_magnification,
                                        low_res_tumor_images_dir, tumor_masked_images_dir)
 
-    normal_slides_info.extend(tumor_slides_info)
-    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(normal_slides_info, splits_dir)
+    print("\nSplitting data:")
+    slides_info = normal_slides_info + tumor_slides_info
+    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, splits_dir)
+
+    # Compute number of samples
+    train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
+    train_slides_info_1 = [slide for slide in train_slides_info if slide['label'] == 1]
+
+    print(f'\nTraining data:\n>> Tot = {len(train_slides_info)}\n'
+          f'>> Tumor samples = {len(train_slides_info_1)}\n>> Normal samples = {len(train_slides_info_0)}')
+
+    test_slides_info_0 = [slide for slide in test_slides_info if slide['label'] == 0]
+    test_slides_info_1 = [slide for slide in test_slides_info if slide['label'] == 1]
+
+    print(f'\nTest data:\n>> Tot = {len(test_slides_info)}\n'
+          f'>> Tumor samples = {len(test_slides_info_1)}\n>> Normal samples = {len(test_slides_info_0)}')
 
     # features extraction
     print("\nImages feature extraction:")
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
-        # TODO
         extracted_features_train_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'train'
         extracted_features_test_dir = BASE_DIR / 'results' / 'images' / 'fine_tuning' / 'extracted_features' / 'test'
-
 
         if not os.path.exists(BASE_DIR / 'results' / 'images' / 'fine_tuning'):
             os.mkdir(BASE_DIR / 'results' / 'images' / 'fine_tuning')

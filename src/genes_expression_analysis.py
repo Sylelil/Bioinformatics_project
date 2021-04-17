@@ -102,47 +102,76 @@ def main():
     X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
     print(">> Done")
 
-    print("\nStandard scaler on gene expression data:")
-    scaler = StandardScaler()
-    train_scaled_features = scaler.fit_transform(X_train.values)
-    X_train = pd.DataFrame(train_scaled_features, index=X_train.index, columns=X_train.columns)
-    print(">> Training features scaled")
-
-    test_scaled_features = scaler.transform(X_test.values)
-    X_test = pd.DataFrame(test_scaled_features, index=X_test.index, columns=X_test.columns)
-    print(">> Test features scaled")
-
-    # SMOTE
-    print("\nSMOTE")
-    print(">> Oversampling training data")
-    sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
-    X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
-    print(Counter(y_train_sm))
-    X_train_sm["target"] = np.array([str(x) for x in y_train_sm])
-    X_train_sm.index = list(X_train_sm["target"])
-    del X_train_sm["target"]
-    print(X_train_sm)
-
     print("\nDifferentially gene expression analysis [DGEA]")
     if args.method == 'welch_t':
+        # feature selection
         selected_genes = genes_selection_welch_t(X_train, params, welch_t_results_dir)
-        selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + \
-                              "_welch_t_selected_genes.txt"
-        selected_genes_path = os.path.join(welch_t_results_dir, selected_genes_file)
-        print("\nSaving selected gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], X_test[selected_genes], selected_genes,
-                                    welch_t_results_dir, selected_genes_path)
-    elif args.method == 'svm_t_rfe':
 
-        selected_genes = genes_selection_svm_t_rfe(X_train_sm, y_train_sm, params, svm_t_rfe_results_dir, config_dir)
+        # save selected genes on file
+        selected_genes_file = str(params['alpha']) + "_selected_genes.txt"
+        selected_genes_path = os.path.join(welch_t_results_dir, selected_genes_file)
+        fp = open(selected_genes_path, "w")
+        for gene in selected_genes:
+            fp.write("%s\n" % gene)
+        fp.close()
+
+        # saving selected features
+        selected_features = str(params['alpha']) + "_selected_features"
+        selected_features_dir = os.path.join(welch_t_results_dir, selected_features)
+        if not os.path.exists(selected_features_dir):
+            os.mkdir(selected_features_dir)
+
+        extracted_features_training = os.path.join(selected_features_dir, 'train')
+        if not os.path.exists(extracted_features_training):
+            os.mkdir(extracted_features_training)
+
+        print("\nSaving selected training gene features on disk...")
+        methods.save_selected_genes(X_train[selected_genes], selected_genes, extracted_features_training)
+
+        extracted_features_test = os.path.join(selected_features_dir, 'test')
+        if not os.path.exists(extracted_features_test):
+            os.mkdir(extracted_features_test)
+
+        print("\nSaving selected test gene features on disk...")
+        methods.save_selected_genes(X_test[selected_genes], selected_genes, extracted_features_test)
+
+    elif args.method == 'svm_t_rfe':
+        # feature selection
+        selected_genes = genes_selection_svm_t_rfe(X_train, y_train, params, svm_t_rfe_results_dir, config_dir)
+
+        # save selected genes on file
         selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + \
-                              "_svm_t_rfe_selected_genes.txt"
+                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
+                              params['scoring_name'] + "_selected_genes.txt"
         selected_genes_path = os.path.join(svm_t_rfe_results_dir, selected_genes_file)
-        print("\nSaving selected gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], X_test[selected_genes], selected_genes,
-                                    svm_t_rfe_results_dir, selected_genes_path)
+        fp = open(selected_genes_path, "w")
+        for gene in selected_genes:
+            fp.write("%s\n" % gene)
+        fp.close()
+
+        # saving selected features
+        selected_features = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
+                            str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
+                            params['scoring_name'] + "_selected_features"
+
+        selected_features_dir = os.path.join(svm_t_rfe_results_dir, selected_features)
+        if not os.path.exists(selected_features_dir):
+            os.mkdir(selected_features_dir)
+
+        extracted_features_training = os.path.join(selected_features_dir, 'train')
+        if not os.path.exists(extracted_features_training):
+            os.mkdir(extracted_features_training)
+
+        print("\nSaving selected training gene features on disk...")
+        methods.save_selected_genes(X_train[selected_genes], selected_genes, extracted_features_training)
+
+        extracted_features_test = os.path.join(selected_features_dir, 'test')
+        if not os.path.exists(extracted_features_test):
+            os.mkdir(extracted_features_test)
+
+        print("\nSaving selected test gene features on disk...")
+        methods.save_selected_genes(X_test[selected_genes], selected_genes, extracted_features_test)
+
     else:
         sys.stderr.write("Invalid value for <feature extraction method>")
         exit(1)

@@ -95,8 +95,10 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
     while True:
         tiles = []
         for i in range(num_slides_prefetch):
-            current_slide = slides_info[slide_num+i]
-            current_label = labels_info[slide_num+i]
+            got_normal = False
+            slide_num += 1
+            current_slide = slides_info[slide_num]
+            current_label = labels_info[slide_num]
 
             slide = utils.open_wsi(current_slide['slide_path'])
             zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0)
@@ -120,6 +122,10 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
                     print("Unknown error, skipping tile")
                     continue
                 tiles.append(np_tile)
+                # TODO: controllo per evitare OOM. Avrebbe senso toglierlo probabilmente in quanto limita il data augmentation
+                if len(tiles) > 1800:
+                    got_normal = True
+                    break
                 if mode == 'train' and current_label == cfg.NORMAL_LABEL:
                     for _ in range(cfg.MULTIPLIER):
                         # Facciamo attenzione a non introdurre alterazioni del colore
@@ -131,18 +137,22 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
                             layers.experimental.preprocessing.RandomZoom(0.4),
                         ])
 
-                        # TODO: controllo per evitare OOM. Avrebbe senso toglierlo probabilmente in quanto limita il data augmentation
-                        if len(tiles) > 3500:
-                            break
                         augmented_tile = data_augmentation(np.expand_dims(np_tile, axis=0))
                         tiles.append(np.squeeze(augmented_tile.numpy(), axis=0))
+                        if len(tiles) > 2400:
+                            got_normal = True
+                            break
+                    got_normal = True  # per evitare che si faccia DA di due slide normal consecutive
 
             data = np.concatenate((data, tiles))
 
-            labels = [*labels, *(-1 if float(current_label) == 0 else 1 for s in range(len(tiles)))]
+            labels = [*labels, *(1 if float(current_label) == 0 else -1 for s in range(len(tiles)))]
             print("Extracted ", len(slide_tiles_coords), " tiles")
             print("Now data is ", len(data), " and labels is ", len(labels))
             tiles = []
+
+            if got_normal:
+                break
 
         print("Extracted ", num_slides_prefetch, " slides")
         print("The data len is ", len(data), " while batch_size is ", batch_size)
@@ -161,7 +171,6 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
             labels = np.delete(labels, np.s_[:batch_size], 0)
             print("labels is now ", len(labels))
 
-        slide_num += num_slides_prefetch
         if slide_num > len(slides_info):
             slide_num = 0
 

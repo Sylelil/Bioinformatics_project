@@ -10,7 +10,7 @@ from skimage.filters import median, gaussian
 from skimage.morphology import disk
 
 
-def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scale_factor, tile_size,
+def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, scale_factor, tile_size,
                          desired_magnification, images_dir, masked_images_dir):
 
     # Apply filters to down scaled images
@@ -21,15 +21,17 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, scal
         print(">> Masked images already available on disk")
 
     # Select tiles with tissue
-    print("Len selected tiles dir: ", len(os.listdir(selected_tiles_dir)))
-    print("Len slides_info: ", len(slides_info))
-    if True:
+    skipped = 0
+    for slide in slides_info:
+        if os.path.isfile(os.path.join(selected_tiles_dir, slide['slide_name'] + '.npy')):
+            skipped +=1
 
+    if skipped == len(slides_info):
+        print(">> Selected tiles already available on disk")
+    else:
         print(">> Select from images the tiles with tissue:")
         multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir,
-                                              tile_size, desired_magnification, scale_factor)
-    else:
-        print(">> Selected tiles already available on disk")
+                                              tile_size, desired_magnification, scale_factor, tiles_info_path)
 
 
 def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, scale_factor, images_dir, masked_images_dir):
@@ -197,7 +199,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
 
 
 def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, selected_tiles_dir,
-                                          tile_size, desired_magnification, scale_factor):
+                                          tile_size, desired_magnification, scale_factor, tiles_info_path):
     """
     Convert all WSI training slides to smaller images using multiple processes (one process per core).
     Each process will process a range of slide numbers.
@@ -234,8 +236,10 @@ def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, 
     for t in tasks:
         results.append(pool.apply_async(select_tiles_with_tissue_range, t))
 
+    filter_info = ""
     for result in results:
-        (start_ind, end_ind) = result.get()
+        (start_ind, end_ind, filter_info_range) = result.get()
+        filter_info += filter_info_range
         if start_ind == end_ind:
             print("Done converting slide %d" % start_ind)
         else:
@@ -243,17 +247,21 @@ def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, 
 
     print(">> Time to select tiles for all images (multiprocess): %s" % str(timer.elapsed()))
 
+    images_tiles_file = open(tiles_info_path, "w")
+    images_tiles_file.write(filter_info)
+    images_tiles_file.close()
+    print(">> Tiles info saved to \"%s\"\n" % tiles_info_path)
+
 
 def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_images_pil_dir, selected_tiles_dir,
                                    tile_size, desired_magnification, scale_factor):
-
+    string = ""
     for slide_num in range(start_index - 1, end_index):
-        if os.path.isfile(os.path.join(selected_tiles_dir, slides_info[slide_num]['slide_name'] + '.npy')):
-            print("Skipping slide " + slides_info[slide_num]['slide_name'])
-        else:
-            select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir,
-                                                selected_tiles_dir, tile_size, desired_magnification, scale_factor)
-    return start_index, end_index
+        info = select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir,
+                                                   selected_tiles_dir, tile_size, desired_magnification, scale_factor)
+        string += info + '\n'
+
+    return start_index, end_index,string
 
 
 def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir,
@@ -313,12 +321,12 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
                 coord = (col, row)
                 coords.append(coord)
 
-    print(f"{slide_info['slide_name']}: num tiles selected = {len(coords)}, slide magnification = {slide_info['slide_magnification']}, "
-          f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
-          f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
-          f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
-          f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
-
+    info = (f"{slide_info['slide_name']}: num tiles selected = {len(coords)}, slide magnification = {slide_info['slide_magnification']}, "
+            f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
+            f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
+            f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
+            f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
+    print(info)
     #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
     np.save(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'), coords)
 
@@ -326,3 +334,4 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
               os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
 
     print(">> Tiles coords saved to \"%s\"" % os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+    return info

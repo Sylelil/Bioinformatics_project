@@ -632,6 +632,7 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Calculate angle of each point wrt the first plane direction.
     # Note: the parameters are `np.arctan2(y, x)`
+
     angles = np.arctan2(proj[:, 1], proj[:, 0])  # shape (K,)
 
     # Find robust extremes (a and 100-a percentiles) of the angle.

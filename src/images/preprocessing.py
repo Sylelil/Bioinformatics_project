@@ -8,6 +8,8 @@ from . import utils
 from skimage import img_as_bool
 from skimage.filters import median, gaussian
 from skimage.morphology import disk
+import config.images.config as cfg
+import hashlib
 
 
 def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, scale_factor, tile_size,
@@ -335,3 +337,24 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
 
     print(">> Tiles coords saved to \"%s\"" % os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
     return info
+
+
+def extract_tiles_on_disk(slides_info):
+    for current_slide in slides_info:
+        slide_name = current_slide['slide_name']
+        print('Saving tiles of slide ', slide_name)
+        slide = utils.open_wsi(current_slide['slide_path'])
+        zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0)
+
+        dzg_level_x = utils.get_x_zoom_level(
+            current_slide['highest_zoom_level'],
+            current_slide['slide_magnification'],
+            10)
+
+        slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, slide_name + '.npy'))
+
+        for index, coord in enumerate(slide_tiles_coords):
+            tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
+            np_tile = utils.normalize_staining(tile)
+            save_path = cfg.selected_tiles_dir / hashlib.md5(slide_name + index) + '_' + slide_name + '.npy'
+            np.save(save_path, np_tile)

@@ -110,7 +110,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
             # Find the deep zoom level corresponding to the requested magnification
             dzg_level_x = utils.get_x_zoom_level(current_slide['highest_zoom_level'], current_slide['slide_magnification'],
                                                  10)
-            selected_tiles_dir = cfg.selected_tiles_dir
+            selected_tiles_dir = cfg.selected_coords_dir
             print(">> Getting tiles..")
             slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, current_slide['slide_name'] + '.npy'))
 
@@ -183,7 +183,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
 def get_ds_len(slides_info):
     acc = 0
     for slide in slides_info:
-        coords_path = os.path.join(cfg.selected_tiles_dir, slide['slide_name'] + '.npy')
+        coords_path = os.path.join(cfg.selected_coords_dir, slide['slide_name'] + '.npy')
         slide_tiles_coords = np.load(coords_path)
         multiplier = (1+cfg.MULTIPLIER) if int(slide["label"]) == cfg.NORMAL_LABEL else 1  # Moltiplichiamo il numero di tile per il moltiplicatore per correggere la classe sbilanciata
         print("label is ", "normal" if int(slide["label"]) == cfg.NORMAL_LABEL else "tumor", "; then multiplier is ", multiplier)

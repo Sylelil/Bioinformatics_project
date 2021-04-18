@@ -10,6 +10,7 @@ from images import preprocessing, slide_info, utils
 from images.features_extraction_methods.fine_tuning import fine_tuning
 from images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
 from common import split_data
+from src.images.preprocessing import extract_tiles_on_disk
 
 USE_GPU = True
 
@@ -34,7 +35,7 @@ def main():
     normal_images = BASE_DIR / 'datasets' / 'images' / 'normal'
     tumor_images = BASE_DIR / 'datasets' / 'images' / 'tumor'
 
-    selected_tiles_dir = cfg.selected_tiles_dir
+    selected_tiles_dir = cfg.selected_coords_dir
 
     normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_tumor'
@@ -144,6 +145,8 @@ def main():
 
     print(f'\nTest data:\n>> Tot = {len(test_slides_info)}\n'
           f'>> Tumor samples = {len(test_slides_info_1)}\n>> Normal samples = {len(test_slides_info_0)}')
+
+    extract_tiles_on_disk(slides_info)
 
     # features extraction
     print("\nImages feature extraction:")

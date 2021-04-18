@@ -1,3 +1,4 @@
+import base64
 import os
 import numpy as np
 import multiprocessing
@@ -361,6 +362,5 @@ def extract_tiles_on_disk(slides_info):
         for index, coord in enumerate(slide_tiles_coords):
             tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
             np_tile = utils.normalize_staining(tile)
-
-            save_path = cfg.selected_tiles_dir / hash_base64(slide_name + index) + '_' + slide_name + '.npy'
+            save_path = cfg.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
             np.save(save_path, np_tile)

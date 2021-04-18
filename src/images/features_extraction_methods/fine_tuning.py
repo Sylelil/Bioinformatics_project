@@ -22,6 +22,10 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
     timer = utils.Time()
     seed = random.randint(0, 100)
 
+    train_slides_info = train_slides_info[:50]
+    y_train = y_train[:50]
+    test_slides_info = test_slides_info[:10]
+    y_test = y_test[:10]
     random.Random(seed).shuffle(train_slides_info)
     random.Random(seed).shuffle(test_slides_info)
     random.Random(seed).shuffle(y_train)
@@ -73,7 +77,7 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
         steps_per_epoch=train_len // batch_size,
         validation_data=eval_gen,
         validation_steps=val_len // batch_size,
-        epochs=1,
+        epochs=5,
         shuffle=True
     )
 

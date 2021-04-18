@@ -35,7 +35,7 @@ def main():
     normal_images = BASE_DIR / 'datasets' / 'images' / 'normal'
     tumor_images = BASE_DIR / 'datasets' / 'images' / 'tumor'
 
-    selected_tiles_dir = cfg.selected_coords_dir
+    selected_coords_dir = cfg.selected_coords_dir
 
     normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_tumor'
@@ -75,8 +75,11 @@ def main():
     if not os.path.exists(BASE_DIR / 'results'/ 'images' / 'low_res_images'):
         os.mkdir(BASE_DIR / 'results' / 'images' / 'low_res_images')
 
-    if not os.path.exists(selected_tiles_dir):
-        os.mkdir(selected_tiles_dir)
+    if not os.path.exists(selected_coords_dir):
+        os.mkdir(selected_coords_dir)
+
+    if not os.path.exists(cfg.selected_tiles_dir):
+        os.mkdir(cfg.selected_tiles_dir)
 
     if not os.path.exists(normal_masked_images_dir):
         os.mkdir(normal_masked_images_dir)
@@ -114,7 +117,7 @@ def main():
     # Images preprocessing
 
     print("\nNormal images preprocessing:")
-    preprocessing.preprocessing_images(normal_slides_info, selected_tiles_dir,
+    preprocessing.preprocessing_images(normal_slides_info, selected_coords_dir,
                                        os.path.join(results, "normal_filter_info.txt"),
                                        os.path.join(results, "normal_tiles_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
@@ -122,7 +125,7 @@ def main():
 
     print("\nTumor images preprocessing:")
 
-    preprocessing.preprocessing_images(tumor_slides_info, selected_tiles_dir,
+    preprocessing.preprocessing_images(tumor_slides_info, selected_coords_dir,
                                        os.path.join(results, "tumor_filter_info.txt"),
                                        os.path.join(results, "normal_tiles_info.txt"),
                                        scale_factor, tile_size, desired_magnification,
@@ -189,11 +192,11 @@ def main():
             os.mkdir(extracted_features_test_dir)
 
         print(">> Extracting features from training images:")
-        fixed_feature_generator(train_slides_info, extracted_features_train_dir, selected_tiles_dir,
+        fixed_feature_generator(train_slides_info, extracted_features_train_dir, selected_coords_dir,
                                 tile_size, desired_magnification, USE_GPU)
 
         print(">> Extracting features from test images:")
-        fixed_feature_generator(test_slides_info, extracted_features_test_dir, selected_tiles_dir,
+        fixed_feature_generator(test_slides_info, extracted_features_test_dir, selected_coords_dir,
                                 tile_size, desired_magnification, USE_GPU)
 
     else:

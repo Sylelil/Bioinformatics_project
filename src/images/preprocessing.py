@@ -10,6 +10,7 @@ from skimage.filters import median, gaussian
 from skimage.morphology import disk
 import config.images.config as cfg
 import hashlib
+import base64
 
 
 def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, scale_factor, tile_size,
@@ -339,6 +340,10 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
     return info
 
 
+def hash_base64(_str):
+    return base64.b64encode(hashlib.md5(_str.encode()).digest()).decode().rstrip("=")
+
+
 def extract_tiles_on_disk(slides_info):
     for current_slide in slides_info:
         slide_name = current_slide['slide_name']
@@ -356,5 +361,6 @@ def extract_tiles_on_disk(slides_info):
         for index, coord in enumerate(slide_tiles_coords):
             tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
             np_tile = utils.normalize_staining(tile)
-            save_path = cfg.selected_tiles_dir / hashlib.md5(slide_name + index) + '_' + slide_name + '.npy'
+
+            save_path = cfg.selected_tiles_dir / hash_base64(slide_name + index) + '_' + slide_name + '.npy'
             np.save(save_path, np_tile)

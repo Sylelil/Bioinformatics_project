@@ -90,7 +90,7 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
 
 
 def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
-    slide_num = 0
+    slide_num = -1
     data = np.array([]).reshape((0, 224, 224, 3))
     labels = []
     num_slides_prefetch = cfg.NUM_SLIDES_PREFETCH
@@ -99,7 +99,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
         tiles = []
         for i in range(num_slides_prefetch):
             slide_num += 1
-            print(f"Slide {slides_info[slide_num+i]['slide_name']} (slide num {slide_num}):")
+            print(f"Slide {slides_info[slide_num]['slide_name']} (slide num {slide_num}):")
             got_normal = False
             current_slide = slides_info[slide_num]
             current_label = labels_info[slide_num]
@@ -175,6 +175,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
             labels = np.delete(labels, np.s_[:batch_size], 0)
             print("labels is now ", len(labels))
 
+        slide_num += num_slides_prefetch
         if slide_num > len(slides_info):
             slide_num = 0
 

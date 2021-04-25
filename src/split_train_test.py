@@ -3,52 +3,57 @@ import os
 from pathlib import Path
 
 from common import split_data
+from src.common import utils
+
+
+def args_parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg',
+                        help='Configuration file path',
+                        required=True,
+                        type=str)
+    parser.add_argument('--testsizepercent',
+                            help='Size of test split as percentage value between 0 and 1',
+                            required=True,
+                            type=float)
+    parser.add_argument('--valsizepercent',
+                            help='Size of validation split as percentage value between 0 and 1',
+                            required=True,
+                            type=float)
+    args = parser.parse_args()
+    return args
 
 
 def main():
-    # Parse arguments from command line
-    '''
-    parser = argparse.ArgumentParser()
-    test_group = parser.add_mutually_exclusive_group(required=True)
-    parser.add_argument('--dirimg',
-                        help='Lookup directory with image data of all patients',
-                        required=True,
-                        type=str)
-    parser.add_argument('--dirgene',
-                        help='Lookup directory with gene data of all patients',
-                        required=True,
-                        type=str)
-    parser.add_argument('--savedir',
-                        help='Directory for saving split data',
-                        required=True,
-                        type=str)
-    test_group.add_argument('--testsizeabsolute',
-                            help='Size of test split as number of samples',
-                            required=False,
-                            type=int,
-                            default=None)
-    test_group.add_argument('--testsizepercent',
-                            help='Size of test split as percentage',
-                            required=False,
-                            type=float,
-                            default=None)
-    args = parser.parse_args()
+    # Parse arguments from command line and get params
+    args = args_parse()
+    params = utils.read_config_file(args.cfg)
 
-    # get int or float test size from arguments
-    if args.testsizeabsolute is not None and args.testsizeabsolute > 0:
-        test_size = args.testsizeabsolute
-    elif args.testsizepercent is not None and args.testsizepercent > 0:
+    # get val and test size from arguments
+    if 0 < args.testsizepercent < 1:
         test_size = args.testsizepercent
     else:
-        raise argparse.ArgumentTypeError('Argument error: insert valid --testsizeabsolute or --testsizepercent')
-    '''
+        raise argparse.ArgumentTypeError('Argument error: invalid --testsizepercent')
+    if 0 < args.valsizepercent < 1:
+        val_size_absolute = args.valsizepercent  # absolute percentage
+        val_size = val_size_absolute / (1 - test_size)  # relative percentage to train+val split
+    else:
+        raise argparse.ArgumentTypeError('Argument error: invalid --valsizepercent')
 
+
+
+    dirimg = params['paths']['images_dir']
+    dirgene = params['paths']['genes_dir']
+    savedir = params['paths']['split_data_dir']
+
+    '''
     dirimg = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images_not_split'
     dirgene = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'genes_not_split'
     savedir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results'
     test_size = float(0.2)
     val_size = float(0.2)
     val_size = val_size / (1 - test_size)
+    '''
 
     if not os.path.exists(dirimg):
         print("%s not existing." % dirimg)
@@ -78,23 +83,26 @@ def main():
     if not os.path.exists(Path(savedir) / 'images' / 'val'):
         os.mkdir(Path(savedir) / 'images' / 'val')
 
-    splitsdir = Path('assets') / 'data_splits'
+    caseid_splits_dir = Path('assets') / 'caseid_splits'
     if not os.path.exists(Path('assets')):
         print("%s not existing." % Path('assets'))
         exit()
-    if not os.path.exists(splitsdir):
-        print("%s not existing." % splitsdir)
+    if not os.path.exists(caseid_splits_dir):
+        print("%s not existing." % caseid_splits_dir)
         exit()
 
     # split caseids in train, validation and test and save on file:
     caseids_train_val, caseids_test, labels_train_val, labels_test = split_data.split_caseids(lookup_dir=dirimg,
                                                                                               test_size=test_size,
-                                                                                              save_dir=splitsdir,
+                                                                                              save_dir=caseid_splits_dir,
                                                                                               nametrain='train_val',
                                                                                               nametest='test')
     caseids_train, caseids_val, _, _ = split_data.split_caseids(caseids_arg=caseids_train_val,
-                                                                labels_arg=labels_train_val, test_size=val_size,
-                                                                save_dir=splitsdir, nametrain='train', nametest='val')
+                                                                labels_arg=labels_train_val,
+                                                                test_size=val_size,
+                                                                save_dir=caseid_splits_dir,
+                                                                nametrain='train',
+                                                                nametest='val')
 
     print('--------------------------')
     print(">> Splitting images files:")

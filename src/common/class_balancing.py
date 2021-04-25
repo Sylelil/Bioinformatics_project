@@ -11,13 +11,13 @@ def get_balancing_method(method, params):
        :return: Class balancing method
     """
     if method == 'random_upsampling':
-        return RandomOverSampler(random_state=params['random_state'])
+        return RandomOverSampler(random_state=params['general']['random_state'])
     elif method == 'combined':
-        return SMOTEENN(random_state=params['random_state'])
+        return SMOTEENN(random_state=params['general']['random_state'])
     elif method == 'smote':
-        return SMOTE(random_state=params['random_state'])
+        return SMOTE(random_state=params['general']['random_state'])
     elif method == 'downsampling':
-        return ClusterCentroids(random_state=params['random_state'])
+        return ClusterCentroids(random_state=params['general']['random_state'])
 
     return None
 

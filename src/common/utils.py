@@ -148,35 +148,43 @@ def read_config_file(config_file_path):
        :return: Dictionary of parameters
     """
     params = {}
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
     config.read(config_file_path)
 
     # general
+    params['general'] = {}
     scoring = config['general']['scoring']
     if scoring == 'matthews_corrcoef':
-        params['scoring'] = metrics.matthews_corrcoef
+        params['general']['scoring'] = metrics.matthews_corrcoef
     if scoring == 'accuracy':
-        params['scoring'] = metrics.accuracy_score
+        params['general']['scoring'] = metrics.accuracy_score
 
     random_state = config['general']['random_state']
     if random_state == 'None' or random_state == '':
-        params['random_state'] = None
+        params['general']['random_state'] = None
     else:
-        params['random_state'] = config.getint('general', 'random_state')
+        params['general']['random_state'] = config.getint('general', 'random_state')
 
-    params['batchsize'] = config.getint('general', 'batchsize')
-
-    params['cv_inner_n_splits'] = config.getint('crossvalidation', 'cv_inner_n_splits')
-    params['cv_outer_n_splits'] = config.getint('crossvalidation', 'cv_outer_n_splits')
-    params['cv_n_splits'] = config.getint('crossvalidation', 'cv_n_splits')
+    # paths
+    params['paths'] = {}
+    params['paths']['images_dir'] = Path(config['paths']['images_dir'])
+    params['paths']['genes_dir'] = Path(config['paths']['genes_dir'])
+    params['paths']['split_data_dir'] = Path(config['paths']['split_data_dir'])
+    params['paths']['split_results_dir'] = Path(config['paths']['split_results_dir'])
+    params['paths']['concatenated_results_dir'] = Path(config['paths']['concatenated_results_dir'])
 
     # pca
-    params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
-    params['n_components'] = config.getint('pca', 'n_components')
+    params['pca'] = {}
+    params['pca']['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
+    params['pca']['n_components'] = config.getint('pca', 'n_components')
 
-    #nn
-    params['epochs'] = config.getint('nn', 'epochs')
-    params['batchsize_nn'] = config.getint('nn', 'batchsize')
+    # preprocessing
+    params['preprocessing'] = {}
+    params['preprocessing']['batchsize'] = config.getint('preprocessing', 'batchsize')
 
+    # nn
+    params['nn'] = {}
+    params['nn']['epochs'] = config.getint('nn', 'epochs')
+    params['nn']['batchsize'] = config.getint('nn', 'batchsize')
 
     return params

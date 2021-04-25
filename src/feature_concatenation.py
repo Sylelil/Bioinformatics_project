@@ -1,3 +1,4 @@
+import argparse
 import os
 from collections import Counter
 from pathlib import Path
@@ -148,7 +149,34 @@ def concatenate_data(lookup_dir_tiles, lookup_dir_genes, path_to_save, gene_copy
     print('>> Done')
 
 
+def args_parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg',
+                        help='Configuration file path',
+                        required=True,
+                        type=str)
+    args = parser.parse_args()
+    return args
+
 def main():
+    # Parse arguments from command line and get params
+    args = args_parse()
+    params = utils.read_config_file(args.cfg)
+
+    results_dir = params['paths']['split_results_dir']
+    tile_features_train_dir = Path(results_dir) / 'images' / 'train'
+    tile_features_test_dir = Path(results_dir) / 'images' / 'test'
+    tile_features_val_dir = Path(results_dir) / 'images' / 'val'
+    gene_features_train_dir = Path(results_dir) / 'genes' / 'train'
+    gene_features_test_dir = Path(results_dir) / 'genes' / 'test'
+    gene_features_val_dir = Path(results_dir) / 'genes' / 'val'
+
+    path_to_save = params['paths']['concatenated_results_dir']
+    path_to_save_train = Path(path_to_save) / 'train'
+    path_to_save_test = Path(path_to_save) / 'test'
+    path_to_save_val = Path(path_to_save) / 'val'
+
+    '''
     tile_features_train_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images' / 'train'
     tile_features_test_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images' / 'test'
     tile_features_val_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images' / 'val'
@@ -159,21 +187,10 @@ def main():
     path_to_save_train = Path(path_to_save) / 'train'
     path_to_save_test = Path(path_to_save) / 'test'
     path_to_save_val = Path(path_to_save) / 'val'
+    '''
 
-    if not os.path.exists(Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results'):
-        print("%s not existing." % Path('results'))
-        exit()
-    if not os.path.exists(path_to_save):
-        print("%s not existing." % path_to_save)
-        exit()
-    if not os.path.exists(path_to_save_train):
-        print("%s not existing." % path_to_save_train)
-        exit()
-    if not os.path.exists(path_to_save_test):
-        print("%s not existing." % path_to_save_test)
-        exit()
-    if not os.path.exists(path_to_save_val):
-        print("%s not existing." % path_to_save_val)
+    if not os.path.exists(Path(results_dir)):
+        print("%s not existing." % Path(results_dir))
         exit()
     if not os.path.exists(tile_features_train_dir):
         print("%s not existing." % tile_features_train_dir)
@@ -194,23 +211,35 @@ def main():
         print("%s not existing." % gene_features_val_dir)
         exit()
 
+    if not os.path.exists(path_to_save):
+        print("%s not existing." % path_to_save)
+        exit()
+    if not os.path.exists(path_to_save_train):
+        os.mkdir(path_to_save_train)
+    if not os.path.exists(path_to_save_test):
+        os.mkdir(path_to_save_test)
+    if not os.path.exists(path_to_save_val):
+        os.mkdir(path_to_save_val)
+
+    # concatenate data with and without duplicating genes to match tiles dimensionality:
+
     print('----------------------------')
     print(">> Concatenating train data:")
     print('----------------------------')
-    #concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train)
+    concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train)
     concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train, gene_copy_ratio=10)
+
     print('---------------------------------')
     print(">> Concatenating validation data:")
     print('---------------------------------')
-    #concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val)
+    concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val)
     concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val, gene_copy_ratio=10)
+
     print('---------------------------')
     print(">> Concatenating test data:")
     print('---------------------------')
-    #concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test)
+    concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test)
     concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test, gene_copy_ratio=10)
-
-
 
 
 if __name__ == '__main__':

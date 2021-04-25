@@ -46,7 +46,7 @@ def main():
     normal_rand_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'rand_normal'
     tumor_rand_tiles_dir = BASE_DIR / 'results'/ 'images' / 'selected_tiles' / 'rand_tumor'
 
-    splits_dir = BASE_DIR / 'assets' / 'data_splits'
+    splits_dir = BASE_DIR / 'assets' / 'caseid_splits'
 
     if not os.path.exists(normal_images):
         sys.stderr.write(f"File \"{normal_images}\" not found")

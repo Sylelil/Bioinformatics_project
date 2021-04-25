@@ -68,7 +68,7 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
 
     else:
         os.mkdir(Path('assets') / 'concatenated_pca')
-        batchsize = params['batchsize']
+        batchsize = params['preprocessing']['batchsize']
 
         print(">> Fitting scaler...")
         scaler = StandardScaler()
@@ -76,7 +76,7 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
             X_train_chunk = chunk.iloc[:, :-1]
             scaler.partial_fit(X_train_chunk)
 
-        ipca = IncrementalPCA(n_components=params['n_components'])
+        ipca = IncrementalPCA(n_components=params['pca']['n_components'])
         X_train = []
         y_train = []
         X_val = []
@@ -153,36 +153,36 @@ def shallow_classification(args, params, train_filepath, val_filepath, test_file
         if args.method == 'svc':
             classifier = LinearSVC(C=hyperparam,
                                    class_weight=('balanced' if args.balancing == 'weights' else None),
-                                   random_state=params['random_state'])
+                                   random_state=params['general']['random_state'])
         else:
             classifier = SGDClassifier(alpha=hyperparam,
                                        max_iter=10, # np.ceil(10**6 / n_samples)
                                        class_weight=('balanced' if args.balancing == 'weights' else None),
-                                       random_state=params['random_state'])
+                                       random_state=params['general']['random_state'])
         classifier.fit(X_train, y_train)
         y_pred = classifier.predict(X_val)
-        score = params['scoring'](y_val, y_pred)
-        print(f"    Validation {params['scoring'].__name__}: {score}")
+        score = params['general']['scoring'](y_val, y_pred)
+        print(f"    Validation {params['general']['scoring'].__name__}: {score}")
         if score > best_score:
             best_score = score
             best_hyperparam = hyperparam
 
-    print(f"Best {params['scoring'].__name__} ({'C' if args.method == 'svc' else 'alpha'}={best_hyperparam}): {best_score}")
+    print(f"Best {params['general']['scoring'].__name__} ({'C' if args.method == 'svc' else 'alpha'}={best_hyperparam}): {best_score}")
     print(f">> Training with best {'LinearSVC' if args.method == 'svc' else 'SGDClassifier'} model...")
     if args.method == 'svc':
         best_classifier = LinearSVC(C=best_hyperparam,
                                     class_weight=('balanced' if args.balancing == 'weights' else None),
-                                    random_state=params['random_state'])
+                                    random_state=params['general']['random_state'])
     else:
         best_classifier = SGDClassifier(alpha=best_hyperparam,
                                         max_iter=10,
                                         class_weight=('balanced' if args.balancing == 'weights' else None),
-                                        random_state=params['random_state'])
+                                        random_state=params['general']['random_state'])
     best_classifier.fit(X_train, y_train)
     print(">> Testing...")
     y_pred_test = best_classifier.predict(X_test)
-    test_score = params['scoring'](y_test, y_pred_test)
-    print(f"Test {params['scoring'].__name__} = {test_score}")
+    test_score = params['general']['scoring'](y_test, y_pred_test)
+    print(f"Test {params['general']['scoring'].__name__} = {test_score}")
 
     print(classification_report(y_test, y_pred_test))
     print('>> Done')
@@ -243,9 +243,9 @@ def pca_nn_classification(args, params, train_filepath, val_filepath, test_filep
         class_weight = compute_class_weights(y_train)
 
     mlp_settings = {
-        'n_input_features' : params['n_components'],
-        'EPOCHS' : params['epochs'],
-        'BATCH_SIZE' : params['batchsize_nn'],
+        'n_input_features' : params['pca']['n_components'],
+        'EPOCHS' : params['nn']['epochs'],
+        'BATCH_SIZE' : params['nn']['batchsize'],
         'early_stopping' : tf.keras.callbacks.EarlyStopping(monitor='val_prc',
                                                             verbose=1,
                                                             patience=10,
@@ -308,7 +308,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
 
 
 def nn_classification(args, params, train_filepath, val_filepath, test_filepath):
-    batchsize = params['batchsize_nn']
+    batchsize = params['nn']['batchsize']
 
     scaler = StandardScaler()
 
@@ -369,7 +369,7 @@ def nn_classification(args, params, train_filepath, val_filepath, test_filepath)
                                                         balancer=None)
     mlp_settings = {
         'n_input_features' : n_features,
-        'EPOCHS' : params['epochs'],
+        'EPOCHS' : params['nn']['epochs'],
         'BATCH_SIZE' : batchsize,
         'early_stopping' : tf.keras.callbacks.EarlyStopping(monitor='val_prc',
                                                             verbose=1,
@@ -396,13 +396,22 @@ def main():
     # Read configuration file
     params = utils.read_config_file(args.cfg)
 
+    concatenated_results_path = params['paths']['concatenated_results_dir']
+    train_filepath = Path(concatenated_results_path) / 'train' / 'concat_data.csv'
+    val_filepath = Path(concatenated_results_path) / 'val' / 'concat_data.csv'
+    test_filepath = Path(concatenated_results_path) / 'test' / 'concat_data.csv'
+    train_filepath_copied_genes = Path(concatenated_results_path) / 'train' / 'concat_data_copied.csv'
+    val_filepath_copied_genes = Path(concatenated_results_path) / 'val' / 'concat_data_copied.csv'
+    test_filepath_copied_genes = Path(concatenated_results_path) / 'test' / 'concat_data_copied.csv'
+
+    '''
     train_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'train' / 'concat_data.csv'
     val_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'val' / 'concat_data.csv'
-    test_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'test' / 'concat_data.csv'
-
+    test_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'test' / 'concat_data.csv'    
     train_filepath_copied_genes = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'train' / 'concat_data_copied.csv'
     val_filepath_copied_genes = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'val' / 'concat_data_copied.csv'
     test_filepath_copied_genes = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'test' / 'concat_data_copied.csv'
+    '''
 
     if args.method == 'svc' or args.method == 'sgd':
         shallow_classification(args, params, train_filepath, val_filepath, test_filepath)

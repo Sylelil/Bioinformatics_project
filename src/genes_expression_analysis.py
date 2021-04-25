@@ -34,7 +34,7 @@ def main():
 
     welch_t_results_dir = Path('results') / 'genes' / 'welch_t'
     svm_t_rfe_results_dir = Path('results') / 'genes' / 'svm_t_rfe'
-    splits_dir = Path('assets') / 'data_splits'
+    splits_dir = Path('assets') / 'caseid_splits'
     config_dir = Path('config') / 'genes'
     path_genes = Path('datasets') / 'genes'
 

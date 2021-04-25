@@ -1,14 +1,22 @@
 from pathlib import Path
 
-# Paths
 BASE_DIR = Path('.')
+
+# Paths
 selected_coords_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'coords'
 selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'tiles'
 
+# Preprocessing
+DESIRED_MAGNIFICATION = 10
+TILE_SIZE = 224
+SCALE_FACTOR = 32
+OVERLAP = 0
 
 # Labels
 NORMAL_LABEL = '0'
 TUMOR_LABEL = '1'
+
+BATCH_SIZE = 32
 
 # Data augmentation
 MULTIPLIER = 3

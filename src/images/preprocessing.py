@@ -14,13 +14,12 @@ import hashlib
 import base64
 
 
-def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, scale_factor, tile_size,
-                         desired_magnification, images_dir, masked_images_dir):
+def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, images_dir, masked_images_dir):
 
     # Apply filters to down scaled images
     if len(os.listdir(masked_images_dir)) < len(slides_info):
         print(">> Apply filters to down scaled images:")
-        multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, scale_factor, images_dir, masked_images_dir)
+        multiprocess_apply_filters_to_wsi(slides_info, filter_info_path, images_dir, masked_images_dir)
     else:
         print(">> Masked images already available on disk")
 
@@ -31,14 +30,13 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tile
             skipped +=1
 
     if skipped == len(slides_info):
-        print(">> Selected tiles already available on disk")
+        print(">> Selected tile coords already available on disk")
     else:
-        print(">> Select from images the tiles with tissue:")
-        multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir,
-                                              tile_size, desired_magnification, scale_factor, tiles_info_path)
+        print(">> Select from images the tile coords with tissue:")
+        multiprocess_select_tiles_with_tissue(slides_info, masked_images_dir, selected_tiles_dir, tiles_info_path)
 
 
-def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, scale_factor, images_dir, masked_images_dir):
+def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, images_dir, masked_images_dir):
     """
     Convert all WSI training slides to smaller images using multiple processes (one process per core).
     Each process will process a range of slide numbers.
@@ -64,8 +62,7 @@ def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, scale_fac
         end_index = num_process * images_per_process
         start_index = int(start_index)
         end_index = int(end_index)
-        tasks.append((start_index, end_index, slides_images, scale_factor, images_dir,
-                      masked_images_dir))
+        tasks.append((start_index, end_index, slides_images, images_dir, masked_images_dir))
         if start_index == end_index:
             print("Task #" + str(num_process) + ": Process slide " + str(start_index))
         else:
@@ -94,11 +91,11 @@ def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, scale_fac
     print(">> Filter info saved to \"%s\"\n" % filter_info_path)
 
 
-def apply_filters(start_ind, end_ind, slide_images, scale_factor, images_dir, masked_images_dir):
+def apply_filters(start_ind, end_ind, slide_images, images_dir, masked_images_dir):
     string = ""
 
     for slide_num in range(start_ind - 1, end_ind):
-        scaled_image, scaled_w, scaled_h = utils.from_wsi_to_scaled_pillow_image(slide_images[slide_num]['slide_path'], scale_factor)
+        scaled_image, scaled_w, scaled_h = utils.from_wsi_to_scaled_pillow_image(slide_images[slide_num]['slide_path'], cfg.SCALE_FACTOR)
         scaled_image.save(os.path.join(images_dir, slide_images[slide_num]['slide_name'] + ".png"))
         info = apply_filters_to_image(slide_images[slide_num], scaled_image, masked_images_dir)
         string += info + '\n'
@@ -202,8 +199,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
     return string
 
 
-def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, selected_tiles_dir,
-                                          tile_size, desired_magnification, scale_factor, tiles_info_path):
+def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, selected_tiles_dir, tiles_info_path):
     """
     Convert all WSI training slides to smaller images using multiple processes (one process per core).
     Each process will process a range of slide numbers.
@@ -229,7 +225,7 @@ def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, 
         end_index = num_process * images_per_process
         start_index = int(start_index)
         end_index = int(end_index)
-        tasks.append((start_index, end_index, slides_images, masked_pil_images_dir, selected_tiles_dir, tile_size, desired_magnification, scale_factor))
+        tasks.append((start_index, end_index, slides_images, masked_pil_images_dir, selected_tiles_dir))
         if start_index == end_index:
             print("Task #" + str(num_process) + ": Process slide " + str(start_index))
         else:
@@ -257,27 +253,23 @@ def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, 
     print(">> Tiles info saved to \"%s\"\n" % tiles_info_path)
 
 
-def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_images_pil_dir, selected_tiles_dir,
-                                   tile_size, desired_magnification, scale_factor):
+def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_images_pil_dir, selected_tiles_dir):
     string = ""
     for slide_num in range(start_index - 1, end_index):
-        info = select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir,
-                                                   selected_tiles_dir, tile_size, desired_magnification, scale_factor)
+        info = select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir, selected_tiles_dir)
         string += info + '\n'
 
     return start_index, end_index,string
 
 
-def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir,
-                                        tile_size, desired_magnification, scale_factor):
+def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir):
     # Initialize deep zoom generator for the slide
     image_dims = (slide_info['slide_width'], slide_info['slide_height'])
     slide = utils.open_wsi(slide_info['slide_path'])
-    dzg = DeepZoomGenerator(slide, tile_size=tile_size, overlap=0)
+    dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
 
     # Find the deep zoom level corresponding to the requested magnification
-    dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'],
-                                   slide_info['slide_magnification'], desired_magnification)
+    dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'], cfg.DESIRED_MAGNIFICATION)
     # dzg_level_x = dzg.level_count - 1
     dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
     dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
@@ -285,11 +277,11 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
 
     # Calculate patch size in the mask
     dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
-    mask_patch_size = int(np.ceil(tile_size * (dzg_downscaling / scale_factor)))
+    mask_patch_size = int(np.ceil(cfg.TILE_SIZE * (dzg_downscaling / cfg.SCALE_FACTOR)))
     # Deep zoom generator for the mask
     pil_masked_image = Image.open(os.path.join(masked_images_pil_dir, slide_info['slide_name'] + ".png"))
     dzg_mask = DeepZoomGenerator(openslide.ImageSlide(pil_masked_image), tile_size=mask_patch_size,
-                                 overlap=0)
+                                 overlap=cfg.OVERLAP)
     dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
     dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
     dzg_mask_ntiles = np.prod(dzg_mask_tile_coords)
@@ -326,9 +318,9 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
                 coords.append(coord)
 
     info = (f"{slide_info['slide_name']}: num tiles selected = {len(coords)}, slide magnification = {slide_info['slide_magnification']}, "
-            f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{desired_magnification}x), "
-            f"num tiles = {n_tiles}, tile size = {tile_size}, mask tile size = {mask_patch_size},"
-            f"slide dimensions = {image_dims}, slide dimensions (at %{desired_magnification}x) = {dzg_level_x_dims},"
+            f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{cfg.DESIRED_MAGNIFICATION}x), "
+            f"num tiles = {n_tiles}, tile size = {cfg.TILE_SIZE}, mask tile size = {mask_patch_size},"
+            f"slide dimensions = {image_dims}, slide dimensions (at %{cfg.DESIRED_MAGNIFICATION}x) = {dzg_level_x_dims},"
             f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
     print(info)
     #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
@@ -346,21 +338,29 @@ def hash_base64(_str):
 
 
 def extract_tiles_on_disk(slides_info):
+    num_tiles = 0
     for current_slide in slides_info:
-        slide_name = current_slide['slide_name']
-        print('Saving tiles of slide ', slide_name)
-        slide = utils.open_wsi(current_slide['slide_path'])
-        zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0)
+        slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, current_slide['slide_name'] + '.npy'))
+        num_tiles += len(slide_tiles_coords)
 
-        dzg_level_x = utils.get_x_zoom_level(
-            current_slide['highest_zoom_level'],
-            current_slide['slide_magnification'],
-            10)
+    if len(os.listdir(cfg.selected_tiles_dir)) < num_tiles:
+        for current_slide in slides_info:
+            slide_name = current_slide['slide_name']
+            print('Saving tiles of slide ', slide_name)
+            slide = utils.open_wsi(current_slide['slide_path'])
+            zoom = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
 
-        slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, slide_name + '.npy'))
+            dzg_level_x = utils.get_x_zoom_level(
+                current_slide['highest_zoom_level'],
+                current_slide['slide_magnification'],
+                10)
 
-        for index, coord in enumerate(slide_tiles_coords):
-            tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
-            np_tile = utils.normalize_staining(tile)
-            save_path = cfg.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
-            np.save(save_path, np_tile)
+            slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, slide_name + '.npy'))
+
+            for index, coord in enumerate(slide_tiles_coords):
+                tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
+                np_tile = utils.normalize_staining(tile)
+                save_path = cfg.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
+                np.save(save_path, np_tile)
+    else:
+        print(">> Selected tiles already saved on disk")

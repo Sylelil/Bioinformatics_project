@@ -10,7 +10,7 @@ from images import preprocessing, slide_info, utils
 from images.features_extraction_methods.fine_tuning import fine_tuning
 from images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
 from common import split_data
-from src.images.preprocessing import extract_tiles_on_disk
+
 
 USE_GPU = True
 
@@ -32,9 +32,7 @@ def main():
 
     # Paths
     results = BASE_DIR / 'results' / 'images'
-    normal_images = BASE_DIR / 'datasets' / 'images' / 'normal'
-    tumor_images = BASE_DIR / 'datasets' / 'images' / 'tumor'
-
+    images = BASE_DIR / 'datasets' / 'images'
     selected_coords_dir = cfg.selected_coords_dir
 
     normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
@@ -48,12 +46,8 @@ def main():
 
     splits_dir = BASE_DIR / 'assets' / 'data_splits'
 
-    if not os.path.exists(normal_images):
-        sys.stderr.write(f"File \"{normal_images}\" not found")
-        exit(1)
-
-    if not os.path.exists(tumor_images):
-        sys.stderr.write(f"File \"{tumor_images}\" not found")
+    if not os.path.exists(images):
+        sys.stderr.write(f"File \"{images}\" not found")
         exit(1)
 
     if not os.path.exists(splits_dir):
@@ -103,38 +97,31 @@ def main():
     # TODO
 
     # Read slides info
-    print("Normal slides info:")
-    normal_slides_info = slide_info.read_slides_info(normal_images)
+    print("Slides info:")
+    normal_slides_info, tumor_slides_info = slide_info.read_slides_info(images)
     slide_info.save_slides_info(normal_slides_info, results, "normal_slides_info.txt", display_info=False)
-
-    print("\nTumor slides info:")
-    tumor_slides_info = slide_info.read_slides_info(tumor_images)
     slide_info.save_slides_info(tumor_slides_info, results, "tumor_slides_info.txt", display_info=False)
 
-    desired_magnification = 10
-    tile_size = 224
-    scale_factor = 32
     # Images preprocessing
-
     print("\nNormal images preprocessing:")
     preprocessing.preprocessing_images(normal_slides_info, selected_coords_dir,
                                        os.path.join(results, "normal_filter_info.txt"),
                                        os.path.join(results, "normal_tiles_info.txt"),
-                                       scale_factor, tile_size, desired_magnification,
                                        low_res_normal_images_dir, normal_masked_images_dir)
 
     print("\nTumor images preprocessing:")
-
     preprocessing.preprocessing_images(tumor_slides_info, selected_coords_dir,
                                        os.path.join(results, "tumor_filter_info.txt"),
                                        os.path.join(results, "normal_tiles_info.txt"),
-                                       scale_factor, tile_size, desired_magnification,
                                        low_res_tumor_images_dir, tumor_masked_images_dir)
 
-    print("\nSplitting data:")
     slides_info = normal_slides_info + tumor_slides_info
+    print("\nSaving selected tiles on disk:")
+    preprocessing.extract_tiles_on_disk(slides_info)
+
+    print("\nSplitting data in train and test:")
     print(f'>> Tot data: {len(slides_info)}')
-    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, splits_dir)
+    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, splits_dir) #TODO splits
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
@@ -148,8 +135,6 @@ def main():
 
     print(f'\nTest data:\n>> Tot = {len(test_slides_info)}\n'
           f'>> Tumor samples = {len(test_slides_info_1)}\n>> Normal samples = {len(test_slides_info_0)}')
-
-    extract_tiles_on_disk(slides_info)
 
     # features extraction
     print("\nImages feature extraction:")
@@ -193,17 +178,15 @@ def main():
 
         print(">> Extracting features from training images:")
         fixed_feature_generator(train_slides_info, extracted_features_train_dir, selected_coords_dir,
-                                tile_size, desired_magnification, USE_GPU)
+                                USE_GPU)
 
         print(">> Extracting features from test images:")
         fixed_feature_generator(test_slides_info, extracted_features_test_dir, selected_coords_dir,
-                                tile_size, desired_magnification, USE_GPU)
+                                USE_GPU)
 
     else:
         sys.stderr.write("Invalid value for <feature extraction method> in config file")
         exit(1)
-
-# def read_config_file(config_file_path, method):
 
 
 if __name__ == '__main__':

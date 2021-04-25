@@ -11,7 +11,8 @@ def read_slides_info(lookup_dir):
         :param lookup_dir: path to directory
         :return: list of dictionaries containing slides info
     """
-    slides_info = []
+    normal_slides_info = []
+    tumor_slides_info = []
 
     for _dir in tqdm(os.listdir(lookup_dir), desc=">> Reading slides info...", file=sys.stdout):
         current_dir = os.path.join(lookup_dir, _dir)
@@ -35,11 +36,14 @@ def read_slides_info(lookup_dir):
                         'slide_magnification': slide_magnification,
                         'slide_width': width,
                         'slide_height': height,
-                        'label': 0 if str(lookup_dir).endswith("normal") else 1,
+                        'label': 0 if file_name.endswith("0") else 1,
                     }
-                    slides_info.append(slide_info_dict)
+                    if slide_info_dict['label'] == 0:
+                        normal_slides_info.append(slide_info_dict)
+                    else:
+                        tumor_slides_info.append(slide_info_dict)
 
-    return slides_info
+    return normal_slides_info, tumor_slides_info
 
 
 def save_slides_info(slides_info, save_dir, file_name, display_info=False):

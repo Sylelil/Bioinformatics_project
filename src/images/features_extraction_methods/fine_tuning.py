@@ -37,10 +37,9 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-    batch_size = 32
-    train_gen = feed_slides_generator(train_slides_info, y_train, batch_size, mode="train")
-    eval_gen = feed_slides_generator(test_slides_info, y_test, batch_size, mode="eval")
-    test_gen = feed_slides_generator(test_slides_info, y_test, batch_size, mode="eval")
+    train_gen = feed_slides_generator(train_slides_info, y_train, cfg.BATCH_SIZE, mode="train")
+    eval_gen = feed_slides_generator(test_slides_info, y_test, cfg.BATCH_SIZE, mode="eval")
+    test_gen = feed_slides_generator(test_slides_info, y_test, cfg.BATCH_SIZE, mode="eval")
 
     train_len = get_ds_len(train_slides_info)
     val_len = get_ds_len(test_slides_info)
@@ -74,9 +73,9 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
     print("[INFO] training head...")
     history = model.fit(
         x=train_gen,
-        steps_per_epoch=train_len // batch_size,
+        steps_per_epoch=train_len // cfg.BATCH_SIZE,
         validation_data=eval_gen,
-        validation_steps=val_len // batch_size,
+        validation_steps=val_len // cfg.BATCH_SIZE,
         epochs=5,
         shuffle=True
     )
@@ -109,7 +108,7 @@ def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
             current_label = labels_info[slide_num]
 
             slide = utils.open_wsi(current_slide['slide_path'])
-            zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0)
+            zoom = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=0)
 
             # Find the deep zoom level corresponding to the requested magnification
             dzg_level_x = utils.get_x_zoom_level(current_slide['highest_zoom_level'], current_slide['slide_magnification'],

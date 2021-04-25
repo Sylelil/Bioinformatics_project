@@ -3,15 +3,13 @@ import os
 from pathlib import Path
 
 from common import split_data
+from config import paths
 from src.common import utils
 
 
 def args_parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg',
-                        help='Configuration file path',
-                        required=True,
-                        type=str)
+
     parser.add_argument('--testsizepercent',
                             help='Size of test split as percentage value between 0 and 1',
                             required=True,
@@ -27,7 +25,6 @@ def args_parse():
 def main():
     # Parse arguments from command line and get params
     args = args_parse()
-    params = utils.read_config_file(args.cfg)
 
     # get val and test size from arguments
     if 0 < args.testsizepercent < 1:
@@ -40,11 +37,9 @@ def main():
     else:
         raise argparse.ArgumentTypeError('Argument error: invalid --valsizepercent')
 
-
-
-    dirimg = params['paths']['images_dir']
-    dirgene = params['paths']['genes_dir']
-    savedir = params['paths']['split_data_dir']
+    dirimg = paths.images_dir
+    dirgene = paths.genes_dir
+    savedir = paths.split_data_dir
 
     '''
     dirimg = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images_not_split'
@@ -62,8 +57,7 @@ def main():
         print("%s not existing." % dirgene)
         exit()
     if not os.path.exists(savedir):
-        print("%s not existing." % savedir)
-        exit()
+        os.makedirs(savedir)
 
     if not os.path.exists(Path(savedir) / 'genes'):
         os.mkdir(Path(savedir) / 'genes')
@@ -83,13 +77,10 @@ def main():
     if not os.path.exists(Path(savedir) / 'images' / 'val'):
         os.mkdir(Path(savedir) / 'images' / 'val')
 
-    caseid_splits_dir = Path('assets') / 'caseid_splits'
-    if not os.path.exists(Path('assets')):
-        print("%s not existing." % Path('assets'))
-        exit()
+    caseid_splits_dir = paths.caseid_splits_dir
+
     if not os.path.exists(caseid_splits_dir):
-        print("%s not existing." % caseid_splits_dir)
-        exit()
+        os.makedirs(caseid_splits_dir)
 
     # split caseids in train, validation and test and save on file:
     caseids_train_val, caseids_test, labels_train_val, labels_test = split_data.split_caseids(lookup_dir=dirgene,

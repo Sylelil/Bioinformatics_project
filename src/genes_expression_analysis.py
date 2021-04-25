@@ -2,16 +2,12 @@ import argparse
 import math
 import os
 import sys
-from collections import Counter
 from os import path
-from pathlib import Path
-from imblearn.over_sampling import SMOTE
-import numpy as np
-from sklearn.preprocessing import StandardScaler
+from config import paths
 from genes import methods
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from genes.features_selection_methods.welch_t import genes_selection_welch_t
-import pandas as pd
+
 
 from common import split_data
 
@@ -32,48 +28,45 @@ def main():
 
     args = parser.parse_args()
 
-    welch_t_results_dir = Path('results') / 'genes' / 'welch_t'
-    svm_t_rfe_results_dir = Path('results') / 'genes' / 'svm_t_rfe'
-    splits_dir = Path('assets') / 'caseid_splits'
-    config_dir = Path('config') / 'genes'
-    path_genes = Path('datasets') / 'genes'
-
-    if not os.path.exists(path_genes):
-        sys.stderr.write(f'{path_genes} does not exists')
+    if not os.path.exists(paths.genes_dir):
+        sys.stderr.write(f'{paths.genes_dir} does not exists')
         exit(2)
 
     if not path.exists(args.cfg) or (not path.isfile(args.cfg)):
         sys.stderr.write("Invalid path for config file")
         exit(2)
 
-    if not os.path.exists(splits_dir):
-        sys.stderr.write(f'{splits_dir} does not exists')
+    if not os.path.exists(paths.split_data_dir):
+        sys.stderr.write(f'{paths.split_data_dir} does not exists')
         exit(2)
 
-    if not os.path.exists(Path('config')):
-        os.mkdir(Path('config'))
+    if not os.path.exists(paths.welch_t_results_dir):
+        os.makedirs(paths.welch_t_results_dir)
 
-    if not os.path.exists(Path('results')):
-        os.mkdir(Path('results'))
+    if not os.path.exists(paths.svm_t_rfe_results_dir):
+        os.makedirs(paths.svm_t_rfe_results_dir)
 
-    if not os.path.exists(Path('results') / 'genes'):
-        os.mkdir(Path('results'))
+    if not os.path.exists(paths.genes_config_dir):
+        os.makedirs(paths.genes_config_dir)
 
-    if not os.path.exists(welch_t_results_dir):
-        os.mkdir(welch_t_results_dir)
+    if not os.path.exists(paths.welch_t_selected_features_train):
+        os.makedirs(paths.welch_t_selected_features_train)
 
-    if not os.path.exists(svm_t_rfe_results_dir):
-        os.mkdir(svm_t_rfe_results_dir)
+    if not os.path.exists(paths.welch_t_selected_features_test):
+        os.makedirs(paths.welch_t_selected_features_test)
 
-    if not os.path.exists(config_dir):
-        os.mkdir(config_dir)
+    if not os.path.exists(paths.svm_t_rfe_selected_features_train):
+        os.makedirs(paths.svm_t_rfe_selected_features_train)
+
+    if not os.path.exists(paths.svm_t_rfe_selected_features_test):
+        os.makedirs(paths.svm_t_rfe_selected_features_test)
 
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
     print("\nReading gene expression data:")
-    df = methods.read_gene_expression_data(path_genes)
-    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, splits_dir) #TODO splits
+    df = methods.read_gene_expression_data(paths.genes_dir)  # TODO check for duplicates
+    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, paths.caseid_splits_dir) #TODO read direclty splitted folders
 
     print("\nExploratory analysis:")
     # Compute number of samples
@@ -105,72 +98,44 @@ def main():
     print("\nDifferentially gene expression analysis [DGEA]")
     if args.method == 'welch_t':
         # feature selection
-        selected_genes = genes_selection_welch_t(X_train, params, welch_t_results_dir)
+        selected_genes = genes_selection_welch_t(X_train, params, paths.welch_t_results_dir)
 
         # save selected genes on file
         selected_genes_file = str(params['alpha']) + "_selected_genes.txt"
-        selected_genes_path = os.path.join(welch_t_results_dir, selected_genes_file)
+        selected_genes_path = os.path.join(paths.welch_t_results_dir, selected_genes_file)
         fp = open(selected_genes_path, "w")
         for gene in selected_genes:
             fp.write("%s\n" % gene)
         fp.close()
 
         # saving selected features
-        selected_features = str(params['alpha']) + "_selected_features"
-        selected_features_dir = os.path.join(welch_t_results_dir, selected_features)
-        if not os.path.exists(selected_features_dir):
-            os.mkdir(selected_features_dir)
-
-        extracted_features_training = os.path.join(selected_features_dir, 'train')
-        if not os.path.exists(extracted_features_training):
-            os.mkdir(extracted_features_training)
-
         print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], selected_genes, extracted_features_training)
-
-        extracted_features_test = os.path.join(selected_features_dir, 'test')
-        if not os.path.exists(extracted_features_test):
-            os.mkdir(extracted_features_test)
+        methods.save_selected_genes(X_train[selected_genes], selected_genes, paths.welch_t_selected_features_train)
 
         print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], selected_genes, extracted_features_test)
+        methods.save_selected_genes(X_test[selected_genes], selected_genes, paths.welch_t_selected_features_test)
 
     elif args.method == 'svm_t_rfe':
         # feature selection
-        selected_genes = genes_selection_svm_t_rfe(X_train, y_train, params, svm_t_rfe_results_dir, config_dir)
+        selected_genes = genes_selection_svm_t_rfe(X_train, y_train, params, paths.svm_t_rfe_results_dir, paths.genes_config_dir)
 
         # save selected genes on file
         selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
                               str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
                               params['scoring_name'] + "_selected_genes.txt"
-        selected_genes_path = os.path.join(svm_t_rfe_results_dir, selected_genes_file)
+
+        selected_genes_path = os.path.join(paths.svm_t_rfe_results_dir, selected_genes_file)
         fp = open(selected_genes_path, "w")
         for gene in selected_genes:
             fp.write("%s\n" % gene)
         fp.close()
 
         # saving selected features
-        selected_features = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                            str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
-                            params['scoring_name'] + "_selected_features"
-
-        selected_features_dir = os.path.join(svm_t_rfe_results_dir, selected_features)
-        if not os.path.exists(selected_features_dir):
-            os.mkdir(selected_features_dir)
-
-        extracted_features_training = os.path.join(selected_features_dir, 'train')
-        if not os.path.exists(extracted_features_training):
-            os.mkdir(extracted_features_training)
-
         print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], selected_genes, extracted_features_training)
-
-        extracted_features_test = os.path.join(selected_features_dir, 'test')
-        if not os.path.exists(extracted_features_test):
-            os.mkdir(extracted_features_test)
+        methods.save_selected_genes(X_train[selected_genes], selected_genes, paths.svm_t_rfe_selected_features_train)
 
         print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], selected_genes, extracted_features_test)
+        methods.save_selected_genes(X_test[selected_genes], selected_genes, paths.svm_t_rfe_selected_features_test)
 
     else:
         sys.stderr.write("Invalid value for <feature extraction method>")

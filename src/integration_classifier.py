@@ -1,6 +1,8 @@
 import argparse
 from pathlib import Path
 import numpy as np
+
+from config import paths
 from src.common import utils, shallow_classification, nn_classification, classification_preprocessing
 import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -33,7 +35,7 @@ def main():
     # Read configuration file
     params = utils.read_config_file(args.cfg)
 
-    concatenated_results_path = params['paths']['concatenated_results_dir']
+    concatenated_results_path = paths.concatenated_results_dir
     train_filepath = Path(concatenated_results_path) / 'train' / 'concat_data.csv'
     val_filepath = Path(concatenated_results_path) / 'val' / 'concat_data.csv'
     test_filepath = Path(concatenated_results_path) / 'test' / 'concat_data.csv'
@@ -41,6 +43,7 @@ def main():
     val_filepath_copied_genes = Path(concatenated_results_path) / 'val' / 'concat_data_copied.csv'
     test_filepath_copied_genes = Path(concatenated_results_path) / 'test' / 'concat_data_copied.csv'
 
+    #TODO check if directories exist
     '''
     train_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'train' / 'concat_data.csv'
     val_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'val' / 'concat_data.csv'

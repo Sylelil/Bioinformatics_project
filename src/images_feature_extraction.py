@@ -4,6 +4,7 @@ import sys
 from os import path
 from pathlib import Path
 import config.images.config as cfg
+from config import paths
 from images import preprocessing, slide_info
 from images.features_extraction_methods.fine_tuning import fine_tuning
 from images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
@@ -25,65 +26,59 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(cfg.images):
-        sys.stderr.write(f"File \"{cfg.images}\" not found")
+    if not os.path.exists(paths.images_dir):
+        sys.stderr.write(f"File \"{paths.images_dir}\" not found")
         exit(1)
 
-    if not os.path.exists(cfg.splits_dir):
-        sys.stderr.write(f"File \"{cfg.splits_dir}\" not found")
+    if not os.path.exists(paths.split_data_dir):
+        sys.stderr.write(f"File \"{paths.split_data_dir}\" not found")
         exit(1)
 
-    if not path.exists(cfg.results):
-        os.makedirs(cfg.results)
+    if not path.exists(paths.images_results):
+        os.makedirs(paths.images_results)
 
-    if not os.path.exists(cfg.selected_coords_dir):
-        os.makedirs(cfg.selected_coords_dir)
+    if not os.path.exists(paths.selected_coords_dir):
+        os.makedirs(paths.selected_coords_dir)
 
-    if not os.path.exists(cfg.selected_tiles_dir):
-        os.makedirs(cfg.selected_tiles_dir)
+    if not os.path.exists(paths.selected_tiles_dir):
+        os.makedirs(paths.selected_tiles_dir)
 
-    if not os.path.exists(cfg.normal_masked_images_dir):
-        os.makedirs(cfg.normal_masked_images_dir)
+    if not os.path.exists(paths.normal_masked_images_dir):
+        os.makedirs(paths.normal_masked_images_dir)
 
-    if not os.path.exists(cfg.tumor_masked_images_dir):
-        os.makedirs(cfg.tumor_masked_images_dir)
+    if not os.path.exists(paths.tumor_masked_images_dir):
+        os.makedirs(paths.tumor_masked_images_dir)
 
-    if not os.path.exists(cfg.low_res_normal_images_dir):
-        os.makedirs(cfg.low_res_normal_images_dir)
+    if not os.path.exists(paths.low_res_normal_images_dir):
+        os.makedirs(paths.low_res_normal_images_dir)
 
-    if not os.path.exists(cfg.low_res_tumor_images_dir):
-        os.makedirs(cfg.low_res_tumor_images_dir)
+    if not os.path.exists(paths.low_res_tumor_images_dir):
+        os.makedirs(paths.low_res_tumor_images_dir)
 
-    if not os.path.exists(cfg.normal_rand_tiles_dir):
-        os.makedirs(cfg.normal_rand_tiles_dir)
+    if not os.path.exists(paths.extracted_features_train):
+        os.makedirs(paths.extracted_features_train)
 
-    if not os.path.exists(cfg.tumor_rand_tiles_dir):
-        os.makedirs(cfg.tumor_rand_tiles_dir)
-
-    if not os.path.exists(cfg.extracted_features_train_dir):
-        os.makedirs(cfg.extracted_features_train_dir)
-
-    if not os.path.exists(cfg.extracted_features_test_dir):
-        os.makedirs(cfg.extracted_features_test_dir)
+    if not os.path.exists(paths.extracted_features_test):
+        os.makedirs(paths.extracted_features_test)
 
     # Read slides info
     print("Slides info:")
-    normal_slides_info, tumor_slides_info = slide_info.read_slides_info()
+    normal_slides_info, tumor_slides_info = slide_info.read_slides_info() # TODO check for duplicates
     slide_info.save_slides_info(normal_slides_info, "normal_slides_info.txt", display_info=False)
     slide_info.save_slides_info(tumor_slides_info, "tumor_slides_info.txt", display_info=False)
 
     # Images preprocessing
     print("\nNormal images preprocessing:")
-    preprocessing.preprocessing_images(normal_slides_info, cfg.selected_coords_dir,
-                                       os.path.join(cfg.results, "normal_filter_info.txt"),
-                                       os.path.join(cfg.results, "normal_tiles_info.txt"),
-                                       cfg.low_res_normal_images_dir, cfg.normal_masked_images_dir)
+    preprocessing.preprocessing_images(normal_slides_info, paths.selected_coords_dir,
+                                       os.path.join(paths.images_results, "normal_filter_info.txt"),
+                                       os.path.join(paths.images_results, "normal_tiles_info.txt"),
+                                       paths.low_res_normal_images_dir, paths.normal_masked_images_dir)
 
     print("\nTumor images preprocessing:")
-    preprocessing.preprocessing_images(tumor_slides_info, cfg.selected_coords_dir,
-                                       os.path.join(cfg.results, "tumor_filter_info.txt"),
-                                       os.path.join(cfg.results, "normal_tiles_info.txt"),
-                                       cfg.low_res_tumor_images_dir, cfg.tumor_masked_images_dir)
+    preprocessing.preprocessing_images(tumor_slides_info, paths.selected_coords_dir,
+                                       os.path.join(paths.images_results, "tumor_filter_info.txt"),
+                                       os.path.join(paths.images_results, "normal_tiles_info.txt"),
+                                       paths.low_res_tumor_images_dir, paths.tumor_masked_images_dir)
 
     slides_info = normal_slides_info + tumor_slides_info
     print("\nSaving selected tiles on disk:")
@@ -91,7 +86,7 @@ def main():
 
     print("\nSplitting data in train and test:")
     print(f'>> Tot data: {len(slides_info)}')
-    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, cfg.splits_dir) #TODO splits
+    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, paths.caseid_splits_dir) #TODO read direclty splitted folders
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
@@ -118,10 +113,10 @@ def main():
         print(">> Fixed feature generator:")
 
         print(">> Extracting features from training images:")
-        fixed_feature_generator(train_slides_info, cfg.extracted_features_train_dir, cfg.selected_coords_dir)
+        fixed_feature_generator(train_slides_info, paths.extracted_features_train, paths.selected_coords_dir)
 
         print(">> Extracting features from test images:")
-        fixed_feature_generator(test_slides_info, cfg.extracted_features_test_dir, cfg.selected_coords_dir)
+        fixed_feature_generator(test_slides_info, paths.extracted_features_test, paths.selected_coords_dir)
 
     else:
         sys.stderr.write("Invalid value for <feature extraction method> in config file")

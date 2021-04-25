@@ -181,12 +181,14 @@ def read_config_file(config_file_path):
         params['general']['random_state'] = config.getint('general', 'random_state')
 
     # paths
+    '''
     params['paths'] = {}
     params['paths']['images_dir'] = Path(config['paths']['images_dir'])
     params['paths']['genes_dir'] = Path(config['paths']['genes_dir'])
     params['paths']['split_data_dir'] = Path(config['paths']['split_data_dir'])
     params['paths']['split_results_dir'] = Path(config['paths']['split_results_dir'])
     params['paths']['concatenated_results_dir'] = Path(config['paths']['concatenated_results_dir'])
+    '''
 
     # pca
     params['pca'] = {}

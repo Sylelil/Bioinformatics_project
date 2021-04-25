@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from config import paths
 from src.common import utils
 
 '''
@@ -158,20 +159,17 @@ def args_parse():
     args = parser.parse_args()
     return args
 
+
 def main():
-    # Parse arguments from command line and get params
-    args = args_parse()
-    params = utils.read_config_file(args.cfg)
 
-    results_dir = params['paths']['split_results_dir']
-    tile_features_train_dir = Path(results_dir) / 'images' / 'train'
-    tile_features_test_dir = Path(results_dir) / 'images' / 'test'
-    tile_features_val_dir = Path(results_dir) / 'images' / 'val'
-    gene_features_train_dir = Path(results_dir) / 'genes' / 'train'
-    gene_features_test_dir = Path(results_dir) / 'genes' / 'test'
-    gene_features_val_dir = Path(results_dir) / 'genes' / 'val'
+    tile_features_train_dir = paths.extracted_features_train
+    tile_features_test_dir = paths.extracted_features_test
+    tile_features_val_dir = paths.extracted_features_val
+    gene_features_train_dir = paths.svm_t_rfe_selected_features_train
+    gene_features_test_dir = paths.svm_t_rfe_selected_features_test
+    gene_features_val_dir = paths.svm_t_rfe_selected_features_val
 
-    path_to_save = params['paths']['concatenated_results_dir']
+    path_to_save = paths.concatenated_results_dir
     path_to_save_train = Path(path_to_save) / 'train'
     path_to_save_test = Path(path_to_save) / 'test'
     path_to_save_val = Path(path_to_save) / 'val'
@@ -189,9 +187,6 @@ def main():
     path_to_save_val = Path(path_to_save) / 'val'
     '''
 
-    if not os.path.exists(Path(results_dir)):
-        print("%s not existing." % Path(results_dir))
-        exit()
     if not os.path.exists(tile_features_train_dir):
         print("%s not existing." % tile_features_train_dir)
         exit()
@@ -212,8 +207,7 @@ def main():
         exit()
 
     if not os.path.exists(path_to_save):
-        print("%s not existing." % path_to_save)
-        exit()
+        os.makedirs(path_to_save)
     if not os.path.exists(path_to_save_train):
         os.mkdir(path_to_save_train)
     if not os.path.exists(path_to_save_test):

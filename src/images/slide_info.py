@@ -2,6 +2,8 @@ import sys
 from openslide.deepzoom import DeepZoomGenerator
 from tqdm import tqdm
 import os
+
+from config import paths
 from . import utils
 import config.images.config as cfg
 
@@ -15,8 +17,8 @@ def read_slides_info():
     normal_slides_info = []
     tumor_slides_info = []
 
-    for _dir in tqdm(os.listdir(cfg.images), desc=">> Reading slides info...", file=sys.stdout):
-        current_dir = os.path.join(cfg.images, _dir)
+    for _dir in tqdm(os.listdir(paths.images_dir), desc=">> Reading slides info...", file=sys.stdout):
+        current_dir = os.path.join(paths.images_dir, _dir)
         if os.path.isdir(current_dir):
             for file in os.listdir(current_dir):
                 if file.endswith('.svs'):

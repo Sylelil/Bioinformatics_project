@@ -259,7 +259,7 @@ def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_i
         info = select_tiles_with_tissue_from_slide(slides_info[slide_num], masked_images_pil_dir, selected_tiles_dir)
         string += info + '\n'
 
-    return start_index, end_index,string
+    return start_index, end_index, string
 
 
 def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir):

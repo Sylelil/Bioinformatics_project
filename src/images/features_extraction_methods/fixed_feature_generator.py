@@ -104,10 +104,10 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
 
 
-def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir, use_gpu):
+def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir):
 
     if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
-        if use_gpu:
+        if cfg.USE_GPU:
             gpus = tf.config.experimental.list_physical_devices('GPU')
 
             if gpus:

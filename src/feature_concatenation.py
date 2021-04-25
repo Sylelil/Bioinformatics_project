@@ -48,8 +48,12 @@ def concatenate(tile_features, gene_features, gene_copy_ratio=1):
 
 
 def concatenate_data(lookup_dir_tiles, lookup_dir_genes, path_to_save, gene_copy_ratio=1):
-    filepath_data = Path(path_to_save) / 'concat_data.csv'
-    filepath_data_info = Path(path_to_save) / 'concat_data_info.csv'
+    if gene_copy_ratio == 1:
+        filepath_data = Path(path_to_save) / 'concat_data.csv'
+        filepath_data_info = Path(path_to_save) / 'concat_data_info.csv'
+    else:
+        filepath_data = Path(path_to_save) / 'concat_data_copied.csv'
+        filepath_data_info = Path(path_to_save) / 'concat_data_info_copied.csv'
 
     # get gene data
     print('>> Reading gene data...')
@@ -71,14 +75,17 @@ def concatenate_data(lookup_dir_tiles, lookup_dir_genes, path_to_save, gene_copy
     else:
         np_gene_features = df_gene_features.to_numpy()
         # separate caseids and labels from features
-        caseids_labels = np_gene_features[:, -2:]
-        features = np_gene_features[:, :-2]
+        caseid_index = np.asarray(df_gene_features.index)
+        labels_list = np_gene_features[:, -1:]
+        labels_list = labels_list.reshape((len(labels_list),))
+        caseids_labels = np.stack((caseid_index, labels_list), axis=1)
+        features = np_gene_features[:, :-1]
         # copy features by ratio
         features_copied = np.tile(features, gene_copy_ratio)
         # re-append caseids and labels to copied features
         np_genes = np.append(features_copied, caseids_labels, axis=1)
         # convert back to dataframe
-        col_names = [f'feat_g_{x}' for x in range(features_copied.shape[0])]
+        col_names = [f'feat_g_{x}' for x in range(features_copied.shape[1])]
         col_names.extend(['caseid', 'label'])
         df_genes_copied = pd.DataFrame(np_genes, columns=col_names).set_index('caseid')
 
@@ -190,15 +197,18 @@ def main():
     print('----------------------------')
     print(">> Concatenating train data:")
     print('----------------------------')
-    concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train)
+    #concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train)
+    concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train, gene_copy_ratio=10)
     print('---------------------------------')
     print(">> Concatenating validation data:")
     print('---------------------------------')
-    concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val)
+    #concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val)
+    concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val, gene_copy_ratio=10)
     print('---------------------------')
     print(">> Concatenating test data:")
     print('---------------------------')
-    concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test)
+    #concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test)
+    concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test, gene_copy_ratio=10)
 
 
 

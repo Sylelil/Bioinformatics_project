@@ -151,6 +151,7 @@ def read_config_file(config_file_path):
     config = configparser.ConfigParser()
     config.read(config_file_path)
 
+    # general
     scoring = config['general']['scoring']
     if scoring == 'matthews_corrcoef':
         params['scoring'] = metrics.matthews_corrcoef
@@ -169,8 +170,13 @@ def read_config_file(config_file_path):
     params['cv_outer_n_splits'] = config.getint('crossvalidation', 'cv_outer_n_splits')
     params['cv_n_splits'] = config.getint('crossvalidation', 'cv_n_splits')
 
+    # pca
     params['percentage_of_variance'] = config.getfloat('pca', 'percentage_of_variance')
     params['n_components'] = config.getint('pca', 'n_components')
+
+    #nn
+    params['epochs'] = config.getint('nn', 'epochs')
+    params['batchsize_nn'] = config.getint('nn', 'batchsize')
 
 
     return params

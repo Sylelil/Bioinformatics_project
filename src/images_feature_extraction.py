@@ -93,7 +93,7 @@ def main():
     if not os.path.exists(images_splits_path):
         print("%s not existing." % images_splits_path)
         exit()
-    train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)  #TODO read direclty splitted folders
+    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(images_splits_path, val_data=False)
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]

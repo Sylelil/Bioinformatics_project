@@ -38,6 +38,7 @@ def make_model(n_input_features, units_1, units_2, metrics=METRICS, output_bias=
                   metrics=metrics)
     return model
 
+
 def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, use_generators=False):
 
     print(">> Creating MultiLayer Perceptron model...")
@@ -53,7 +54,6 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
                         validation_data=(X_val, (None if use_generators else y_val)),
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
-
 
     plots.plot_loss(history, 'Training and validation loss', 0)
     plots.plt.figure()

@@ -70,10 +70,10 @@ def concatenate_data(lookup_dir_tiles, lookup_dir_genes, path_to_save, gene_copy
     df_gene_features = df_gene_features.drop(index=duplicates)
 
     # copy gene data according to ratio:
-    print('>> Copy gene data according to ratio...')
     if gene_copy_ratio == 1:
         df_genes_copied = df_gene_features
     else:
+        print(f'>> Copying gene data according to ratio (={gene_copy_ratio})...')
         np_gene_features = df_gene_features.to_numpy()
         # separate caseids and labels from features
         caseid_index = np.asarray(df_gene_features.index)
@@ -227,18 +227,24 @@ def main():
     print(">> Concatenating train data:")
     print('----------------------------')
     concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train)
+    print('>> With repeated gene features:')
+    print('-------------------------------')
     concatenate_data(tile_features_train_dir, gene_features_train_dir, path_to_save_train, gene_copy_ratio=10)
 
     print('---------------------------------')
     print(">> Concatenating validation data:")
     print('---------------------------------')
     concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val)
+    print('>> With repeated gene features:')
+    print('-------------------------------')
     concatenate_data(tile_features_val_dir, gene_features_val_dir, path_to_save_val, gene_copy_ratio=10)
 
     print('---------------------------')
     print(">> Concatenating test data:")
     print('---------------------------')
     concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test)
+    print('>> With repeated gene features:')
+    print('-------------------------------')
     concatenate_data(tile_features_test_dir, gene_features_test_dir, path_to_save_test, gene_copy_ratio=10)
 
 

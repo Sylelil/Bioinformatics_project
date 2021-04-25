@@ -92,7 +92,7 @@ def main():
         exit()
 
     # split caseids in train, validation and test and save on file:
-    caseids_train_val, caseids_test, labels_train_val, labels_test = split_data.split_caseids(lookup_dir=dirimg,
+    caseids_train_val, caseids_test, labels_train_val, labels_test = split_data.split_caseids(lookup_dir=dirgene,
                                                                                               test_size=test_size,
                                                                                               save_dir=caseid_splits_dir,
                                                                                               nametrain='train_val',

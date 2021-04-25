@@ -84,9 +84,16 @@ def main():
     print("\nSaving selected tiles on disk:")
     preprocessing.extract_tiles_on_disk(slides_info)
 
-    print("\nSplitting data in train and test:")
+    print("\nReading split slides data:")
+    images_splits_path = Path(paths.split_data_dir) / 'images'
     print(f'>> Tot data: {len(slides_info)}')
-    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(slides_info, paths.caseid_splits_dir) #TODO read direclty splitted folders
+    if not os.path.exists(paths.split_data_dir):
+        print("%s not existing." % paths.split_data_dir)
+        exit()
+    if not os.path.exists(images_splits_path):
+        print("%s not existing." % images_splits_path)
+        exit()
+    train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)  #TODO read direclty splitted folders
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]

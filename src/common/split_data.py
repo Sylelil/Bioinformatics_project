@@ -10,51 +10,9 @@ from collections import Counter
 
 from tqdm import tqdm
 
-
-def save_split_data_files(X_train, X_test, y_train, y_test, path_to_save):
-    """
-        Description: Save split datasets in separate files.
-        :param X_train: training dataset.
-        :param X_test: test dataset.
-        :param y_train: numpy array of training labels.
-        :param y_test: numpy array of test labels.
-        :param path_to_save: Path of the directory where files will be saved.
-    """
-    if not os.path.exists(path_to_save):
-        print("%s not existing." % path_to_save)
-        exit()
-    print(f'>> Saving split data and labels in {path_to_save} directory...')
-    with open(os.path.join(path_to_save, 'X_train.pkl'), 'wb') as f:
-        pickle.dump(X_train, f)
-    with open(os.path.join(path_to_save, 'X_test.pkl'), 'wb') as f:
-        pickle.dump(X_test, f)
-    with open(os.path.join(path_to_save, 'y_train.pkl'), 'wb') as f:
-        pickle.dump(y_train, f)
-    with open(os.path.join(path_to_save, 'y_test.pkl'), 'wb') as f:
-        pickle.dump(y_test, f)
-    print('>> Done')
-
-
-def read_split_data_from_files(lookup_dir):
-    """
-        Description: Retrieve split datasets from files.
-        :param lookup_dir: lookup directory with data.
-        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
-    """
-    if not os.path.exists(lookup_dir):
-        print("%s not existing." % lookup_dir)
-        exit()
-    print('>> Retrieving split data from files...')
-    with open(os.path.join(lookup_dir, 'X_train.pkl'), 'rb') as f:
-        X_train = pickle.load(f)
-    with open(os.path.join(lookup_dir, 'X_test.pkl'), 'rb') as f:
-        X_test = pickle.load(f)
-    with open(os.path.join(lookup_dir, 'y_train.pkl'), 'rb') as f:
-        y_train = pickle.load(f)
-    with open(os.path.join(lookup_dir, 'y_test.pkl'), 'rb') as f:
-        y_test = pickle.load(f)
-    print('>> Done')
-    return X_train, X_test, y_train, y_test
+from config import paths
+from src.genes import methods
+from src.images import slide_info
 
 
 def __get_split_caseids(lookup_dir):
@@ -71,69 +29,68 @@ def __get_split_caseids(lookup_dir):
     return train_caseids, test_caseids
 
 
-def get_images_split_data(slides_info, splits_dir, path_to_save=None):
+def get_images_split_data(lookup_dir, val_data=True):
     """
-        Description: Retrieve split data according to lists of caseids saved in splits_dir.
-        :param lookup_dir: lookup directory with data to be split.
-        :param splits_dir: directory with lists of splits.
-        :param path_to_save: directory for saving data (default=None).
-        :return: X_train, X_test, y_train, y_test: train and test datasets (lists)
+        Description: Retrieve split data from lookup folder.
+        :param lookup_dir: lookup directory with split data.
+        :return: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
     """
+    train_filepath = Path(lookup_dir) / 'train'
+    val_filepath = Path(lookup_dir) / 'val'
+    test_filepath = Path(lookup_dir) / 'test'
 
-    X_train = []
-    X_test = []
-    y_train = []
-    y_test = []
+    if not os.path.exists(train_filepath):
+        print("%s not existing." % train_filepath)
+        exit()
+    if not os.path.exists(val_filepath):
+        print("%s not existing." % val_filepath)
+        exit()
+    if not os.path.exists(test_filepath):
+        print("%s not existing." % test_filepath)
+        exit()
 
-    # get split caseids
-    train_caseids, test_caseids = __get_split_caseids(splits_dir)
+    X_train, y_train = slide_info.read_slides_info_from_folder(train_filepath)
+    X_val, y_val = slide_info.read_slides_info_from_folder(val_filepath)
+    X_test, y_test = slide_info.read_slides_info_from_folder(test_filepath)
 
-    # get data with caseid and label
-    print('>> Retrieving data based on caseid splits...')
-    for slide in slides_info:
-        filename = slide['slide_name']
-        label = filename[-1]
-
-        # add data to corresponding split
-        if filename in train_caseids:
-            X_train.append(slide)
-            y_train.append(label)
-        elif filename in test_caseids:
-            X_test.append(slide)
-            y_test.append(label)
-        else:
-            print(f"warning: caseid {filename} not found in splits.")
-            # exit()
-    print('>> Done')
-
-    if path_to_save:
-        save_split_data_files(X_train, X_test, y_train, y_test, path_to_save)
-
-    return X_train, X_test, y_train, y_test
+    if val_data:
+        return X_train, X_val, X_test, y_train, y_val, y_test
+    else:
+        X_train.extend(X_val)
+        y_train.extend(y_val)
+        return X_train, X_test, y_train, y_test
 
 
-def get_genes_split_data(df, splits_dir, path_to_save=None):
+def get_genes_split_data(lookup_dir, val_data=True):
     """
-        Description: Retrieve split data according to lists of caseids saved in splits_dir.
-        :param lookup_dir: lookup directory with data to be split.
-        :param path_to_save: directory for saving data (default=None).
-        :return: X_train, X_test, y_train, y_test: train and test datasets and labels
+        Description: Retrieve split data from lookup folder.
+        :param lookup_dir: lookup directory with split data.
+        :return: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
     """
+    train_filepath = Path(lookup_dir) / 'train'
+    val_filepath = Path(lookup_dir) / 'val'
+    test_filepath = Path(lookup_dir) / 'test'
 
-    # get split caseids
-    train_caseids, test_caseids = __get_split_caseids(splits_dir)
+    if not os.path.exists(train_filepath):
+        print("%s not existing." % train_filepath)
+        exit()
+    if not os.path.exists(val_filepath):
+        print("%s not existing." % val_filepath)
+        exit()
+    if not os.path.exists(test_filepath):
+        print("%s not existing." % test_filepath)
+        exit()
 
-    # get data with caseid and label
-    X_train = df.loc[train_caseids]
-    X_test = df.loc[test_caseids]
-    y_train = np.array([int(x[-1:]) for x in train_caseids])
-    y_test = np.array([int(x[-1:]) for x in test_caseids])
-    print('>> Done')
+    X_train, y_train = methods.read_genes_from_folder(train_filepath)
+    X_val, y_val = methods.read_genes_from_folder(val_filepath)
+    X_test, y_test = methods.read_genes_from_folder(test_filepath)
 
-    if path_to_save:
-        save_split_data_files(X_train, X_test, y_train, y_test, path_to_save)
-
-    return X_train, X_test, y_train, y_test
+    if val_data:
+        return X_train, X_val, X_test, y_train, y_val, y_test
+    else:
+        X_train_val = X_train.append(X_val, sort=False)
+        y_train.extend(y_val)
+        return X_train_val, X_test, y_train, y_test
 
 
 def split_caseids(test_size, save_dir, lookup_dir=None, caseids_arg=None, labels_arg=None, nametrain='train', nametest='test'):

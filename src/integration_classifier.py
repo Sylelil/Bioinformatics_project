@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 import numpy as np
 
@@ -43,7 +44,28 @@ def main():
     val_filepath_copied_genes = Path(concatenated_results_path) / 'val' / 'concat_data_copied.csv'
     test_filepath_copied_genes = Path(concatenated_results_path) / 'test' / 'concat_data_copied.csv'
 
-    #TODO check if directories exist
+    if not os.path.exists(concatenated_results_path):
+        print("%s not existing." % concatenated_results_path)
+        exit()
+    if not os.path.exists(train_filepath):
+        print("%s not existing." % train_filepath)
+        exit()
+    if not os.path.exists(val_filepath):
+        print("%s not existing." % val_filepath)
+        exit()
+    if not os.path.exists(test_filepath):
+        print("%s not existing." % test_filepath)
+        exit()
+    if not os.path.exists(train_filepath_copied_genes):
+        print("%s not existing." % train_filepath_copied_genes)
+        exit()
+    if not os.path.exists(val_filepath_copied_genes):
+        print("%s not existing." % val_filepath_copied_genes)
+        exit()
+    if not os.path.exists(test_filepath_copied_genes):
+        print("%s not existing." % test_filepath_copied_genes)
+        exit()
+
     '''
     train_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'train' / 'concat_data.csv'
     val_filepath = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'concatenated' / 'val' / 'concat_data.csv'

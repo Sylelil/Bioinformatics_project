@@ -16,6 +16,21 @@ from tqdm import tqdm
 from scipy import stats
 
 
+def read_genes_from_folder(lookup_dir):
+    X = pd.DataFrame()
+    y = []
+    for file_name in tqdm(os.listdir(lookup_dir), desc=">> Reading genes data...", file=sys.stdout):
+        file_path = os.path.join(lookup_dir, file_name)
+        with open(file_path) as f:
+            patient_df = pd.read_csv(f, sep="\t", header=None, index_col=0, names=[file_name.replace(".txt", "")])
+            patient_df = pd.DataFrame.transpose(patient_df)
+            X = X.append(patient_df)
+            y.append(0 if file_name.endswith("_0.txt") else 1)
+
+    return X, y
+
+
+
 def read_gene_expression_data(path):
     data_frame_0 = pd.DataFrame()
     data_frame_1 = pd.DataFrame()

@@ -3,6 +3,8 @@ import math
 import os
 import sys
 from os import path
+from pathlib import Path
+
 from config import paths
 from genes import methods
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
@@ -64,9 +66,16 @@ def main():
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.method)
 
-    print("\nReading gene expression data:")
-    df = methods.read_gene_expression_data(paths.genes_dir)  # TODO check for duplicates
-    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, paths.caseid_splits_dir) #TODO read direclty splitted folders
+    print("\nReading split gene expression data:")
+    # df = methods.read_gene_expression_data(paths.genes_dir)
+    genes_splits_path = Path(paths.split_data_dir) / 'genes'
+    if not os.path.exists(paths.split_data_dir):
+        print("%s not existing." % paths.split_data_dir)
+        exit()
+    if not os.path.exists(genes_splits_path):
+        print("%s not existing." % genes_splits_path)
+        exit()
+    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(genes_splits_path, val_data=False)
 
     print("\nExploratory analysis:")
     # Compute number of samples

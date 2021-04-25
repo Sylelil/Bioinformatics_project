@@ -8,6 +8,39 @@ from . import utils
 import config.images.config as cfg
 
 
+def read_slides_info_from_folder(lookup_dir):
+    X = []
+    y = []
+    for _dir in tqdm(os.listdir(lookup_dir), desc=">> Reading slides info...", file=sys.stdout):
+        current_dir = os.path.join(lookup_dir, _dir)
+        if os.path.isdir(current_dir):
+            for file in os.listdir(current_dir):
+                if file.endswith('.svs'):
+                    slide = utils.open_wsi(os.path.join(current_dir, file))
+                    slide_magnification = utils.get_wsi_magnification(slide)
+
+                    zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0, limit_bounds=True)
+                    highest_zoom_level = utils.get_wsi_highest_zoom_level(zoom)
+
+                    (width, height) = slide.dimensions  # slide dimensions for level 0 (highest resolution)
+
+                    file_name = utils.extract_file_name_from_string_path(os.path.join(current_dir, file))
+                    slide_info_dict = {
+                        'slide_path': os.path.join(current_dir, file),
+                        'slide_name': file_name,  # slide name without extension
+                        'num_zoom_levels': zoom.level_count,
+                        'highest_zoom_level': highest_zoom_level,
+                        'slide_magnification': slide_magnification,
+                        'slide_width': width,
+                        'slide_height': height,
+                        'label': 0 if file_name.endswith("0") else 1,
+                    }
+                    X.append(slide_info_dict)
+                    y.append(slide_info_dict['label'])
+
+    return X, y
+
+
 def read_slides_info():
     """
         Description: read directory containing Whole slide images

@@ -8,8 +8,8 @@ genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione 
 # assets folder
 images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI
 genes_dir = BASE_DIR / 'assets' / 'genes_files'      # Path ai dati di genomica
-split_data_dir = BASE_DIR / 'assets' / 'split_data'  # case_id splittati
-caseid_splits_dir = BASE_DIR / 'assets' / 'caseid_splits'
+split_data_dir = BASE_DIR / 'assets' / 'split_data'  # dati splittati
+caseid_splits_dir = BASE_DIR / 'assets' / 'caseid_splits' # case_id splittati
 
 # results folder
 

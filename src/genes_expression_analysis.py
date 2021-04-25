@@ -73,7 +73,7 @@ def main():
 
     print("\nReading gene expression data:")
     df = methods.read_gene_expression_data(path_genes)
-    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, splits_dir)
+    X_train, X_test, y_train, y_test = split_data.get_genes_split_data(df, splits_dir) #TODO splits
 
     print("\nExploratory analysis:")
     # Compute number of samples

@@ -3,18 +3,20 @@ from openslide.deepzoom import DeepZoomGenerator
 from tqdm import tqdm
 import os
 from . import utils
+import config.images.config as cfg
 
 
-def read_slides_info(lookup_dir):
+def read_slides_info():
     """
         Description: read directory containing Whole slide images
         :param lookup_dir: path to directory
         :return: list of dictionaries containing slides info
     """
-    slides_info = []
+    normal_slides_info = []
+    tumor_slides_info = []
 
-    for _dir in tqdm(os.listdir(lookup_dir), desc=">> Reading slides info...", file=sys.stdout):
-        current_dir = os.path.join(lookup_dir, _dir)
+    for _dir in tqdm(os.listdir(cfg.images), desc=">> Reading slides info...", file=sys.stdout):
+        current_dir = os.path.join(cfg.images, _dir)
         if os.path.isdir(current_dir):
             for file in os.listdir(current_dir):
                 if file.endswith('.svs'):
@@ -35,14 +37,17 @@ def read_slides_info(lookup_dir):
                         'slide_magnification': slide_magnification,
                         'slide_width': width,
                         'slide_height': height,
-                        'label': 0 if str(lookup_dir).endswith("normal") else 1,
+                        'label': 0 if file_name.endswith("0") else 1,
                     }
-                    slides_info.append(slide_info_dict)
+                    if slide_info_dict['label'] == 0:
+                        normal_slides_info.append(slide_info_dict)
+                    else:
+                        tumor_slides_info.append(slide_info_dict)
 
-    return slides_info
+    return normal_slides_info, tumor_slides_info
 
 
-def save_slides_info(slides_info, save_dir, file_name, display_info=False):
+def save_slides_info(slides_info, file_name, display_info=False):
     if display_info:
         for item in slides_info:
             print("%s: slide width= %d, slide height = %d, num of zoom levels = %d,"
@@ -62,10 +67,10 @@ def save_slides_info(slides_info, save_dir, file_name, display_info=False):
                                                           slides_info[i]['slide_magnification'])
     images_info_string += "\n"
 
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
+    if not os.path.exists(cfg.results):
+        os.mkdir(cfg.results)
 
-    images_info_file = open(os.path.join(save_dir, file_name), "w")
+    images_info_file = open(os.path.join(cfg.results, file_name), "w")
     images_info_file.write(images_info_string)
     images_info_file.close()
-    print(">> Slides info saved to \"%s\"" % os.path.join(save_dir, file_name))
+    print(">> Slides info saved to \"%s\"" % os.path.join(cfg.results, file_name))

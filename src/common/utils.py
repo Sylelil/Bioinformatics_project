@@ -140,6 +140,21 @@ def read_extracted_features():
     return tile_features_train, tile_features_test, gene_features_train, gene_features_test
 
 
+def compute_class_weights(labels):
+    print(">> Computing class weights...")
+    total = len(labels)
+    pos = np.count_nonzero(labels)
+    neg = total - pos
+    # Scaling by total/2 helps keep the loss to a similar magnitude.
+    # The sum of the weights of all examples stays the same.
+    weight_for_0 = (1 / neg) * total / 2.0
+    weight_for_1 = (1 / pos) * total / 2.0
+    class_weight = {0: weight_for_0, 1: weight_for_1}
+    print('Weight for class 0: {:.2f}'.format(weight_for_0))
+    print('Weight for class 1: {:.2f}'.format(weight_for_1))
+    return class_weight
+
+
 def read_config_file(config_file_path):
     """
        Description: Read configuration parameters.

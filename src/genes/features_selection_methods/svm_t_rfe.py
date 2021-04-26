@@ -151,7 +151,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         # ricerca del miglior C
         if perform_grid_search:
             scaler = StandardScaler()
-            smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+            smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
             svm = SVC(kernel=params['kernel'])
             imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
             cv = KFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
@@ -164,7 +164,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         else:
             C = c_values[i]
             scaler = StandardScaler()
-            smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+            smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
             svm = SVC(kernel=params['kernel'], C=C)
             imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
             imba_pipeline.fit(df_array, y)
@@ -226,7 +226,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
 
         scaler = StandardScaler()
-        smt = SMOTE(sampling_strategy=1.0, random_state=params['random_state'])
+        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
         svm = SVC(kernel=params['kernel'])
         imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
 

@@ -8,6 +8,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.colors import ListedColormap
 from sklearn import metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -79,7 +80,8 @@ def read_config_file(config_file_path, section):
         params['alpha'] = config.getfloat('welch_t_test', 'alpha')
 
     elif section == 'svm_t_rfe':
-        params['random_state'] = config.getint('svm_t_rfe', 'random_state')
+        params['random_state'] = config.getint('general', 'random_state')
+        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['alpha'] = config.getfloat('svm_t_rfe', 'alpha')
         params['theta'] = config.getfloat('svm_t_rfe', 'theta')
         params['cv_grid_search_rank'] = config.getint('svm_t_rfe', 'cv_grid_search_rank')
@@ -117,6 +119,8 @@ def read_config_file(config_file_path, section):
             sys.stderr.write("Invalid value for <kernel> in config file")
             exit(1)
     elif section == 'svm':
+        params['random_state'] = config.getint('general', 'random_state')
+        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
     else:
         sys.stderr.write("Invalid value for <section> in config file")
@@ -262,4 +266,31 @@ def tsne_3D(X_train, y_train):
     ax.set_zlabel('tsne-three')
     ax.add_artist(legend)
 
+    plt.show()
+
+def show_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
+    h = .02  # step size in the mesh
+    x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
+    y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+
+    # just plot the dataset first
+    cm = plt.cm.RdBu
+    cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+
+    # Put the result into a color plot
+    clf.fit(X_train[:, :2], y_train)
+    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+
+    # Plot the training points
+    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')
+    # Plot the testing points
+    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.6, edgecolors='k')
+    plt.xlim(xx.min(), xx.max())
+    plt.ylim(yy.min(), yy.max())
+    plt.xticks(())
+    plt.yticks(())
     plt.show()

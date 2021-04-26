@@ -1,12 +1,8 @@
 import statistics
 import sys
-import pandas as pd
 from tqdm import tqdm
 from scipy import stats
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-import seaborn as sns
 
 
 def remove_genes_with_median_0(data_frame):
@@ -149,41 +145,6 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
         i+=1
 
     return dict
-
-
-def normalize_with_GeoMean_and_SizeFactor(data_frame):
-    geo_mean = []
-    removed_genes = []
-
-    for gene in tqdm(data_frame.columns, desc=">> Compute geometric mean for each gene...", file=sys.stdout):
-        gm = stats.mstats.gmean(data_frame[gene])
-        if gm == 0:
-            removed_genes.append(gene)
-        else:
-            geo_mean.append(gm)
-    data_frame = data_frame.drop(columns=removed_genes)
-    df_ratio = pd.DataFrame()
-    df_ratio = df_ratio.append(data_frame)
-    i = 0
-    for gene in tqdm(df_ratio.columns, desc=">> Compute ratio for each gene...", file=sys.stdout):
-        df_ratio[gene] = data_frame[gene] / geo_mean[i]
-        i += 1
-
-    size_factor = []
-    df_ratio_transpose = pd.DataFrame.transpose(df_ratio)
-
-    for gene in tqdm(df_ratio_transpose.columns, desc=">> Compute size factor for each samples...", file=sys.stdout):
-        size_factor.append(statistics.median(df_ratio_transpose[gene]))
-    data_frame_transpose = pd.DataFrame.transpose(data_frame)
-    i = 0
-    for gene in tqdm(data_frame_transpose.columns, desc=">> Compute final normalization for each gene...",
-                     file=sys.stdout):
-        data_frame_transpose[gene] = data_frame_transpose[gene] / size_factor[i]
-        i += 1
-
-    data_frame_after_scaling = pd.DataFrame.transpose(data_frame_transpose)
-
-    return data_frame, data_frame_after_scaling, removed_genes
 
 
 def is_float(value):

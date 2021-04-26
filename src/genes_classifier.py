@@ -1,26 +1,24 @@
 import argparse
-import math
 import os
 import sys
 from collections import Counter
 from os import path
-from pathlib import Path
-import seaborn as sns
 from imblearn.metrics import classification_report_imbalanced, sensitivity_score, specificity_score
 from imblearn.over_sampling import SMOTE
-from matplotlib.colors import ListedColormap
-
 from sklearn.metrics import accuracy_score, precision_score, average_precision_score, recall_score, \
     plot_confusion_matrix, plot_roc_curve, roc_curve, precision_recall_fscore_support
 from sklearn.model_selection import KFold, GridSearchCV
-import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
 from sklearn.svm import SVC
-
 import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from config import paths
 from genes import methods
+from genes.nn_classifier import MultiLayerPerceptron
+import numpy as np
 
 
 def main():
@@ -44,35 +42,35 @@ def main():
         sys.stderr.write("Invalid path for config file")
         exit(2)
 
+    if not os.path.exists(paths.svm_t_rfe_selected_features_train) or \
+            len(os.listdir(paths.svm_t_rfe_selected_features_train)) == 0:
+        print("Directory " + str(paths.svm_t_rfe_selected_features_train) + " doesn't exists or is empty")
+        exit(1)
+    if not os.listdir(paths.svm_t_rfe_selected_features_test) or \
+            len(os.listdir(paths.svm_t_rfe_selected_features_test)) == 0:
+        print("Directory " + str(paths.svm_t_rfe_selected_features_test) + " doesn't exists or is empty")
+        exit(1)
+
     # Read configuration file
     params = methods.read_config_file(args.cfg, args.classification_method)
 
+    X_train, y_train = methods.load_selected_genes(paths.svm_t_rfe_selected_features_train)
+    X_test, y_test = methods.load_selected_genes(paths.svm_t_rfe_selected_features_test)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    methods.pca(X_train, y_train)
+    methods.pca(X_test, y_test)
+
+    # SMOTE
+    print("\n[SMOTE]")
+    sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+    X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
+    print(Counter(y_train_sm))
+
     if args.classification_method == "svm":
-        training_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'train'
-        test_selected_genes_dir = Path('results') / 'genes' / 'svm_t_rfe' / 'selected_features' / 'test'
-        if not os.listdir(training_selected_genes_dir) or len(os.listdir(training_selected_genes_dir)) == 0:
-            print("Directory " + str(training_selected_genes_dir) + " doesn't exists or is empty")
-            exit(1)
-        if not os.listdir(test_selected_genes_dir) or len(os.listdir(test_selected_genes_dir)) == 0:
-            print("Directory " + str(test_selected_genes_dir) + " doesn't exists or is empty")
-            exit(1)
-
-        X_train, y_train = methods.load_selected_genes(training_selected_genes_dir)
-        X_test, y_test = methods.load_selected_genes(test_selected_genes_dir)
-
-        #SMOTE
-        print("\n[SMOTE]")
-
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
-
-        methods.pca(X_train, y_train)
-        methods.pca(X_test, y_test)
-
-        sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
-        X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
-        print(Counter(y_train_sm))
 
         tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
 
@@ -82,6 +80,7 @@ def main():
                            refit=True)
         clf.fit(X_train_sm, y_train_sm)
         pred = clf.predict(X_test)
+
         print("accuracy= %f" % accuracy_score(y_test, pred))
         average_precision = average_precision_score(y_test, pred, pos_label=0)
         precision = precision_score(y_test, pred, average='binary', pos_label=0)
@@ -114,35 +113,23 @@ def main():
         plt.show()
 
         # Show decision boundary
-        h = .02  # step size in the mesh
-        x_min, x_max = X_train_sm[:, 0].min() - .5, X_train_sm[:, 0].max() + .5
-        y_min, y_max = X_train_sm[:, 1].min() - .5, X_train_sm[:, 1].max() + .5
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                             np.arange(y_min, y_max, h))
-
-        # just plot the dataset first
-        cm = plt.cm.RdBu
-        cm_bright = ListedColormap(['#FF0000', '#0000FF'])
-
-        # Put the result into a color plot
-        clf.fit(X_train_sm[:, :2], y_train_sm)
-        Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
-        Z = Z.reshape(xx.shape)
-        plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
-
-        # Plot the training points
-        plt.scatter(X_train_sm[:, 0], X_train_sm[:, 1], c=y_train_sm, cmap=cm_bright, edgecolors='k')
-        # Plot the testing points
-        plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.6, edgecolors='k')
-        plt.xlim(xx.min(), xx.max())
-        plt.ylim(yy.min(), yy.max())
-        plt.xticks(())
-        plt.yticks(())
-        plt.show()
+        methods.show_svm_decision_boundary(clf, X_train_sm, y_train_sm, X_test, y_test)
 
     elif args.classification_method == "nn":
-        # TODO
-        pass
+
+        n_epochs = 20
+        my_net = MultiLayerPerceptron(n_epochs=n_epochs,
+                                      batch_size=64,
+                                      learning_rate=0.01,
+                                      num_features=len(X_train[0]),
+                                      n_classes=len(np.unique(y_test)),
+                                      lr_reduction_epoch=15,
+                                      logdir="fc_0-001")
+
+        history = my_net.train_model(X_train_sm, y_train_sm, X_test, y_test)
+        loss, acc = my_net.model.evaluate(X_test, y_test, verbose=False)
+        print("Test done!\n\tMean accuracy: {}\n\tLoss: {}".format(acc, loss))
+
     else:
         sys.stderr.write("Invalid value for <classification_method>")
         exit(1)

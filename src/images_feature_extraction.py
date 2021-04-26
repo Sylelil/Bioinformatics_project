@@ -63,7 +63,7 @@ def main():
 
     # Read slides info
     print("Slides info:")
-    normal_slides_info, tumor_slides_info = slide_info.read_slides_info() # TODO check for duplicates
+    normal_slides_info, tumor_slides_info = slide_info.read_slides_info()
     slide_info.save_slides_info(normal_slides_info, "normal_slides_info.txt", display_info=False)
     slide_info.save_slides_info(tumor_slides_info, "tumor_slides_info.txt", display_info=False)
 

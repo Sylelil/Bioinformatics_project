@@ -66,7 +66,6 @@ def main():
     params = methods.read_config_file(args.cfg, args.method)
 
     print("\nReading split gene expression data:")
-    # df = methods.read_gene_expression_data(paths.genes_dir)
     genes_splits_path = Path(paths.split_data_dir) / 'genes'
     if not os.path.exists(paths.split_data_dir):
         print("%s not existing." % paths.split_data_dir)

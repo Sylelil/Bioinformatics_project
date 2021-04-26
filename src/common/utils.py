@@ -4,6 +4,11 @@ import numpy as np
 
 
 def compute_class_weights(labels):
+    """
+        Description: Compute class weights from list of labels.
+        :param labels: list of labels.
+        :returns: class weights dictionary
+    """
     print(">> Computing class weights...")
     total = len(labels)
     pos = np.count_nonzero(labels)
@@ -22,7 +27,7 @@ def read_config_file(config_file_path):
     """
        Description: Read configuration parameters.
        :param config_file_path: Path of the configuration file.
-       :return: Dictionary of parameters
+       :returns: Dictionary of parameters
     """
     params = {}
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())

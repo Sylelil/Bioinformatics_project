@@ -8,7 +8,7 @@ def get_balancing_method(method, params):
        Description: Return method corresponding to the parameter 'method'.
        :param method: Class balancing method.
        :param params: Parameters from configuration file.
-       :return: Class balancing method
+       :returns: Class balancing method
     """
     if method == 'random_upsampling':
         return RandomOverSampler(random_state=params['general']['random_state'])

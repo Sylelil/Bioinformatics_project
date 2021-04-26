@@ -2,6 +2,15 @@ import numpy as np
 
 
 def csv_data_generator(inputPath, batchsize, scaler, mode="train", balancer=None):
+    """
+       Description: Return method corresponding to the parameter 'method'.
+       :param inputPath: path where input data is located.
+       :param batchsize: size of each batch.
+       :param scaler: standard scaler model.
+       :param mode: train or test mode.
+       :param balancer: class balancing model.
+       :yields: batch data and labels
+    """
     # open the CSV file for reading
     with open(inputPath, "r") as f:
         f.readline()  # skip first line of file with header

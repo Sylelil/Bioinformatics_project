@@ -7,9 +7,9 @@ from tqdm import tqdm
 
 def get_gene_features(lookup_dir):
     """
-       Description: Private function. Read extracted gene features from files.
+       Description: Read extracted gene features from files.
        :param lookup_dir: Path of the lookup directory.
-       :return: Dataframe of features.
+       :returns: Dataframe of features.
     """
     all_features = []  # list of all tile features
     data = None
@@ -44,6 +44,12 @@ def get_gene_features(lookup_dir):
 
 
 def copy_gene_features(df_gene_features, gene_copy_ratio):
+    """
+       Description: Copy gene features of each patient according to specified ratio.
+       :param df_gene_features: Dataframe of features
+       :param gene_copy_ratio: copy ratio
+       :returns: Dataframe of copied features.
+    """
     print(f'>> Copying gene data according to ratio (={gene_copy_ratio})...')
     np_gene_features = df_gene_features.to_numpy()
 
@@ -69,6 +75,13 @@ def copy_gene_features(df_gene_features, gene_copy_ratio):
 
 
 def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, gene_copy_ratio=1):
+    """
+       Description: Concatenate gene features (possibly copied according to specified ratio) with tile features.
+       :param lookup_dir_tiles: lookup directory with tile features
+       :param lookup_dir_genes: lookup directory with gene features
+       :param gene_copy_ratio: copy ratio for gene features
+       :param path_to_save: directory where concatenated data will be saved
+    """
     if gene_copy_ratio == 1:
         filepath_data = Path(path_to_save) / 'concat_data.csv'
         filepath_data_info = Path(path_to_save) / 'concat_data_info.csv'

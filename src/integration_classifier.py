@@ -9,6 +9,10 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
 def args_parse():
+    """
+       Description: Parse command-line arguments.
+       :returns: arguments parser.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg',
                         help='Configuration file path',
@@ -29,6 +33,9 @@ def args_parse():
 
 
 def main():
+    """
+       Description: Train and test classifier on concatenated features, with possible preprocessing techniques and class balancing.
+    """
     # Parse arguments from command line
     args = args_parse()
 

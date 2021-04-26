@@ -6,6 +6,10 @@ from config import paths
 
 
 def args_parse():
+    """
+       Description: Parse command-line arguments.
+       :returns: arguments parser.
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--testsizepercent',
@@ -21,6 +25,9 @@ def args_parse():
 
 
 def main():
+    """
+       Description: Split data into train, validation and test splits and copy files in respective folders.
+    """
     # Parse arguments from command line and get params
     args = args_parse()
 
@@ -74,11 +81,13 @@ def main():
     # split caseids in train, validation and test and save on file:
     filenames_train_val, filenames_test, labels_train_val, labels_test = split_data.split_filenames(lookup_dir=dirgene,
                                                                                                     test_size=test_size,
+                                                                                                    save_dir=filename_splits_dir,
                                                                                                     nametrain='train_val',
                                                                                                     nametest='test')
     filenames_train, filenames_val, _, _ = split_data.split_filenames(filenames_arg=filenames_train_val,
                                                                       labels_arg=labels_train_val,
                                                                       test_size=val_size,
+                                                                      save_dir=filename_splits_dir,
                                                                       nametrain='train',
                                                                       nametest='val')
 

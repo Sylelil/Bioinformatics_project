@@ -5,18 +5,10 @@ from config import paths
 from src.data_manipulation import concatenate_features
 
 
-def args_parse():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg',
-                        help='Configuration file path',
-                        required=True,
-                        type=str)
-    args = parser.parse_args()
-    return args
-
-
 def main():
-
+    """
+       Description: Concatenate gene features (possibly copied according to specified ratio) with tile features and save them on files.
+    """
     tile_features_train_dir = paths.extracted_features_train
     tile_features_test_dir = paths.extracted_features_test
     tile_features_val_dir = paths.extracted_features_val

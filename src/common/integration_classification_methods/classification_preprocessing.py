@@ -7,7 +7,16 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import IncrementalPCA
 
+
 def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
+    """
+       Description: Apply StandardScaler and IncrementalPCA to data.
+       :param params: configuration parameters.
+       :param train_filepath: path of train data.
+       :param val_filepath: path of validation data.
+       :param test_filepath: path of test data.
+       :returns: X_train, y_train, X_val, y_val, X_test, y_test: data and labels
+    """
     x_train_pca_path = Path('assets') / 'concatenated_pca' / 'x_train.npy'
     y_train_pca_path = Path('assets') / 'concatenated_pca' / 'y_train.npy'
     x_val_pca_path = Path('assets') / 'concatenated_pca' / 'x_val.npy'

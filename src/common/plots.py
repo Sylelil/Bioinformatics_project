@@ -9,6 +9,10 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
 def plot_loss2(model_history):
+    """
+       Description: Plot loss.
+       :param model_history: model history.
+    """
     train_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][0]
     valid_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][1]
     fig, ax1 = plt.subplots()
@@ -24,6 +28,12 @@ def plot_loss2(model_history):
 
 
 def plot_loss(history, label, n):
+    """
+       Description: Plot loss.
+       :param history: model history.
+       :param label: label string.
+       :param n: color number.
+    """
     # Use a log scale on y-axis to show the wide range of values.
     plt.semilogy(history.epoch, history.history['loss'],
                color=colors[n], label='Train ' + label)
@@ -35,6 +45,10 @@ def plot_loss(history, label, n):
 
 
 def plot_metrics(history):
+    """
+       Description: Plot metrics.
+       :param history: model history.
+    """
     metrics = ['loss', 'prc', 'precision', 'recall']
     for n, metric in enumerate(metrics):
         name = metric.replace("_"," ").capitalize()
@@ -55,6 +69,12 @@ def plot_metrics(history):
 
 
 def plot_cm(labels, predictions, p=0.5):
+    """
+       Description: Plot Confusion Matrix.
+       :param labels: ground truth labels.
+       :param predictions: predicted labels.
+       :param p: threshold.
+    """
     cm = confusion_matrix(labels, predictions > p)
     plt.figure(figsize=(5,5))
     sns.heatmap(cm, annot=True, fmt="d")
@@ -70,6 +90,13 @@ def plot_cm(labels, predictions, p=0.5):
 
 
 def plot_roc(name, labels, predictions, **kwargs):
+    """
+       Description: Plot ROC curve.
+       :param name: title.
+       :param labels: ground truth labels.
+       :param predictions: predicted labels.
+       :param **kwargs: plot arguments.
+    """
     fp, tp, _ = roc_curve(labels, predictions)
 
     plt.plot(100*fp, 100*tp, label=name, linewidth=2, **kwargs)
@@ -83,6 +110,13 @@ def plot_roc(name, labels, predictions, **kwargs):
 
 
 def plot_prc(name, labels, predictions, **kwargs):
+    """
+       Description: Plot Precision-Recall curve.
+       :param name: title.
+       :param labels: ground truth labels.
+       :param predictions: predicted labels.
+       :param **kwargs: plot arguments.
+    """
     precision, recall, _ = precision_recall_curve(labels, predictions)
 
     plt.plot(precision, recall, label=name, linewidth=2, **kwargs)

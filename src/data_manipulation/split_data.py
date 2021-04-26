@@ -5,13 +5,15 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from src.genes import methods
 from src.images import slide_info
+import numpy as np
 
 
 def get_images_split_data(lookup_dir, val_data=True):
     """
         Description: Retrieve split data from lookup folder.
         :param lookup_dir: lookup directory with split data.
-        :return: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
+        :param val_data: either or not to return validation split (default: True)
+        :returns: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
     """
     train_filepath = Path(lookup_dir) / 'train'
     val_filepath = Path(lookup_dir) / 'val'
@@ -43,7 +45,8 @@ def get_genes_split_data(lookup_dir, val_data=True):
     """
         Description: Retrieve split data from lookup folder.
         :param lookup_dir: lookup directory with split data.
-        :return: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
+        :param val_data: either or not to return validation split (default: True)
+        :returns: X_train, (X_val,) X_test, y_train, (y_val,) y_test: datasets and labels
     """
     train_filepath = Path(lookup_dir) / 'train'
     val_filepath = Path(lookup_dir) / 'val'
@@ -71,12 +74,17 @@ def get_genes_split_data(lookup_dir, val_data=True):
         return X_train_val, X_test, y_train, y_test
 
 
-def split_filenames(test_size, lookup_dir=None, filenames_arg=None, labels_arg=None, nametrain='train', nametest='test'):
+def split_filenames(test_size, save_dir, lookup_dir=None, filenames_arg=None, labels_arg=None, nametrain='train', nametest='test'):
     """
-        Description: Private function. Split caseids into random train, test subsets according to specified sizes with stratification.
-        Save splitted caseids into three files in 'assets\train_test_split' folder.
-        :param lookup_dir: lookup directory with data to be split.
+        Description: Split filenames into random train, test subsets according to specified sizes with stratification.
         :param test_size: float or int size of test subset.
+        :param save_dir: directory where lists of split filenames will be saved.
+        :param lookup_dir: lookup directory with data filenames to be split.
+        :param filenames_arg: list of train+val filenames to be split.
+        :param labels_arg: list of train+val labels to be split.
+        :param nametrain: name of train split.
+        :param nametest: name of test split.
+        :returns: filenames_train, filenames_test, labels_train, labels_test: split filenames lists and split labels lists
     """
     filenames = []
     labels = []
@@ -100,12 +108,26 @@ def split_filenames(test_size, lookup_dir=None, filenames_arg=None, labels_arg=N
     filenames_train, filenames_test, labels_train, labels_test = train_test_split(filenames, labels,
                                                                                   test_size=test_size, stratify=labels,
                                                                                   random_state=42)
-
+    # save in files
+    print(f'>> Saving splits in {save_dir} directory...')
+    fname_train = nametrain + '_filenames.npy'
+    fname_test = nametest + '_filenames.npy'
+    np.save(os.path.join(save_dir, fname_train), filenames_train)
+    np.save(os.path.join(save_dir, fname_test), filenames_test)
     print('>> Done')
+
     return filenames_train, filenames_test, labels_train, labels_test
 
 
 def split_into_folders(lookup_dir, filenames_train, filenames_val, filenames_test, path_to_save):
+    """
+        Description: Copy data into folders according to filenames splits.
+        :param lookup_dir: lookup directory with data to be split.
+        :param filenames_train: list of train filenames.
+        :param filenames_val: list of val filenames.
+        :param filenames_test: list of test filenames.
+        :param path_to_save: directory where data will be saved.
+    """
     traindir = Path(path_to_save) / 'train'
     valdir = Path(path_to_save) / 'val'
     testdir = Path(path_to_save) / 'test'

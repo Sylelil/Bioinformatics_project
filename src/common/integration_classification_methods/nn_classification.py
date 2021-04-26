@@ -25,6 +25,15 @@ METRICS = [
 
 
 def make_model(n_input_features, units_1, units_2, metrics=METRICS, output_bias=None):
+    """
+       Description: Create MLP model.
+       :param n_input_features: number of input features.
+       :param units_1: number of units in first dense layer.
+       :param units_2: number of units in second dense layer.
+       :param metrics: metrics list.
+       :param output_bias: output bias.
+       :returns: MLP model.
+    """
     if output_bias is not None:
         output_bias = tf.keras.initializers.Constant(output_bias)
     model = keras.Sequential([
@@ -41,6 +50,17 @@ def make_model(n_input_features, units_1, units_2, metrics=METRICS, output_bias=
 
 
 def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, use_generators=False):
+    """
+       Description: Train and test MLP classifier and show results.
+       :param X_train: train data.
+       :param y_train: train labels.
+       :param X_val: validation data.
+       :param y_val: validation labels.
+       :param X_test: test data.
+       :param y_test: test labels.
+       :param mlp_settings: dictionary with MLP settings.
+       :param use_generators: either or not to get data as generators.
+    """
 
     print(">> Creating MultiLayer Perceptron model...")
     model = make_model(mlp_settings['n_input_features'], units_1=mlp_settings['units_1'], units_2=mlp_settings['units_2'])
@@ -88,6 +108,14 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
 
 
 def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
+    """
+       Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
+       :param args: arguments.
+       :param params: configuration parameters.
+       :param train_filepath: train data path.
+       :param val_filepath: validation data path.
+       :param test_filepath: test data path.
+    """
     X_train, y_train, X_val, y_val, X_test, y_test = classification_preprocessing.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
 
     class_weight = None
@@ -116,6 +144,14 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
 
 
 def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
+    """
+       Description: Train and test MLP classifier using data generators from csv files, then show results.
+       :param args: arguments.
+       :param params: configuration parameters.
+       :param train_filepath: train data path.
+       :param val_filepath: validation data path.
+       :param test_filepath: test data path.
+    """
     batchsize = params['nn']['batchsize']
 
     scaler = StandardScaler()

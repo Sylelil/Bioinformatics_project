@@ -8,6 +8,14 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
 def shallow_classifier(args, params, train_filepath, val_filepath, test_filepath):
+    """
+       Description: Train and test shallow classifier, then show results.
+       :param args: arguments.
+       :param params: configuration parameters.
+       :param train_filepath: train data path.
+       :param val_filepath: validation data path.
+       :param test_filepath: test data path.
+    """
     X_train, y_train, X_val, y_val, X_test, y_test = classification_preprocessing.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
 
     if args.balancing and args.balancing != 'weights':

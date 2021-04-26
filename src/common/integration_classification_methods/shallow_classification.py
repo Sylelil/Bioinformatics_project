@@ -1,6 +1,7 @@
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
-from src.common import class_balancing, classification_preprocessing
+from src.common import class_balancing
+from src.common.integration_classification_methods import classification_preprocessing
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']

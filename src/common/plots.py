@@ -8,7 +8,7 @@ mpl.rcParams['figure.figsize'] = (12, 10)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
-'''def plot_loss(model_history):
+def plot_loss2(model_history):
     train_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][0]
     valid_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][1]
     fig, ax1 = plt.subplots()
@@ -20,7 +20,7 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     ax1.tick_params(axis='y', labelcolor=color)
     plt.legend(loc='upper left')
     plt.title('Model Loss')
-    plt.show()'''
+    plt.show()
 
 
 def plot_loss(history, label, n):

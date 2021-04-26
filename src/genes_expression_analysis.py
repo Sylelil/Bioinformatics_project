@@ -10,8 +10,7 @@ from genes import methods
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from genes.features_selection_methods.welch_t import genes_selection_welch_t
 
-
-from common import split_data
+from src.data_manipulation import split_data
 
 
 def main():

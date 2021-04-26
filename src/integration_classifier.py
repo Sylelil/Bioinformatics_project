@@ -1,9 +1,9 @@
 import argparse
 import os
 from pathlib import Path
-import numpy as np
 from config import paths
-from src.common import utils, shallow_classification, nn_classification, classification_preprocessing
+from src.common import utils
+from src.common.integration_classification_methods import nn_classification, shallow_classification
 import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 

@@ -4,7 +4,8 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from src.common import class_balancing, data_generator, plots, classification_preprocessing, utils
+from src.common import class_balancing, data_generator, plots, utils
+from src.common.integration_classification_methods import classification_preprocessing
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt

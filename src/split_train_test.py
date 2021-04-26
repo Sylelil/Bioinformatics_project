@@ -1,23 +1,21 @@
 import argparse
 import os
 from pathlib import Path
-
 from common import split_data
 from config import paths
-from src.common import utils
 
 
 def args_parse():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--testsizepercent',
-                            help='Size of test split as percentage value between 0 and 1',
-                            required=True,
-                            type=float)
+                        help='Size of test split as percentage value between 0 and 1',
+                        required=True,
+                        type=float)
     parser.add_argument('--valsizepercent',
-                            help='Size of validation split as percentage value between 0 and 1',
-                            required=True,
-                            type=float)
+                        help='Size of validation split as percentage value between 0 and 1',
+                        required=True,
+                        type=float)
     args = parser.parse_args()
     return args
 
@@ -40,15 +38,6 @@ def main():
     dirimg = paths.images_dir
     dirgene = paths.genes_dir
     savedir = paths.split_data_dir
-
-    '''
-    dirimg = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'images_not_split'
-    dirgene = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results' / 'genes_not_split'
-    savedir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'results'
-    test_size = float(0.2)
-    val_size = float(0.2)
-    val_size = val_size / (1 - test_size)
-    '''
 
     if not os.path.exists(dirimg):
         print("%s not existing." % dirimg)
@@ -77,32 +66,30 @@ def main():
     if not os.path.exists(Path(savedir) / 'images' / 'val'):
         os.mkdir(Path(savedir) / 'images' / 'val')
 
-    caseid_splits_dir = paths.caseid_splits_dir
+    filename_splits_dir = paths.filename_splits_dir
 
-    if not os.path.exists(caseid_splits_dir):
-        os.makedirs(caseid_splits_dir)
+    if not os.path.exists(filename_splits_dir):
+        os.makedirs(filename_splits_dir)
 
     # split caseids in train, validation and test and save on file:
-    caseids_train_val, caseids_test, labels_train_val, labels_test = split_data.split_caseids(lookup_dir=dirgene,
-                                                                                              test_size=test_size,
-                                                                                              save_dir=caseid_splits_dir,
-                                                                                              nametrain='train_val',
-                                                                                              nametest='test')
-    caseids_train, caseids_val, _, _ = split_data.split_caseids(caseids_arg=caseids_train_val,
-                                                                labels_arg=labels_train_val,
-                                                                test_size=val_size,
-                                                                save_dir=caseid_splits_dir,
-                                                                nametrain='train',
-                                                                nametest='val')
+    filenames_train_val, filenames_test, labels_train_val, labels_test = split_data.split_filenames(lookup_dir=dirgene,
+                                                                                                    test_size=test_size,
+                                                                                                    nametrain='train_val',
+                                                                                                    nametest='test')
+    filenames_train, filenames_val, _, _ = split_data.split_filenames(filenames_arg=filenames_train_val,
+                                                                      labels_arg=labels_train_val,
+                                                                      test_size=val_size,
+                                                                      nametrain='train',
+                                                                      nametest='val')
 
     print('--------------------------')
     print(">> Splitting images files:")
     print('--------------------------')
-    split_data.split_into_folders(dirimg, caseids_train, caseids_val, caseids_test, Path(savedir) / 'images')
+    split_data.split_into_folders(dirimg, filenames_train, filenames_val, filenames_test, Path(savedir) / 'images')
     print('-------------------------')
     print(">> Splitting genes files:")
     print('-------------------------')
-    split_data.split_into_folders(dirgene, caseids_train, caseids_val, caseids_test, Path(savedir) / 'genes')
+    split_data.split_into_folders(dirgene, filenames_train, filenames_val, filenames_test, Path(savedir) / 'genes')
 
 
 if __name__ == '__main__':

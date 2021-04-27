@@ -7,17 +7,13 @@ from imblearn.metrics import classification_report_imbalanced, sensitivity_score
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import accuracy_score, precision_score, average_precision_score, recall_score, \
     plot_confusion_matrix, plot_roc_curve, roc_curve, precision_recall_fscore_support
-from sklearn.model_selection import KFold, GridSearchCV
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import KFold, GridSearchCV, StratifiedKFold
+from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
 from config import paths
 from genes import methods
-from genes.nn_classifier import MultiLayerPerceptron
 import numpy as np
 
 
@@ -55,30 +51,31 @@ def main():
     params = methods.read_config_file(args.cfg, args.classification_method)
 
     X_train, y_train = methods.load_selected_genes(paths.svm_t_rfe_selected_features_train)
+    X_val, y_val = methods.load_selected_genes(paths.svm_t_rfe_selected_features_val)
     X_test, y_test = methods.load_selected_genes(paths.svm_t_rfe_selected_features_test)
 
+    # train + val
+    X_train = X_train + X_val
+    y_train = y_train + y_val
+
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-    methods.pca(X_train, y_train)
-    methods.pca(X_test, y_test)
-
-    # SMOTE
-    print("\n[SMOTE]")
-    sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-    X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
-    print(Counter(y_train_sm))
+    methods.pca(scaler.fit_transform(X_train), y_train)
+    methods.pca(scaler.transform(X_test), y_test)
 
     if args.classification_method == "svm":
 
-        tuned_parameters = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
+        C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+        param_grid = dict(svm__C=C_range)
 
-        pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
-        cv = KFold(n_splits=params['cv_grid_search_acc'])
-        clf = GridSearchCV(estimator=pipe_grid, param_grid=tuned_parameters, scoring='accuracy', cv=cv, n_jobs=-1,
-                           refit=True)
-        clf.fit(X_train_sm, y_train_sm)
+        scaler = StandardScaler()
+        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+        svm = SVC(kernel=params['kernel'])
+        imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+
+        # define search
+        cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+        clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
+        clf.fit(X_train, y_train)
         pred = clf.predict(X_test)
 
         print("accuracy= %f" % accuracy_score(y_test, pred))
@@ -113,22 +110,11 @@ def main():
         plt.show()
 
         # Show decision boundary
-        methods.show_svm_decision_boundary(clf, X_train_sm, y_train_sm, X_test, y_test)
+        methods.show_svm_decision_boundary(params, X_train, y_train, X_test, y_test)
 
     elif args.classification_method == "nn":
-
-        n_epochs = 20
-        my_net = MultiLayerPerceptron(n_epochs=n_epochs,
-                                      batch_size=64,
-                                      learning_rate=0.01,
-                                      num_features=len(X_train[0]),
-                                      n_classes=len(np.unique(y_test)),
-                                      lr_reduction_epoch=15,
-                                      logdir="fc_0-001")
-
-        history = my_net.train_model(X_train_sm, y_train_sm, X_test, y_test)
-        loss, acc = my_net.model.evaluate(X_test, y_test, verbose=False)
-        print("Test done!\n\tMean accuracy: {}\n\tLoss: {}".format(acc, loss))
+        # TODO
+        pass
 
     else:
         sys.stderr.write("Invalid value for <classification_method>")

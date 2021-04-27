@@ -1,18 +1,23 @@
 import configparser
 import os
 import sys
-from pathlib import Path
+from collections import Counter
 
-import imblearn
+from imblearn.metrics import sensitivity_score, specificity_score
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline
 from matplotlib.colors import ListedColormap
 from sklearn import metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics import make_scorer
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 from tqdm import tqdm
 from scipy import stats
 
@@ -29,7 +34,6 @@ def read_genes_from_folder(lookup_dir):
             y.append(0 if file_name.endswith("_0.txt") else 1)
 
     return X, y
-
 
 
 def read_gene_expression_data(path):
@@ -68,7 +72,7 @@ def save_selected_genes(X, selected_genes, extracted_features_dir):
         row = np.asarray(row)
         np.save(os.path.join(extracted_features_dir, index + '.npy'), row)
 
-    print(">> Features saved to " + extracted_features_dir)
+    print(">> Features saved to " + str(extracted_features_dir))
 
 
 def read_config_file(config_file_path, section):
@@ -105,10 +109,10 @@ def read_config_file(config_file_path, section):
             params['scoring'] = make_scorer(metrics.f1_score)
             params['scoring_name'] = config['svm_t_rfe']['scoring']
         elif config['svm_t_rfe']['scoring'] == 'sensitivity':
-            params['scoring'] = make_scorer(imblearn.metrics.sensitivity_score)
+            params['scoring'] = make_scorer(sensitivity_score)
             params['scoring_name'] = config['svm_t_rfe']['scoring']
         elif config['svm_t_rfe']['scoring'] == 'specificity':
-            params['scoring'] = make_scorer(imblearn.metrics.specificity_score)
+            params['scoring'] = make_scorer(specificity_score)
             params['scoring_name'] = config['svm_t_rfe']['scoring']
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
@@ -122,6 +126,16 @@ def read_config_file(config_file_path, section):
         params['random_state'] = config.getint('general', 'random_state')
         params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
+        if config['svm']['kernel'] == 'linear' or config['svm']['kernel'] == 'rbf':
+            params['kernel'] = config['svm']['kernel']
+        else:
+            sys.stderr.write("Invalid value for <kernel> in config file")
+            exit(1)
+        if config['svm']['scoring'] == 'accuracy':
+            params['scoring'] = make_scorer(metrics.accuracy_score)
+        else:
+            sys.stderr.write("Invalid value for <kernel> in config file")
+            exit(1)
     else:
         sys.stderr.write("Invalid value for <section> in config file")
         exit(1)
@@ -268,10 +282,19 @@ def tsne_3D(X_train, y_train):
 
     plt.show()
 
-def show_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
+
+def show_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
+    X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
+    print(Counter(y_train_sm))
+
     h = .02  # step size in the mesh
-    x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
-    y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
+    x_min, x_max = X_train_sm[:, 0].min() - .5, X_train_sm[:, 0].max() + .5
+    y_min, y_max = X_train_sm[:, 1].min() - .5, X_train_sm[:, 1].max() + .5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
 
@@ -280,6 +303,17 @@ def show_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
 
     # Put the result into a color plot
+    C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+    param_grid = dict(svm__C=C_range)
+
+    scaler = StandardScaler()
+    smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+    svm = SVC(kernel=params['kernel'])
+    imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+
+    # define search
+    cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+    clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
     clf.fit(X_train[:, :2], y_train)
     Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)

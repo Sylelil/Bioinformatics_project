@@ -1,12 +1,10 @@
 import os
 import sys
 from numpy.linalg import norm
-from sklearn import metrics
-from sklearn.metrics import accuracy_score, make_scorer
 from tqdm import tqdm
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
 from . import common
@@ -154,7 +152,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
             smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
             svm = SVC(kernel=params['kernel'])
             imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
-            cv = KFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
+            cv = StratifiedKFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
             grid = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
             grid.fit(df_array, y)  # Refit the estimator using the best found parameters on the whole dataset
             C = grid.best_params_['svm__C']
@@ -231,10 +229,10 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
 
         # define search
-        cv_inner = KFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+        cv_inner = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
         search = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv_inner)
         # configure the cross-validation procedure
-        cv_outer = KFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
+        cv_outer = StratifiedKFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
         # execute the nested cross-validation
         scores = cross_val_score(search, df_selected_array, y, scoring=params['scoring'], cv=cv_outer)
         # report performance

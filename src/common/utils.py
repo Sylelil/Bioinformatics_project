@@ -35,12 +35,6 @@ def read_config_file(config_file_path):
 
     # general
     params['general'] = {}
-    scoring = config['general']['scoring']
-    if scoring == 'matthews_corrcoef':
-        params['general']['scoring'] = metrics.matthews_corrcoef
-    if scoring == 'accuracy':
-        params['general']['scoring'] = metrics.accuracy_score
-
     random_state = config['general']['random_state']
     if random_state == 'None' or random_state == '':
         params['general']['random_state'] = None

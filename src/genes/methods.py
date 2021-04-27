@@ -14,7 +14,7 @@ from matplotlib.colors import ListedColormap
 from sklearn import metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.metrics import make_scorer
+from sklearn.metrics import make_scorer, accuracy_score
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -63,7 +63,7 @@ def load_selected_genes(selected_features_dir):
         X.append(patient_features)
         y.append(int(target))
 
-    return X, y
+    return np.asarray(X), y
 
 
 def save_selected_genes(X, selected_genes, extracted_features_dir):
@@ -288,10 +288,11 @@ def show_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
+    sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
     X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
     print(Counter(y_train_sm))
 
+    # Show decision boundary
     h = .02  # step size in the mesh
     x_min, x_max = X_train_sm[:, 0].min() - .5, X_train_sm[:, 0].max() + .5
     y_min, y_max = X_train_sm[:, 1].min() - .5, X_train_sm[:, 1].max() + .5
@@ -303,18 +304,8 @@ def show_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
 
     # Put the result into a color plot
-    C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
-    param_grid = dict(svm__C=C_range)
-
-    scaler = StandardScaler()
-    smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-    svm = SVC(kernel=params['kernel'])
-    imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
-
-    # define search
-    cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-    clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
-    clf.fit(X_train[:, :2], y_train)
+    clf = SVC(kernel='linear')
+    clf.fit(X_train_sm[:, :2], y_train_sm)
     Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)

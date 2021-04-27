@@ -55,7 +55,7 @@ def main():
     X_test, y_test = methods.load_selected_genes(paths.svm_t_rfe_selected_features_test)
 
     # train + val
-    X_train = X_train + X_val
+    X_train = np.concatenate((X_train, X_val), axis=0)
     y_train = y_train + y_val
 
     scaler = StandardScaler()

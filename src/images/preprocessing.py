@@ -5,6 +5,8 @@ import multiprocessing
 import openslide
 from PIL import Image
 from openslide.deepzoom import DeepZoomGenerator
+
+from config import paths
 from . import utils
 from skimage import img_as_bool
 from skimage.filters import median, gaussian
@@ -340,10 +342,10 @@ def hash_base64(_str):
 def extract_tiles_on_disk(slides_info):
     num_tiles = 0
     for current_slide in slides_info:
-        slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, current_slide['slide_name'] + '.npy'))
+        slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, current_slide['slide_name'] + '.npy'))
         num_tiles += len(slide_tiles_coords)
 
-    if len(os.listdir(cfg.selected_tiles_dir)) < num_tiles:
+    if len(os.listdir(paths.selected_tiles_dir)) < num_tiles:
         for current_slide in slides_info:
             slide_name = current_slide['slide_name']
             print('Saving tiles of slide ', slide_name)
@@ -355,12 +357,12 @@ def extract_tiles_on_disk(slides_info):
                 current_slide['slide_magnification'],
                 10)
 
-            slide_tiles_coords = np.load(os.path.join(cfg.selected_coords_dir, slide_name + '.npy'))
+            slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, slide_name + '.npy'))
 
             for index, coord in enumerate(slide_tiles_coords):
                 tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
                 np_tile = utils.normalize_staining(tile)
-                save_path = cfg.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
+                save_path = paths.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
                 np.save(save_path, np_tile)
     else:
         print(">> Selected tiles already saved on disk")

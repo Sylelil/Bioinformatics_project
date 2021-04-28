@@ -8,10 +8,10 @@ import numpy as np
 def remove_genes_with_median_0(data_frame):
     """
     Description: Removes the genes for which the median calculated
-                 on all patients (healthy + sick) is = 0
-    :param data_frame:
-    :return data_frame:
-    :return removed_genes:
+                 on all patients (normal + tumor) is = 0
+    :param data_frame: data frame containing gene expression data
+    :return data_frame: data frame after removing genes with median = 0
+    :return removed_genes: removed genes names
     """
     removed_genes = []
     for gene in tqdm(data_frame.columns, desc=">> Compute median for each gene...", file=sys.stdout):
@@ -26,9 +26,9 @@ def remove_genes_with_median_0(data_frame):
 def anderson_normality_test(data_frame_0, data_frame_1):
     """
     Description: Anderson test
-    :param data_frame_0:
-    :param data_frame_1:
-    :return:
+    :param data_frame_0: data frame containing gene expression values of normal patients
+    :param data_frame_1: data frame containing gene expression values of tumor patients
+    :return: genes names for which normality check holds
     """
     normal_genes = []
     for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
@@ -48,9 +48,9 @@ def shapiro_normality_test(data_frame_0, data_frame_1, alpha):
     """
     Description: Shapiro test
     :param alpha:
-    :param data_frame_0:
-    :param data_frame_1:
-    :return:
+    :param data_frame_0: data frame containing gene expression values of normal patients
+    :param data_frame_1: data frame containing gene expression values of tumor patients
+    :return: genes names for which normality check holds
     """
     normal_genes = []
     for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
@@ -67,9 +67,9 @@ def normal_test(data_frame_0, data_frame_1, alpha):
     """
     Description: Normal test
     :param alpha:
-    :param data_frame_0:
-    :param data_frame_1:
-    :return:
+    :param data_frame_0: data frame containing gene expression values of normal patients
+    :param data_frame_1: data frame containing gene expression values of tumor patients
+    :return: genes names for which normality check holds
     """
     normal_genes = []
     for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
@@ -85,10 +85,10 @@ def normal_test(data_frame_0, data_frame_1, alpha):
 def mann_whitney_u_test(data_frame_0, data_frame_1, alpha):
     """
     Description: Non-parametric statistical test
-    :param data_frame_0:
-    :param data_frame_1:
+    :param data_frame_0: data frame containing gene expression values of normal patients
+    :param data_frame_1: data frame containing gene expression values of tumor patients
     :param alpha:
-    :return m_reduced_genes:
+    :return m_reduced_genes: genes names for which the test holds
     """
     m_reduced_genes = []
 
@@ -103,12 +103,21 @@ def mann_whitney_u_test(data_frame_0, data_frame_1, alpha):
 def welch_t_test(data_frame_0, data_frame_1, alpha):
     """
     Description: Parametric statistical test
-    :param data_frame_0:
-    :param data_frame_1:
+    :param data_frame_0: data frame containing gene expression values of normal patients
+    :param data_frame_1: data frame containing gene expression values of tumor patients
     :param alpha:
-    :return:
+    :return dict_: dictionary containing:
+        - genes_b: genes for which the test holds (with bonferroni adjustment)
+        - genes_hh: genes holm hochberg
+        - genes_bh' genes_benjamini_hochberg
+        - genes: genes for which the test holds
+        - p_values_b: p values (bonferroni)
+        - t_values_b: t values (bonferroni)
+        - all_p_values:
+        - all_t_values:
     """
-    dict = {
+
+    dict_ = {
         'genes_b': [],  # genes_bonferroni
         'genes_hh': [],  # genes holm hochberg
         'genes_bh': [],  # genes_benjamini_hochberg
@@ -127,24 +136,24 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
                                          equal_var=False, nan_policy='omit')
 
         if not np.isnan(pvalue) and pvalue < alpha:
-            dict['genes'].append(gene)
+            dict_['genes'].append(gene)
 
         if not np.isnan(pvalue) and pvalue <= alpha / len(data_frame_0.columns):
-            dict['genes_b'].append(gene)
-            dict['p_values_b'].append(pvalue)
-            dict['t_values_b'].append(tvalue)
+            dict_['genes_b'].append(gene)
+            dict_['p_values_b'].append(pvalue)
+            dict_['t_values_b'].append(tvalue)
 
         if not np.isnan(pvalue) and pvalue < alpha / (len(data_frame_0.columns) - i + 1):
-            dict['genes_hh'].append(gene)
+            dict_['genes_hh'].append(gene)
 
         if not np.isnan(pvalue) and pvalue < alpha / (len(data_frame_0.columns) - i):
-            dict['genes_bh'].append(gene)
+            dict_['genes_bh'].append(gene)
 
-        dict['all_p_values'].append(pvalue)
-        dict['all_t_values'].append(tvalue)
+        dict_['all_p_values'].append(pvalue)
+        dict_['all_t_values'].append(tvalue)
         i+=1
 
-    return dict
+    return dict_
 
 
 def is_float(value):

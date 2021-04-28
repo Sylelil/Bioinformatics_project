@@ -23,6 +23,17 @@ from scipy import stats
 
 
 def read_genes_from_folder(lookup_dir):
+    """
+        Description: Reading gene expression data from specified directory.
+                     The directory contains one .txt file for each case_id (patient).
+                     Each .txt file contains the gene expression values (features) for one specific case_id.
+        :param lookup_dir: directory containing gene expression data
+        :return df_patients: dataframe containing one row for each patient:
+                - rows = gene expression values
+                - columns = gene names
+                - indexes = case_ids
+        :return y: labels (0/1)
+    """
     X = pd.DataFrame()
     y = []
     for file_name in tqdm(os.listdir(lookup_dir), desc=">> Reading genes data...", file=sys.stdout):
@@ -37,6 +48,16 @@ def read_genes_from_folder(lookup_dir):
 
 
 def read_gene_expression_data(path):
+    """
+        Description: Reading gene expression data from specified path.
+                     The directory contains one .txt file for each case_id (patient).
+                     Each .txt file contains the gene expression values (features) for one specific case_id.
+        :param path: directory containing gene expression data
+        :returns: df_patients: dataframe containing one row for each patient:
+                  - rows = gene expression values
+                  - columns = gene names
+                  - indexes = case_ids
+    """
     data_frame_0 = pd.DataFrame()
     data_frame_1 = pd.DataFrame()
 
@@ -54,6 +75,14 @@ def read_gene_expression_data(path):
 
 
 def load_selected_genes(selected_features_dir):
+    """
+        Description: Reading gene expression values (features) of genes selected by feature selection method.
+                     The directory contains one .npy file for each case_id (patient).
+                     Each .npy file contains the gene expression values for one specific case_id.
+        :param selected_features_dir: directory containing the gene expression data
+        :returns X: numpy array containing the features
+        :return y: labels (0/1)
+    """
     X = []
     y = []
     for patient_file in tqdm(os.listdir(selected_features_dir), desc=">> Reading selected genes...", file=sys.stdout):
@@ -63,12 +92,20 @@ def load_selected_genes(selected_features_dir):
         X.append(patient_features)
         y.append(int(target))
 
+    #TODO check data type
     return np.asarray(X), y
 
 
-def save_selected_genes(X, selected_genes, extracted_features_dir):
-
-    for index, row in X[selected_genes].iterrows():
+def save_selected_genes(X, extracted_features_dir):
+    """
+        Description: Saving to disk gene expression values (features) of genes selected by feature selection algorithm.
+                     The directory contains one .npy file for each case_id (patient).
+                     Each .npy file contains the gene expression values for one specific case_id.
+        :param X: dataframe containing gene expression data of selected genes
+        :param extracted_features_dir: path to save gene expression data
+    """
+    #TODO check selected_genes
+    for index, row in X.iterrows():
         row = np.asarray(row)
         np.save(os.path.join(extracted_features_dir, index + '.npy'), row)
 
@@ -76,6 +113,11 @@ def save_selected_genes(X, selected_genes, extracted_features_dir):
 
 
 def read_config_file(config_file_path, section):
+    """
+        Description: Reading configuration file for genes
+        :param config_file_path: path to configuration file
+        :param section: configuration file section
+       """
     params = {}
     config = configparser.ConfigParser()
     config.read(config_file_path)
@@ -240,7 +282,6 @@ def tsne_pca(X_train, y_train):
 
 
 def tsne(X_train, y_train):
-    # , verbose=0, perplexity=40, n_iter=300,
 
     tsne = TSNE(n_components=2, random_state=42)
     tsne_results = tsne.fit_transform(X_train)

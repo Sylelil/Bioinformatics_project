@@ -9,7 +9,8 @@ genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione 
 images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI
 genes_dir = BASE_DIR / 'assets' / 'genes_files'      # Path ai dati di genomica
 split_data_dir = BASE_DIR / 'assets' / 'split_data'  # dati splittati
-filename_splits_dir = BASE_DIR / 'assets' / 'filename_splits'  # case_id splittati
+# filename_splits_dir = BASE_DIR / 'assets' / 'filename_splits'  # case_id splittati
+filename_splits_dir = Path('.') / 'assets' / 'caseid_splits'
 
 # results folder
 
@@ -36,5 +37,6 @@ low_res_normal_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' /
 low_res_tumor_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 'img_tumor'
 
 # results/concatenated_results
-concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'
+concatenated_results_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'assets' / 'concatenated_results'
+# concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'
 

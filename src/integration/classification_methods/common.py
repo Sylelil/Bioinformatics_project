@@ -6,6 +6,55 @@ from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import IncrementalPCA
+from sklearn import metrics
+from tensorflow import keras
+from config import paths
+from src.integration import plots
+import matplotlib.pyplot as plt
+
+METRICS_skl = [
+    metrics.accuracy_score,
+    metrics.average_precision_score,
+    metrics.f1_score,
+    metrics.precision_score,
+    metrics.recall_score,
+    metrics.matthews_corrcoef,
+    metrics.roc_auc_score,
+    metrics.confusion_matrix,
+]
+
+
+METRICS_keras = [
+    keras.metrics.TruePositives(name='tp'),
+    keras.metrics.FalsePositives(name='fp'),
+    keras.metrics.TrueNegatives(name='tn'),
+    keras.metrics.FalseNegatives(name='fn'),
+    keras.metrics.BinaryAccuracy(name='accuracy'),
+    keras.metrics.Precision(name='precision'),
+    keras.metrics.Recall(name='recall'),
+    keras.metrics.AUC(name='auc'),
+    keras.metrics.AUC(name='prc', curve='PR'), # precision-recall curve
+]
+
+
+def compute_class_weights(labels):
+    """
+        Description: Compute class weights from list of labels.
+        :param labels: list of labels.
+        :returns: class weights dictionary
+    """
+    print(">> Computing class weights...")
+    total = len(labels)
+    pos = np.count_nonzero(labels)
+    neg = total - pos
+    # Scaling by total/2 helps keep the loss to a similar magnitude.
+    # The sum of the weights of all examples stays the same.
+    weight_for_0 = (1 / neg) * total / 2.0
+    weight_for_1 = (1 / pos) * total / 2.0
+    class_weight = {0: weight_for_0, 1: weight_for_1}
+    print('Weight for class 0: {:.2f}'.format(weight_for_0))
+    print('Weight for class 1: {:.2f}'.format(weight_for_1))
+    return class_weight
 
 
 def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
@@ -96,3 +145,57 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
         np.save(y_test_pca_path, y_test)
 
     return X_train, y_train, X_val, y_val, X_test, y_test
+
+
+def aggregate_results_per_patient(y_pred_test):
+    """
+        Description: Aggregate results for each patient in test dataset.
+        :param y_pred_test: list of predictions.
+    """
+    print('>> Aggregating results for each patient in test dataset...')
+    test_data_info_path = Path(paths.concatenated_results_dir) / 'test' / 'concat_data_info.csv'
+    test_info_df = pd.read_csv(test_data_info_path)
+    test_info_df['y_pred_test'] = y_pred_test
+    # test_filenames_file = Path(paths.filename_splits_dir) / 'test_filenames.npy'
+    test_filenames_file = Path(paths.filename_splits_dir) / 'test_caseids.npy'
+    test_filenames = np.load(test_filenames_file)
+    gt_labels = []
+    pred_labels = []
+    filename_list = []
+    '''
+    for filename in tqdm(test_filenames):
+        if filename not in filename_list:
+            patient_info = test_info_df.loc[test_info_df['filename'] == filename]
+            patient_predictions = list(patient_info['y_pred_test'])
+            gt_label = filename[-1]
+            pred_label = 1 if 1 in patient_predictions else 0  # if at least one prediction is tumor, the predicted label is tumor
+            gt_labels.append(gt_label)
+            pred_labels.append(pred_label)
+        else:  # filename of patient already aggregated
+            continue
+    '''
+    for filename in tqdm(test_filenames):
+        if filename not in filename_list:
+            options = [f"{filename}_0", f"{filename}_1"]
+            # patient_info = test_info_df.loc[test_info_df['filename'] == filename]
+            patient_info = test_info_df.loc[test_info_df['filename'].isin(options)]
+            patient_predictions = list(patient_info['y_pred_test'])
+            gt_label = list(patient_info['label'])[0]
+            #gt_label = filename[-1]
+            pred_label = 1 if 1 in patient_predictions else 0  # if at least one prediction is tumor, the predicted label is tumor
+            gt_labels.append(gt_label)
+            pred_labels.append(pred_label)
+        else:  # filename of patient already aggregated
+            continue
+
+    print('Test scores for results aggregated by patient:')
+    test_scores_aggregated = []
+    for metric in METRICS_skl:
+        test_scores_aggregated.append((metric.__name__, metric(gt_labels, pred_labels)))
+    for name, value in test_scores_aggregated:
+        print(name, ': ', value)
+    print()
+
+    plots.plot_test_results_aggregated(gt_labels, np.asarray(pred_labels))
+    plt.show()
+

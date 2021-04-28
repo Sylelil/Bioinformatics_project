@@ -128,3 +128,38 @@ def plot_prc(name, labels, predictions, **kwargs):
     ax = plt.gca()
     ax.set_aspect('equal')
 
+
+def plot_train_val_results(history):
+    plot_loss(history, 'Training and validation loss', 0)
+    plt.figure()
+    plot_metrics(history)
+    plt.figure()
+
+
+def plot_test_results(y_test, test_predictions_baseline, y_train, train_predictions_baseline):
+    plot_cm(y_test, test_predictions_baseline)
+    plt.figure()
+
+    plot_roc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
+    plot_roc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
+    plt.legend(loc='lower right')
+    plt.figure()
+
+    plot_prc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
+    plot_prc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
+    plt.legend(loc='lower right')
+    plt.figure()
+
+
+def plot_test_results_aggregated(y_test, test_predictions_baseline):
+    plot_cm(y_test, test_predictions_baseline)
+    plt.figure()
+
+    plot_roc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
+    plt.legend(loc='lower right')
+    plt.figure()
+
+    plot_prc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
+    plt.legend(loc='lower right')
+    plt.figure()
+

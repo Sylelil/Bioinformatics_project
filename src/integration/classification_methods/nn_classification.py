@@ -4,27 +4,15 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from src.common import class_balancing, data_generator, plots, utils
-from src.common.integration_classification_methods import classification_preprocessing
+from src.integration import class_balancing, data_generator, plots, utils
+from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-METRICS = [
-    keras.metrics.TruePositives(name='tp'),
-    keras.metrics.FalsePositives(name='fp'),
-    keras.metrics.TrueNegatives(name='tn'),
-    keras.metrics.FalseNegatives(name='fn'),
-    keras.metrics.BinaryAccuracy(name='accuracy'),
-    keras.metrics.Precision(name='precision'),
-    keras.metrics.Recall(name='recall'),
-    keras.metrics.AUC(name='auc'),
-    keras.metrics.AUC(name='prc', curve='PR'), # precision-recall curve
-]
 
-
-def make_model(n_input_features, units_1, units_2, metrics=METRICS, output_bias=None):
+def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
     """
        Description: Create MLP model.
        :param n_input_features: number of input features.
@@ -76,10 +64,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
-    plots.plot_loss(history, 'Training and validation loss', 0)
-    plots.plt.figure()
-    plots.plot_metrics(history)
-    plt.figure()
+    plots.plot_train_val_results(history)
 
     train_predictions_baseline = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
     test_predictions_baseline = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
@@ -91,20 +76,12 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
         print(name, ': ', value)
     print()
 
-    plots.plot_cm(y_test, test_predictions_baseline)
-    plt.figure()
-
-    plots.plot_roc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
-    plots.plot_roc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
-
-    plots.plot_prc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
-    plots.plot_prc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
+    plots.plot_test_results(y_test, test_predictions_baseline, y_train, train_predictions_baseline)
 
     plt.show()
+
+    # aggregate results for each patient in test dataset:
+    common.aggregate_results_per_patient(test_predictions_baseline)
 
 
 def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -116,7 +93,7 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
        :param val_filepath: validation data path.
        :param test_filepath: test data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = classification_preprocessing.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
+    X_train, y_train, X_val, y_val, X_test, y_test = common.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
 
     class_weight = None
     if args.balancing and args.balancing != 'weights':
@@ -124,7 +101,7 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
         balancer = class_balancing.get_balancing_method(args.balancing, params)
         X_train, y_train = balancer.fit_resample(X_train, y_train)
     elif args.balancing == 'weights':
-        class_weight = utils.compute_class_weights(y_train)
+        class_weight = common.compute_class_weights(y_train)
 
     mlp_settings = {
         'n_input_features' : params['pca']['n_components'],
@@ -194,7 +171,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     if args.balancing and args.balancing != 'weights':
         balancer = class_balancing.get_balancing_method(args.balancing, params)
     elif args.balancing == 'weights':
-        class_weight = utils.compute_class_weights(y_train)
+        class_weight = common.compute_class_weights(y_train)
 
     print(f">> Creating train data generator with scaler and {args.balancing} balancer...")
     train_generator = data_generator.csv_data_generator(train_filepath,

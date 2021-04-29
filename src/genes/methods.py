@@ -28,10 +28,9 @@ def read_genes_from_folder(lookup_dir):
                      The directory contains one .txt file for each case_id (patient).
                      Each .txt file contains the gene expression values (features) for one specific case_id.
         :param lookup_dir: directory containing gene expression data
-        :return df_patients: dataframe containing one row for each patient:
-                - rows = gene expression values
-                - columns = gene names
-                - indexes = case_ids
+        :return df_patients: DataFrame containing one row for each patient:
+                - gene names = the column labels of the DataFrame
+                - case_id = the index (row labels) of the DataFrame
         :return y: labels (0/1)
     """
     X = pd.DataFrame()
@@ -45,33 +44,6 @@ def read_genes_from_folder(lookup_dir):
             y.append(0 if file_name.endswith("_0.txt") else 1)
 
     return X, y
-
-
-def read_gene_expression_data(path):
-    """
-        Description: Reading gene expression data from specified path.
-                     The directory contains one .txt file for each case_id (patient).
-                     Each .txt file contains the gene expression values (features) for one specific case_id.
-        :param path: directory containing gene expression data
-        :returns: df_patients: dataframe containing one row for each patient:
-                  - rows = gene expression values
-                  - columns = gene names
-                  - indexes = case_ids
-    """
-    data_frame_0 = pd.DataFrame()
-    data_frame_1 = pd.DataFrame()
-
-    for file_name in tqdm(os.listdir(path), desc=">> Reading patient data...", file=sys.stdout):
-        file_path = os.path.join(path, file_name)
-        with open(file_path) as f:
-            patient_df = pd.read_csv(f, sep="\t", header=None, index_col=0, names=[file_name.replace(".txt", "")])
-            patient_df = pd.DataFrame.transpose(patient_df)
-            if file_name.endswith("_0.txt"):
-                data_frame_0 = data_frame_0.append(patient_df)
-            else:
-                data_frame_1 = data_frame_1.append(patient_df)
-    df_patients = data_frame_0.append(data_frame_1, sort=False)  # Merge normal data frame with tumor data frame
-    return df_patients
 
 
 def load_selected_genes(selected_features_dir):

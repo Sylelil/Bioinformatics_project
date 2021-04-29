@@ -25,13 +25,17 @@ from scipy import stats
 def read_genes_from_folder(lookup_dir):
     """
         Description: Reading gene expression data from specified directory.
-                     The directory contains one .txt file for each case_id (patient).
-                     Each .txt file contains the gene expression values (features) for one specific case_id.
-        :param lookup_dir: directory containing gene expression data
-        :return df_patients: DataFrame containing one row for each patient:
-                - gene names = the column labels of the DataFrame
-                - case_id = the index (row labels) of the DataFrame
-        :return y: labels (0/1)
+            The directory contains one .txt file for each case_id (patient).
+            Each .txt file contains the gene expression values (features) for one specific case_id.
+
+        :param lookup_dir: Path
+            directory containing gene expression data
+        :return df_patients: DataFrame, shape = [n_samples, n_features],
+             where n_samples is the number of samples and n_features is the number of features.
+             - DataFrame.columns: contains the gene names
+             - DataFrame.index: contains the case_ids
+        :return y: array-like, shape = [n_samples]
+            labels (0/1)
     """
     X = pd.DataFrame()
     y = []
@@ -49,11 +53,15 @@ def read_genes_from_folder(lookup_dir):
 def load_selected_genes(selected_features_dir):
     """
         Description: Reading gene expression values (features) of genes selected by feature selection method.
-                     The directory contains one .npy file for each case_id (patient).
-                     Each .npy file contains the gene expression values for one specific case_id.
-        :param selected_features_dir: directory containing the gene expression data
-        :returns X: numpy array containing the features
-        :return y: labels (0/1)
+            The directory contains one .npy file for each case_id (patient).
+            Each .npy file contains the gene expression values for one specific case_id.
+
+        :param selected_features_dir: Path
+            directory containing the gene expression data
+        :returns X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of selected features
+        :return y: array-like, shape = [n_samples]
+            labels (0/1)
     """
     X = []
     y = []
@@ -70,11 +78,14 @@ def load_selected_genes(selected_features_dir):
 
 def save_selected_genes(X, extracted_features_dir):
     """
-        Description: Saving to disk gene expression values (features) of genes selected by feature selection algorithm.
-                     The directory contains one .npy file for each case_id (patient).
-                     Each .npy file contains the gene expression values for one specific case_id.
-        :param X: dataframe containing gene expression data of selected genes
-        :param extracted_features_dir: path to save gene expression data
+        Description: Saving to disk gene expression values of genes selected by feature selection algorithm.
+            The directory contains one .npy file for each case_id (patient).
+            Each .npy file contains the gene expression values for one specific case_id.
+
+        :param X: DataFrame, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of selected features.
+        :param extracted_features_dir: Path
+            directory to save gene expression data
     """
     #TODO check selected_genes
     for index, row in X.iterrows():
@@ -87,8 +98,10 @@ def save_selected_genes(X, extracted_features_dir):
 def read_config_file(config_file_path, section):
     """
         Description: Reading configuration file for genes
-        :param config_file_path: path to configuration file
-        :param section: configuration file section
+        :param config_file_path: Path
+            configuration file
+        :param section: String
+            configuration file section
        """
     params = {}
     config = configparser.ConfigParser()

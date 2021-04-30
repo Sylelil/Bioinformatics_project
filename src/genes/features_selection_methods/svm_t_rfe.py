@@ -15,6 +15,25 @@ from sklearn.model_selection import cross_val_score
 
 
 def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
+    """
+        Description: genes selection algorithm which extends support vector machine
+            recursive feature elimination (SVM-RFE) algorithm by incorporating T-statistic
+
+        :param df: DataFrame, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of features.
+            - DataFrame.columns: contains the gene names
+            - DataFrame.index: contains the case_ids
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+        :param params: Dictionary
+            configuration file parameters
+        :param results_dir: Path
+            directory to save results
+        :param config_dir: Path
+            configuration file
+        :return ranked_genes[:num_selected]: array-like, shape = [num_selected]
+            genes names selected with SVM-T-RFE algorithm
+    """
 
     # File names
     ranking_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
@@ -119,6 +138,24 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
 
 def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
+    """
+        Description: Feature ranking with recursive feature elimination.
+
+        :param df: DataFrame, shape = [n_samples, n_selected_features],
+            where n_samples is the number of samples and n_features is the number of selected features.
+            - DataFrame.columns: contains the gene names
+            - DataFrame.index: contains the case_ids
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+        :param selected_t_statistics: array-like, shape = [n_selected_features]
+            t values from t test for the selected genes
+        :param params: Dictionary
+            configuration file parameters
+        :param path_to_c_values: Path
+            file containing C values obtained with GridSearchCV
+        :return ranked_genes: array-like, shape = [n_selected_features]
+            genes names ranked by feature importance
+    """
     c_values = []
     perform_grid_search = False
 
@@ -205,6 +242,22 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
 
 
 def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params):
+    """
+        Description: Determine the optimal number of highest-ranked features for classification accuracy
+
+        :param df_top_ranked_genes: DataFrame, shape = [n_samples, n_top_ranked_features],
+               where n_samples is the number of samples and n_features is the number of top ranked features.
+               - DataFrame.columns: contains the gene names
+               - DataFrame.index: contains the case_ids
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+        :param params: Dictionary
+            configuration file parameters
+        :param top_ranked_genes: array-like, shape = [n_top_ranked_features]
+            top ranked genes names
+        :return scores_list: array-like, shape = [n_top_ranked_features]
+            mean scores considering from 1 to n_top_ranked_features
+       """
     scores_list = []
 
     # costruisco la param_grid per la ricerca dei migliori hyperparms

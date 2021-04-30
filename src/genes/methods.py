@@ -58,7 +58,7 @@ def load_selected_genes(selected_features_dir):
 
         :param selected_features_dir: Path
             directory containing the gene expression data
-        :returns X: 2D-numpy array, shape = [n_samples, n_features],
+        :returns X: 2D-numpy array, shape = [n_samples, n_selected_features],
             where n_samples is the number of samples and n_features is the number of selected features
         :return y: array-like, shape = [n_samples]
             labels (0/1)
@@ -82,7 +82,7 @@ def save_selected_genes(X, extracted_features_dir):
             The directory contains one .npy file for each case_id (patient).
             Each .npy file contains the gene expression values for one specific case_id.
 
-        :param X: DataFrame, shape = [n_samples, n_features],
+        :param X: DataFrame, shape = [n_samples, n_selected_features],
             where n_samples is the number of samples and n_features is the number of selected features.
         :param extracted_features_dir: Path
             directory to save gene expression data
@@ -102,6 +102,8 @@ def read_config_file(config_file_path, section):
             configuration file
         :param section: String
             configuration file section
+        :return params: Dictionary
+            configuration file parameters
        """
     params = {}
     config = configparser.ConfigParser()

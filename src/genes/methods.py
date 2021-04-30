@@ -23,6 +23,20 @@ from scipy import stats
 
 
 def read_genes_from_folder(lookup_dir):
+    """
+        Description: Reading gene expression data from specified directory.
+            The directory contains one .txt file for each case_id (patient).
+            Each .txt file contains the gene expression values (features) for one specific case_id.
+
+        :param lookup_dir: Path
+            directory containing gene expression data
+        :return df_patients: DataFrame, shape = [n_samples, n_features],
+             where n_samples is the number of samples and n_features is the number of features.
+             - DataFrame.columns: contains the gene names
+             - DataFrame.index: contains the case_ids
+        :return y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
     X = pd.DataFrame()
     y = []
     for file_name in tqdm(os.listdir(lookup_dir), desc=">> Reading genes data...", file=sys.stdout):
@@ -36,24 +50,19 @@ def read_genes_from_folder(lookup_dir):
     return X, y
 
 
-def read_gene_expression_data(path):
-    data_frame_0 = pd.DataFrame()
-    data_frame_1 = pd.DataFrame()
-
-    for file_name in tqdm(os.listdir(path), desc=">> Reading patient data...", file=sys.stdout):
-        file_path = os.path.join(path, file_name)
-        with open(file_path) as f:
-            patient_df = pd.read_csv(f, sep="\t", header=None, index_col=0, names=[file_name.replace(".txt", "")])
-            patient_df = pd.DataFrame.transpose(patient_df)
-            if file_name.endswith("_0.txt"):
-                data_frame_0 = data_frame_0.append(patient_df)
-            else:
-                data_frame_1 = data_frame_1.append(patient_df)
-    df_patients = data_frame_0.append(data_frame_1, sort=False)  # Merge normal data frame with tumor data frame
-    return df_patients
-
-
 def load_selected_genes(selected_features_dir):
+    """
+        Description: Reading gene expression values (features) of genes selected by feature selection method.
+            The directory contains one .npy file for each case_id (patient).
+            Each .npy file contains the gene expression values for one specific case_id.
+
+        :param selected_features_dir: Path
+            directory containing the gene expression data
+        :returns X: 2D-numpy array, shape = [n_samples, n_selected_features],
+            where n_samples is the number of samples and n_features is the number of selected features
+        :return y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
     X = []
     y = []
     for patient_file in tqdm(os.listdir(selected_features_dir), desc=">> Reading selected genes...", file=sys.stdout):
@@ -63,12 +72,23 @@ def load_selected_genes(selected_features_dir):
         X.append(patient_features)
         y.append(int(target))
 
+    #TODO check data type
     return np.asarray(X), y
 
 
-def save_selected_genes(X, selected_genes, extracted_features_dir):
+def save_selected_genes(X, extracted_features_dir):
+    """
+        Description: Saving to disk gene expression values of genes selected by feature selection algorithm.
+            The directory contains one .npy file for each case_id (patient).
+            Each .npy file contains the gene expression values for one specific case_id.
 
-    for index, row in X[selected_genes].iterrows():
+        :param X: DataFrame, shape = [n_samples, n_selected_features],
+            where n_samples is the number of samples and n_features is the number of selected features.
+        :param extracted_features_dir: Path
+            directory to save gene expression data
+    """
+    #TODO check selected_genes
+    for index, row in X.iterrows():
         row = np.asarray(row)
         np.save(os.path.join(extracted_features_dir, index + '.npy'), row)
 
@@ -76,6 +96,15 @@ def save_selected_genes(X, selected_genes, extracted_features_dir):
 
 
 def read_config_file(config_file_path, section):
+    """
+        Description: Reading configuration file for genes
+        :param config_file_path: Path
+            configuration file
+        :param section: String
+            configuration file section
+        :return params: Dictionary
+            configuration file parameters
+       """
     params = {}
     config = configparser.ConfigParser()
     config.read(config_file_path)
@@ -240,7 +269,6 @@ def tsne_pca(X_train, y_train):
 
 
 def tsne(X_train, y_train):
-    # , verbose=0, perplexity=40, n_iter=300,
 
     tsne = TSNE(n_components=2, random_state=42)
     tsne_results = tsne.fit_transform(X_train)

@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from src.integration import class_balancing, data_generator, plots, utils
+from src.integration import data_generator, plots, utils
 from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
@@ -80,8 +80,14 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
 
     plt.show()
 
-    # aggregate results for each patient in test dataset:
-    common.aggregate_results_per_patient(test_predictions_baseline)
+
+    # compute patch score and patient score:
+    print('>> Computing patch score...')
+    patch_score = common.compute_patch_score(y_test, train_predictions_baseline)
+    print(f'patch_score = {patch_score}')
+    print('>> Computing patient score...')
+    patient_avg_score, patent_stddev_score = common.compute_patient_score(train_predictions_baseline)
+    print(f'patient_score = {patient_avg_score} +- {patent_stddev_score}')
 
 
 def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -98,7 +104,7 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
     class_weight = None
     if args.balancing and args.balancing != 'weights':
         print(f">> Applying class balancing with {args.balancing}...")
-        balancer = class_balancing.get_balancing_method(args.balancing, params)
+        balancer = utils.get_balancing_method(args.balancing, params)
         X_train, y_train = balancer.fit_resample(X_train, y_train)
     elif args.balancing == 'weights':
         class_weight = common.compute_class_weights(y_train)
@@ -169,7 +175,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     balancer = None
     class_weight = None
     if args.balancing and args.balancing != 'weights':
-        balancer = class_balancing.get_balancing_method(args.balancing, params)
+        balancer = utils.get_balancing_method(args.balancing, params)
     elif args.balancing == 'weights':
         class_weight = common.compute_class_weights(y_train)
 

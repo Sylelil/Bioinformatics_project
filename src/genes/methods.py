@@ -62,18 +62,22 @@ def load_selected_genes(selected_features_dir):
             where n_samples is the number of samples and n_features is the number of selected features
         :return y: array-like, shape = [n_samples]
             labels (0/1)
+        :return targets: array-like, shape = [n_samples]
+            case_ids
     """
     X = []
     y = []
+    case_ids = []
     for patient_file in tqdm(os.listdir(selected_features_dir), desc=">> Reading selected genes...", file=sys.stdout):
         patient_features = np.load(os.path.join(selected_features_dir, patient_file))
         case_id = os.path.splitext(patient_file)[0]
         target = case_id[-1:]
+        case_ids.append(case_id)
         X.append(patient_features)
         y.append(int(target))
 
-    #TODO check data type
-    return np.asarray(X), y
+    X = np.asarray(X)
+    return X, y, case_ids
 
 
 def save_selected_genes(X, extracted_features_dir):
@@ -87,7 +91,7 @@ def save_selected_genes(X, extracted_features_dir):
         :param extracted_features_dir: Path
             directory to save gene expression data
     """
-    #TODO check selected_genes
+
     for index, row in X.iterrows():
         row = np.asarray(row)
         np.save(os.path.join(extracted_features_dir, index + '.npy'), row)
@@ -163,7 +167,29 @@ def read_config_file(config_file_path, section):
         if config['svm']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
         else:
-            sys.stderr.write("Invalid value for <kernel> in config file")
+            sys.stderr.write("Invalid value for <scoring> in config file")
+            exit(1)
+    elif section == 'perceptron':
+        params['random_state'] = config.getint('general', 'random_state')
+        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
+        params['cv_grid_search_acc'] = config.getint('perceptron', 'cv_grid_search_acc')
+        if config['perceptron']['scoring'] == 'accuracy':
+            params['scoring'] = make_scorer(metrics.accuracy_score)
+        elif config['perceptron']['scoring'] == 'recall':
+            params['scoring'] = make_scorer(metrics.recall_score)
+        else:
+            sys.stderr.write("Invalid value for <scoring> in config file")
+            exit(1)
+    elif section == 'sgd_classifier':
+        params['random_state'] = config.getint('general', 'random_state')
+        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
+        params['cv_grid_search_acc'] = config.getint('sgd_classifier', 'cv_grid_search_acc')
+        if config['sgd_classifier']['scoring'] == 'accuracy':
+            params['scoring'] = make_scorer(metrics.accuracy_score)
+        elif config['sgd_classifier']['scoring'] == 'recall':
+            params['scoring'] = make_scorer(metrics.recall_score)
+        else:
+            sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
     else:
         sys.stderr.write("Invalid value for <section> in config file")
@@ -195,15 +221,15 @@ def eval_asymmetry_and_kurt(df):
     return n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2
 
 
-def pca(X_train, y_train):
+def pca(X, y):
 
     pca = PCA(n_components=2, random_state=42)
-    pca_results = pca.fit_transform(X_train)
-    print('Cumulative explained variation for 2 principal components: {}'.format(
+    pca_results = pca.fit_transform(X)
+    print('>> Cumulative explained variation for 2 principal components: {}'.format(
         np.sum(pca.explained_variance_ratio_)))
 
     df_pca = pd.DataFrame(
-        dict(pca_one=pca_results[:, 0], pca_two=pca_results[:, 1], y=y_train))
+        dict(pca_one=pca_results[:, 0], pca_two=pca_results[:, 1], y=y))
     plt.figure(figsize=(16, 7))
     sns.scatterplot(
         x="pca_one", y="pca_two",
@@ -211,18 +237,18 @@ def pca(X_train, y_train):
         palette=sns.color_palette("hls", 2),
         data=df_pca,
         legend="full",
-        alpha=0.3,
+        alpha=0.9,
     )
     plt.xlabel('pca_one')
     plt.ylabel('pca_two')
     plt.show()
 
 
-def pca_3D(X_train, y_train):
+def pca_3D(X, y):
 
     pca = PCA(n_components=3, random_state=42)
-    pca_results = pca.fit_transform(X_train)
-    print('Cumulative explained variation for 3 principal components: {}'.format(
+    pca_results = pca.fit_transform(X)
+    print('>> Cumulative explained variation for 3 principal components: {}'.format(
         np.sum(pca.explained_variance_ratio_)))
 
     ax = plt.figure(figsize=(16, 10)).gca(projection='3d')
@@ -230,7 +256,7 @@ def pca_3D(X_train, y_train):
         xs=pca_results[:, 0],
         ys=pca_results[:, 1],
         zs=pca_results[:, 2],
-        c=y_train,
+        c=y,
         cmap='tab10'
     )
     legend = ax.legend(*scatter.legend_elements())
@@ -242,18 +268,18 @@ def pca_3D(X_train, y_train):
     plt.show()
 
 
-def tsne_pca(X_train, y_train):
+def tsne_pca(X, y):
 
     pca_50 = PCA(n_components=50, random_state=42)
-    pca_result_50 = pca_50.fit_transform(X_train)
-    print('Cumulative explained variation for 50 principal components: {}'.format(
+    pca_result_50 = pca_50.fit_transform(X)
+    print('>> Cumulative explained variation for 50 principal components: {}'.format(
         np.sum(pca_50.explained_variance_ratio_)))
 
     tsne = TSNE(n_components=2, random_state=42)
     tsne_pca_results = tsne.fit_transform(pca_result_50)
 
     df_tsne_pca = pd.DataFrame(
-        dict(tsne_pca50_one=tsne_pca_results[:, 0], tsne_pca50_two=tsne_pca_results[:, 1], y=y_train))
+        dict(tsne_pca50_one=tsne_pca_results[:, 0], tsne_pca50_two=tsne_pca_results[:, 1], y=y))
     plt.figure(figsize=(16, 7))
     sns.scatterplot(
         x="tsne_pca50_one", y="tsne_pca50_two",
@@ -261,20 +287,20 @@ def tsne_pca(X_train, y_train):
         palette=sns.color_palette("hls", 2),
         data=df_tsne_pca,
         legend="full",
-        alpha=0.3,
+        alpha=0.9,
     )
     plt.xlabel('tsne_pca50_one')
     plt.ylabel('tsne_pca50_two')
     plt.show()
 
 
-def tsne(X_train, y_train):
+def tsne(X, y):
 
     tsne = TSNE(n_components=2, random_state=42)
-    tsne_results = tsne.fit_transform(X_train)
+    tsne_results = tsne.fit_transform(X)
 
     df_tsne = pd.DataFrame(
-        dict(tsne_one=tsne_results[:, 0], tsne_two=tsne_results[:, 1], y=y_train))
+        dict(tsne_one=tsne_results[:, 0], tsne_two=tsne_results[:, 1], y=y))
     plt.figure(figsize=(16, 7))
     sns.scatterplot(
         x="tsne_one", y="tsne_two",
@@ -282,24 +308,24 @@ def tsne(X_train, y_train):
         palette=sns.color_palette("hls", 2),
         data=df_tsne,
         legend="full",
-        alpha=0.3,
+        alpha=0.9,
     )
     plt.xlabel('tsne_one')
     plt.ylabel('tsne_two')
     plt.show()
 
 
-def tsne_3D(X_train, y_train):
+def tsne_3D(X, y):
 
     tsne = TSNE(n_components=3, random_state=42)
-    tsne_results = tsne.fit_transform(X_train)
+    tsne_results = tsne.fit_transform(X)
 
     ax = plt.figure(figsize=(16, 10)).gca(projection='3d')
     scatter = ax.scatter(
         xs=tsne_results[:, 0],
         ys=tsne_results[:, 1],
         zs=tsne_results[:, 2],
-        c=y_train,
+        c=y,
         cmap='tab10'
     )
     legend = ax.legend(*scatter.legend_elements())
@@ -311,19 +337,15 @@ def tsne_3D(X_train, y_train):
     plt.show()
 
 
-def show_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+def show_2D_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
 
-    sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-    X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
-    print(Counter(y_train_sm))
+    C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+    param_grid = dict(svm__C=C_range)
 
     # Show decision boundary
     h = .02  # step size in the mesh
-    x_min, x_max = X_train_sm[:, 0].min() - .5, X_train_sm[:, 0].max() + .5
-    y_min, y_max = X_train_sm[:, 1].min() - .5, X_train_sm[:, 1].max() + .5
+    x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
+    y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
 
@@ -332,11 +354,21 @@ def show_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
 
     # Put the result into a color plot
-    clf = SVC(kernel='linear')
-    clf.fit(X_train_sm[:, :2], y_train_sm)
+    scaler = StandardScaler()
+    smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+    svm = SVC(kernel=params['kernel'])
+    imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+
+    # define search
+    cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+    clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
+    clf.fit(X_train[:, :2], y_train)
     Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+
+    pred = clf.predict(X_test[:, :2])
+    print(">> Test accuracy= %f" % accuracy_score(y_test, pred))
 
     # Plot the training points
     plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')

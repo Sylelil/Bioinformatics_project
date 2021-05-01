@@ -126,13 +126,13 @@ def main():
 
         # saving selected features
         print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], selected_genes, paths.welch_t_selected_features_train)
+        methods.save_selected_genes(X_train[selected_genes], paths.welch_t_selected_features_train)
 
         print("\nSaving selected validation gene features on disk...")
-        methods.save_selected_genes(X_val[selected_genes], selected_genes, paths.welch_t_selected_features_val)
+        methods.save_selected_genes(X_val[selected_genes], paths.welch_t_selected_features_val)
 
         print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], selected_genes, paths.welch_t_selected_features_test)
+        methods.save_selected_genes(X_test[selected_genes], paths.welch_t_selected_features_test)
 
     elif args.method == 'svm_t_rfe':
         # feature selection
@@ -151,13 +151,13 @@ def main():
 
         # saving selected features
         print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], selected_genes, paths.svm_t_rfe_selected_features_train)
+        methods.save_selected_genes(X_train[selected_genes], paths.svm_t_rfe_selected_features_train)
 
         print("\nSaving selected validation gene features on disk...")
-        methods.save_selected_genes(X_val[selected_genes], selected_genes, paths.svm_t_rfe_selected_features_val)
+        methods.save_selected_genes(X_val[selected_genes], paths.svm_t_rfe_selected_features_val)
 
         print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], selected_genes, paths.svm_t_rfe_selected_features_test)
+        methods.save_selected_genes(X_test[selected_genes], paths.svm_t_rfe_selected_features_test)
 
     else:
         sys.stderr.write("Invalid value for <feature extraction method>")

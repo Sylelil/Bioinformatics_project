@@ -93,7 +93,8 @@ def main():
     if not os.path.exists(images_splits_path):
         print("%s not existing." % images_splits_path)
         exit()
-    train_slides_info, test_slides_info, y_train, y_test = split_data.get_images_split_data(images_splits_path, val_data=False)
+
+    train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
@@ -101,6 +102,12 @@ def main():
 
     print(f'\nTraining data:\n>> Tot = {len(train_slides_info)}\n'
           f'>> Tumor samples = {len(train_slides_info_1)}\n>> Normal samples = {len(train_slides_info_0)}')
+
+    val_slides_info_0 = [slide for slide in val_slides_info if slide['label'] == 0]
+    val_slides_info_1 = [slide for slide in val_slides_info if slide['label'] == 1]
+
+    print(f'\nVal data:\n>> Tot = {len(val_slides_info)}\n'
+          f'>> Tumor samples = {len(val_slides_info_1)}\n>> Normal samples = {len(val_slides_info_0)}')
 
     test_slides_info_0 = [slide for slide in test_slides_info if slide['label'] == 0]
     test_slides_info_1 = [slide for slide in test_slides_info if slide['label'] == 1]
@@ -121,6 +128,9 @@ def main():
 
         print(">> Extracting features from training images:")
         fixed_feature_generator(train_slides_info, paths.extracted_features_train, paths.selected_coords_dir)
+
+        print(">> Extracting features from val images:")
+        fixed_feature_generator(val_slides_info, paths.extracted_features_val, paths.selected_coords_dir)
 
         print(">> Extracting features from test images:")
         fixed_feature_generator(test_slides_info, paths.extracted_features_test, paths.selected_coords_dir)

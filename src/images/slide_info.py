@@ -102,10 +102,10 @@ def save_slides_info(slides_info, file_name, display_info=False):
                                                           slides_info[i]['slide_magnification'])
     images_info_string += "\n"
 
-    if not os.path.exists(cfg.results):
-        os.mkdir(cfg.results)
+    if not os.path.exists(paths.images_results):
+        os.mkdir(paths.images_results)
 
-    images_info_file = open(os.path.join(cfg.results, file_name), "w")
+    images_info_file = open(os.path.join(paths.images_results, file_name), "w")
     images_info_file.write(images_info_string)
     images_info_file.close()
-    print(">> Slides info saved to \"%s\"" % os.path.join(cfg.results, file_name))
+    print(">> Slides info saved to \"%s\"" % os.path.join(paths.images_results, file_name))

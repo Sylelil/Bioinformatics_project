@@ -88,7 +88,7 @@ def mann_whitney_u_test(data_frame_0, data_frame_1, alpha):
     :param data_frame_0: data frame containing gene expression values of normal patients
     :param data_frame_1: data frame containing gene expression values of tumor patients
     :param alpha:
-    :return m_reduced_genes: genes names for which the test holds
+    :return m_reduced_genes: differentially expressed genes in normal and tumor samples
     """
     m_reduced_genes = []
 
@@ -107,28 +107,22 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
     :param data_frame_1: data frame containing gene expression values of tumor patients
     :param alpha:
     :return dict_: dictionary containing:
-        - genes_b: genes for which the test holds (with bonferroni adjustment)
-        - genes_hh: genes holm hochberg
-        - genes_bh' genes_benjamini_hochberg
-        - genes: genes for which the test holds
+        - genes_b: differentially expressed genes in normal and tumor samples (with bonferroni adjustment)
+        - genes: differentially expressed genes in normal and tumor samples
         - p_values_b: p values (bonferroni)
         - t_values_b: t values (bonferroni)
-        - all_p_values:
-        - all_t_values:
+        - all_p_values: all p values
+        - all_t_values: all t values
     """
 
     dict_ = {
         'genes_b': [],  # genes_bonferroni
-        'genes_hh': [],  # genes holm hochberg
-        'genes_bh': [],  # genes_benjamini_hochberg
         'genes': [],
         'p_values_b': [],  # pvalues bonferroni
         't_values_b': [],  # tvalues bonferroni
         'all_p_values': [],
         'all_t_values': []
     }
-
-    i = 0
 
     for gene in tqdm(data_frame_0.columns, desc=">> Computing test for each gene...", file=sys.stdout):
         tvalue, pvalue = stats.ttest_ind(np.array(data_frame_0[gene].tolist()),
@@ -143,15 +137,8 @@ def welch_t_test(data_frame_0, data_frame_1, alpha):
             dict_['p_values_b'].append(pvalue)
             dict_['t_values_b'].append(tvalue)
 
-        if not np.isnan(pvalue) and pvalue < alpha / (len(data_frame_0.columns) - i + 1):
-            dict_['genes_hh'].append(gene)
-
-        if not np.isnan(pvalue) and pvalue < alpha / (len(data_frame_0.columns) - i):
-            dict_['genes_bh'].append(gene)
-
         dict_['all_p_values'].append(pvalue)
         dict_['all_t_values'].append(tvalue)
-        i+=1
 
     return dict_
 

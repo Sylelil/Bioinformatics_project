@@ -69,10 +69,8 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
-    print(">> Number of selected genes with HH (features) %d" % len(welch_dict['genes_hh']))
-    print(">> Number of selected genes with BH (features) %d" % len(welch_dict['genes_bh']))
 
-    # Print p-value histogram: mi mostra qual'è la densità di
+    # Print p-value histogram: mi mostra qual è la densità di
     # frequenza dei valori di p-value sotto l'ipotesi nulla
     plt.hist(welch_dict['all_p_values'])
     plt.xlabel("p values Welch t-test")

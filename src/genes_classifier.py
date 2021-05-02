@@ -20,6 +20,10 @@ import numpy as np
 
 
 def main():
+    """
+        Description: Main implementing different classification methods to classify
+            patients in "tumor" or "normal", according to gene expression values
+    """
     # Parse arguments from command line
     parser = argparse.ArgumentParser()
 
@@ -64,10 +68,8 @@ def main():
     # Data visualization
     print("\nData visualization:")
     scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    methods.tsne_pca(X_train_scaled, y_train)
-    methods.tsne_pca(X_test_scaled, y_test)
+    methods.tsne_pca(scaler.fit_transform(X_train), y_train)
+    methods.tsne_pca(scaler.transform(X_test), y_test)
 
     classifier_str = ''
     param_grid = {}
@@ -75,16 +77,32 @@ def main():
 
     if args.classification_method == "svm":
 
-        # Show decision boundary for svm trained on the first 2 features
-        print("\nFit SVM with first 2 ranked features:")
-        methods.show_2D_svm_decision_boundary(params, X_train, y_train, X_test, y_test)
-
-        # Fit svm model on all features
-
-        # define grid
+        # Param grid
         C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
         param_grid = dict(svm__C=C_range)
 
+        print("\nFit SVM with first 2 ranked features:")
+        scaler = StandardScaler()
+        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+        svm = SVC(kernel=params['kernel'])
+        imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+
+        # define search
+        cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+        clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
+        clf.fit(X_train[:, :2], y_train)
+
+        pred = clf.predict(X_test)
+        print(">> Test accuracy= %f" % accuracy_score(y_test, pred))
+
+        # Show decision boundary for svm trained on the first 2 features
+        scaler = StandardScaler()
+        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+        X_train_sm, y_train_sm = smt.fit_resample(scaler.fit_transform(X_train[:, :2]), y_train)
+
+        methods.show_2D_svm_decision_boundary(clf, X_train_sm, y_train_sm, scaler.transform(X_test[:, :2]), y_test)
+
+        # Fit svm model on all features
         # define model
         classifier = SVC(kernel=params['kernel'])
         classifier_str = 'svm'

@@ -42,8 +42,7 @@ def main():
     # Read configuration file
     params = utils.read_config_file(args.cfg)
 
-    '''concatenated_results_path = paths.concatenated_results_dir'''
-    concatenated_results_path = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'assets' / 'concatenated_results'
+    concatenated_results_path = paths.concatenated_results_dir
     train_filepath = Path(concatenated_results_path) / 'train' / 'concat_data.csv'
     val_filepath = Path(concatenated_results_path) / 'val' / 'concat_data.csv'
     test_filepath = Path(concatenated_results_path) / 'test' / 'concat_data.csv'

@@ -1,4 +1,6 @@
 import os
+import sys
+
 import openslide
 from openslide import OpenSlideError
 import datetime
@@ -8,6 +10,7 @@ import PIL
 from PIL import Image, ImageDraw, ImageFont
 import skimage.morphology as sk_morphology
 import skimage.filters as sk_filters
+from tqdm import tqdm
 
 
 class Time:
@@ -682,3 +685,14 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     x_norm = x_norm.astype(np.uint8)
     x_norm = x_norm.T.reshape(h, w, c)
     return x_norm
+
+
+def load_images_features(path):
+
+    for patient_file in tqdm(os.listdir(path), desc=">> Reading images features...", file=sys.stdout):
+        patient_features = np.load(os.path.join(path, patient_file))
+        print(patient_features[0])
+
+        print(patient_features[1])
+
+    return

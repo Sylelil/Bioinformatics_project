@@ -18,16 +18,25 @@ def args_parse():
                         help='Configuration file path',
                         required=True,
                         type=str)
-    parser.add_argument('--method',
+    parser.add_argument('--classification_method',
                         help='Classification method',
-                        choices=['svc', 'sgd', 'nn', 'pca_nn'],
-                        required=True,
+                        choices=['linearsvc', 'sgd', 'nn', 'pca_nn'],
+                        required=False,
                         type=str)
     parser.add_argument('--balancing',
                         help='Class balancing method',
                         choices=['random_upsampling', 'combined', 'smote', 'downsampling', 'weights'],
                         required=False,
                         type=str)
+    parser.add_argument('--n_principal_components',
+                        help='Number of Principal Components for PCA',
+                        required=False,
+                        type=int)
+    parser.add_argument('--plot_explained_variance',
+                        help='Either to plot explained variance to choose best number of Principal Components or not',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
     return args
 
@@ -44,6 +53,7 @@ def main():
 
     '''concatenated_results_path = paths.concatenated_results_dir'''
     concatenated_results_path = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'assets' / 'concatenated_results'
+    #concatenated_results_path = paths.concatenated_results_dir
     train_filepath = Path(concatenated_results_path) / 'train' / 'concat_data.csv'
     val_filepath = Path(concatenated_results_path) / 'val' / 'concat_data.csv'
     test_filepath = Path(concatenated_results_path) / 'test' / 'concat_data.csv'
@@ -73,14 +83,25 @@ def main():
         print("%s not existing." % test_filepath_copied_genes)
         exit()
 
-    if params['pca']['plot_cumulative_explained_variance']:
-        utils.plot_cumulative_explained_variance_pca(params, train_filepath, val_filepath, test_filepath)
+    if args.plot_explained_variance:
+        if not args.n_principal_components:
+            print('error: missing argument <n_principal_components>.')
+            exit()
+        utils.plot_explained_variance_pca(params, train_filepath, val_filepath, test_filepath)
     else:
-        if args.method == 'svc' or args.method == 'sgd':
+        if args.classification_method == 'linearsvc' or args.classification_method == 'sgd':
+            if not args.n_principal_components:
+                print('error: missing argument <n_principal_components>.')
+                exit()
+            params['pca']['n_components'] = args.n_principal_components
             shallow_classification.shallow_classifier(args, params, train_filepath, val_filepath, test_filepath)
-        elif args.method == 'pca_nn':
+        elif args.classification_method == 'pca_nn':
+            if not args.n_principal_components:
+                print('error: missing argument <n_principal_components>.')
+                exit()
+            params['pca']['n_components'] = args.n_principal_components
             nn_classification.pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
-        elif args.method == 'nn':
+        elif args.classification_method == 'nn':
             nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes, test_filepath_copied_genes)
 
 

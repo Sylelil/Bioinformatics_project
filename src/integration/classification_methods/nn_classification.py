@@ -4,12 +4,39 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+
+from config import paths
 from src.integration import data_generator, plots, utils
 from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
+
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+
+def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores):
+    # path to save results:
+    experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
+    results_path = Path(paths.integration_classification_results_dir) / experiment_descr
+    if not os.path.exists(results_path):
+        os.makedirs(results_path)
+
+    # convert predicted probabilities (output of sigmoid) to 0/1 labels:
+    y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
+    y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
+
+    # generate classification report:
+    experiment_info = {}
+    experiment_info['Classification method'] = str(args.classification_method)
+    experiment_info['PCA n. components'] = str(params['pca']['n_components'])
+    experiment_info['Class balancing method'] = str(args.balancing)
+    utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
+
+    # generate plots:
+    utils.generate_classification_plots(results_path, y_test, y_pred_test_labels, y_train, y_pred_train_labels)
+
+    print('>> Done')
 
 
 def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
@@ -51,7 +78,8 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
     """
 
     print(">> Creating MultiLayer Perceptron model...")
-    model = make_model(mlp_settings['n_input_features'], units_1=mlp_settings['units_1'], units_2=mlp_settings['units_2'])
+    model = make_model(mlp_settings['n_input_features'], units_1=mlp_settings['units_1'],
+                       units_2=mlp_settings['units_2'])
     model.summary()
 
     print(">> Fitting model on train data...")
@@ -62,32 +90,19 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_val, (None if use_generators else y_val)),
                         class_weight=mlp_settings['class_weight'],
-                        verbose=1)
+                        verbose=2)
 
     plots.plot_train_val_results(history)
 
-    train_predictions_baseline = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
-    test_predictions_baseline = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
+    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
+    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
 
     print('Evaluating model on the test dataset...')
-    baseline_results = model.evaluate(X_test, (None if use_generators else y_test), batch_size=mlp_settings['BATCH_SIZE'], verbose=0)
+    test_scores_list = model.evaluate(X_test, (None if use_generators else y_test), batch_size=mlp_settings['BATCH_SIZE'],
+                                 verbose=0)
+    test_scores = dict(zip(model.metrics_names, test_scores_list))
 
-    for name, value in zip(model.metrics_names, baseline_results):
-        print(name, ': ', value)
-    print()
-
-    plots.plot_test_results(y_test, test_predictions_baseline, y_train, train_predictions_baseline)
-
-    plt.show()
-
-
-    # compute patch score and patient score:
-    print('>> Computing patch score...')
-    patch_score = common.compute_patch_score(y_test, train_predictions_baseline)
-    print(f'patch_score = {patch_score}')
-    print('>> Computing patient score...')
-    patient_avg_score, patent_stddev_score = common.compute_patient_score(train_predictions_baseline)
-    print(f'patient_score = {patient_avg_score} +- {patent_stddev_score}')
+    return y_pred_test, y_pred_train, test_scores
 
 
 def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -99,7 +114,8 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
        :param val_filepath: validation data path.
        :param test_filepath: test data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath,
+                                                                               test_filepath)
 
     class_weight = None
     if args.balancing and args.balancing != 'weights':
@@ -110,20 +126,23 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
         class_weight = common.compute_class_weights(y_train)
 
     mlp_settings = {
-        'n_input_features' : params['pca']['n_components'],
-        'EPOCHS' : params['nn']['epochs'],
-        'BATCH_SIZE' : params['nn']['batchsize'],
-        'early_stopping' : tf.keras.callbacks.EarlyStopping(monitor='val_prc',
-                                                            verbose=1,
-                                                            patience=10,
-                                                            mode='max',
-                                                            restore_best_weights=True),
-        'class_weight' : class_weight,
-        'units_1' : 32,
+        'n_input_features': params['pca']['n_components'],
+        'EPOCHS': params['nn']['epochs'],
+        'BATCH_SIZE': params['nn']['batchsize'],
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_prc',
+                                                           verbose=1,
+                                                           patience=10,
+                                                           mode='max',
+                                                           restore_best_weights=True),
+        'class_weight': class_weight,
+        'units_1': 32,
         'units_2': 16,
     }
 
-    mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings)
+    y_pred_test, y_pred_train, test_scores = mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test,
+                                                               mlp_settings)
+
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores)
 
 
 def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -170,7 +189,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     with open(train_filepath, "r") as f:
         line = f.readline()
         line = line.strip().split(",")
-        n_features = len(line) -1  # -1 because we don't want to consider label!
+        n_features = len(line) - 1  # -1 because we don't want to consider label!
 
     balancer = None
     class_weight = None
@@ -186,31 +205,32 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
                                                         balancer=balancer)
     print(f">> Creating validation data generator with scaler...")
     val_generator = data_generator.csv_data_generator(val_filepath,
-                                                        batchsize=batchsize,
-                                                        scaler=scaler,
-                                                        balancer=None)
+                                                      batchsize=batchsize,
+                                                      scaler=scaler,
+                                                      balancer=None)
     print(f">> Creating test data generator with scaler...")
     test_generator = data_generator.csv_data_generator(test_filepath,
-                                                        batchsize=batchsize,
-                                                        scaler=scaler,
-                                                        balancer=None)
+                                                       batchsize=batchsize,
+                                                       scaler=scaler,
+                                                       balancer=None)
     mlp_settings = {
-        'n_input_features' : n_features,
-        'EPOCHS' : params['nn']['epochs'],
-        'BATCH_SIZE' : batchsize,
-        'early_stopping' : tf.keras.callbacks.EarlyStopping(monitor='val_prc',
-                                                            verbose=1,
-                                                            patience=10,
-                                                            mode='max',
-                                                            restore_best_weights=True),
-        'class_weight' : class_weight,
-        'units_1' : 2048,
+        'n_input_features': n_features,
+        'EPOCHS': params['nn']['epochs'],
+        'BATCH_SIZE': batchsize,
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_prc',
+                                                           verbose=1,
+                                                           patience=10,
+                                                           mode='max',
+                                                           restore_best_weights=True),
+        'class_weight': class_weight,
+        'units_1': 2048,
         'units_2': 1024,
     }
 
-    mpl_classify(X_train=train_generator, y_train=y_train,
-                 X_val=val_generator, y_val=y_val,
-                 X_test=test_generator, y_test=y_test,
-                 mlp_settings=mlp_settings,
-                 use_generators=True)
+    y_pred_test, y_pred_train, test_scores = mpl_classify(X_train=train_generator, y_train=y_train,
+                                                               X_val=val_generator, y_val=y_val,
+                                                               X_test=test_generator, y_test=y_test,
+                                                               mlp_settings=mlp_settings,
+                                                               use_generators=True)
 
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores)

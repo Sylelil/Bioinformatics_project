@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib as mpl
-from sklearn.metrics import confusion_matrix, precision_recall_curve, roc_curve
+from sklearn import metrics
 import numpy as np
 
 mpl.rcParams['figure.figsize'] = (12, 10)
@@ -61,32 +61,26 @@ def plot_metrics(history):
         if metric == 'loss':
             plt.ylim([0, plt.ylim()[1]])
         elif metric == 'auc':
-            plt.ylim([0.8,1])
+            plt.ylim([0.8, 1])
         else:
-            plt.ylim([0,1])
+            plt.ylim([0, 1])
 
         plt.legend()
 
 
-def plot_cm(labels, predictions, p=0.5):
+def plot_cm(labels, predictions):
     """
        Description: Plot Confusion Matrix.
        :param labels: ground truth labels.
        :param predictions: predicted labels.
        :param p: threshold.
     """
-    cm = confusion_matrix(labels, predictions > p)
-    plt.figure(figsize=(5,5))
+    cm = metrics.confusion_matrix(labels, predictions)
+    plt.figure(figsize=(5, 5))
     sns.heatmap(cm, annot=True, fmt="d")
-    plt.title('Confusion matrix @{:.2f}'.format(p))
-    plt.ylabel('Actual label')
+    plt.title('Confusion matrix')
+    plt.ylabel('True label')
     plt.xlabel('Predicted label')
-
-    print('Normal Detected (True Negatives): ', cm[0][0])
-    print('Normal Incorrectly Detected (False Positives): ', cm[0][1])
-    print('Tumor Missed (False Negatives): ', cm[1][0])
-    print('Tumor Detected (True Positives): ', cm[1][1])
-    print('Total Tumor: ', np.sum(cm[1]))
 
 
 def plot_roc(name, labels, predictions, **kwargs):
@@ -97,16 +91,18 @@ def plot_roc(name, labels, predictions, **kwargs):
        :param predictions: predicted labels.
        :param **kwargs: plot arguments.
     """
-    fp, tp, _ = roc_curve(labels, predictions)
+    fp, tp, _ = metrics.roc_curve(labels, predictions)
+    auc = metrics.roc_auc_score(labels, predictions)
 
-    plt.plot(100*fp, 100*tp, label=name, linewidth=2, **kwargs)
-    plt.xlabel('False positives [%]')
-    plt.ylabel('True positives [%]')
-    plt.xlim([-0.5,20])
-    plt.ylim([80,100.5])
+    plt.plot(fp, tp, label=f'{name}, auc={auc}', linewidth=2, **kwargs)
+    plt.xlabel('False positive rate (Positive label: 1)')
+    plt.ylabel('True positive rate (Positive label: 1)')
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
     plt.grid(True)
     ax = plt.gca()
     ax.set_aspect('equal')
+    plt.legend(loc=0)
 
 
 def plot_prc(name, labels, predictions, **kwargs):
@@ -117,11 +113,11 @@ def plot_prc(name, labels, predictions, **kwargs):
        :param predictions: predicted labels.
        :param **kwargs: plot arguments.
     """
-    precision, recall, _ = precision_recall_curve(labels, predictions)
+    precision, recall, _ = metrics.precision_recall_curve(labels, predictions)
 
     plt.plot(precision, recall, label=name, linewidth=2, **kwargs)
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
+    plt.xlabel('Recall (Positive label: 1)')
+    plt.ylabel('Precision (Positive label: 1)')
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     plt.grid(True)
@@ -135,31 +131,4 @@ def plot_train_val_results(history):
     plot_metrics(history)
     plt.figure()
 
-
-def plot_test_results(y_test, test_predictions_baseline, y_train, train_predictions_baseline):
-    plot_cm(y_test, test_predictions_baseline)
-    plt.figure()
-
-    plot_roc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
-    plot_roc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
-
-    plot_prc("Train Baseline", y_train, train_predictions_baseline, color=colors[0])
-    plot_prc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
-
-
-def plot_test_results_aggregated(y_test, test_predictions_baseline):
-    plot_cm(y_test, test_predictions_baseline)
-    plt.figure()
-
-    plot_roc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
-
-    plot_prc("Test Baseline", y_test, test_predictions_baseline, color=colors[0], linestyle='--')
-    plt.legend(loc='lower right')
-    plt.figure()
 

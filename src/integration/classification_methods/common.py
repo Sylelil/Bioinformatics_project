@@ -11,13 +11,12 @@ from imblearn.under_sampling import ClusterCentroids
 
 METRICS_skl = [
     metrics.accuracy_score,
+    metrics.matthews_corrcoef,
     metrics.average_precision_score,
     metrics.f1_score,
     metrics.precision_score,
     metrics.recall_score,
-    metrics.matthews_corrcoef,
     metrics.roc_auc_score,
-    metrics.confusion_matrix,
 ]
 
 
@@ -102,7 +101,7 @@ def compute_patient_score(y_pred_test):
     filename_list = []
 
     per_patient_patch_score_list = []
-    for filename in tqdm(test_filenames):
+    for filename in test_filenames:
         if filename not in filename_list:
             filename_list.append(filename)
             options = [f"{filename}_0", f"{filename}_1"]

@@ -9,6 +9,11 @@ import config.images.config as cfg
 
 
 def read_slides_info_from_folder(lookup_dir):
+    """
+        Description: read slides info from folder, returning list of slides info and list of labels
+        :param lookup_dir: path to directory
+        :return: X, y: list of data and list of labels
+    """
     X = []
     y = []
     for file in tqdm(os.listdir(lookup_dir), desc=">> Reading slides info...", file=sys.stdout):

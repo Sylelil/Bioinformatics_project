@@ -10,7 +10,7 @@ import numpy as np
 
 def get_images_split_data(lookup_dir, val_data=True):
     """
-        Description: Retrieve split data from lookup folder.
+        Description: Retrieve images split data from lookup folder.
         :param lookup_dir: lookup directory with split data.
         :param val_data: either or not to return validation split (default: True)
         :returns: X_train, X_val, X_test, y_train, y_val, y_test: datasets and labels
@@ -43,7 +43,7 @@ def get_images_split_data(lookup_dir, val_data=True):
 
 def get_genes_split_data(lookup_dir, val_data=True):
     """
-        Description: Retrieve split data from lookup folder.
+        Description: Retrieve genes split data from lookup folder.
         :param lookup_dir: lookup directory with split data.
         :param val_data: either or not to return validation split (default: True)
         :returns: X_train, (X_val,) X_test, y_train, (y_val,) y_test: datasets and labels

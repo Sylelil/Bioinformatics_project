@@ -99,12 +99,12 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
        :param val_filepath: validation data path.
        :param test_filepath: test data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = common.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
 
     class_weight = None
     if args.balancing and args.balancing != 'weights':
         print(f">> Applying class balancing with {args.balancing}...")
-        balancer = utils.get_balancing_method(args.balancing, params)
+        balancer = common.get_balancing_method(args.balancing, params)
         X_train, y_train = balancer.fit_resample(X_train, y_train)
     elif args.balancing == 'weights':
         class_weight = common.compute_class_weights(y_train)
@@ -175,7 +175,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     balancer = None
     class_weight = None
     if args.balancing and args.balancing != 'weights':
-        balancer = utils.get_balancing_method(args.balancing, params)
+        balancer = common.get_balancing_method(args.balancing, params)
     elif args.balancing == 'weights':
         class_weight = common.compute_class_weights(y_train)
 

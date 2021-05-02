@@ -1,16 +1,13 @@
-import os
-import argparse
 from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import IncrementalPCA
 from sklearn import metrics
 from tensorflow import keras
 from config import paths
-from src.integration import plots
-import matplotlib.pyplot as plt
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+from imblearn.combine import SMOTEENN
+from imblearn.under_sampling import ClusterCentroids
 
 METRICS_skl = [
     metrics.accuracy_score,
@@ -37,6 +34,24 @@ METRICS_keras = [
 ]
 
 
+def get_balancing_method(method, params):
+    """
+       Description: Return method corresponding to the parameter 'method'.
+       :param method: Class balancing method.
+       :param params: Parameters from configuration file.
+       :returns: Class balancing method
+    """
+    if method == 'random_upsampling':
+        return RandomOverSampler(random_state=params['general']['random_state'])
+    elif method == 'combined':
+        return SMOTEENN(random_state=params['general']['random_state'])
+    elif method == 'smote':
+        return SMOTE(random_state=params['general']['random_state'])
+    elif method == 'downsampling':
+        return ClusterCentroids(random_state=params['general']['random_state'])
+    return None
+
+
 def compute_class_weights(labels):
     """
         Description: Compute class weights from list of labels.
@@ -55,96 +70,6 @@ def compute_class_weights(labels):
     print('Weight for class 0: {:.2f}'.format(weight_for_0))
     print('Weight for class 1: {:.2f}'.format(weight_for_1))
     return class_weight
-
-
-def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
-    """
-       Description: Apply StandardScaler and IncrementalPCA to data.
-       :param params: configuration parameters.
-       :param train_filepath: path of train data.
-       :param val_filepath: path of validation data.
-       :param test_filepath: path of test data.
-       :returns: X_train, y_train, X_val, y_val, X_test, y_test: data and labels
-    """
-    x_train_pca_path = Path('assets') / 'concatenated_pca' / 'x_train.npy'
-    y_train_pca_path = Path('assets') / 'concatenated_pca' / 'y_train.npy'
-    x_val_pca_path = Path('assets') / 'concatenated_pca' / 'x_val.npy'
-    y_val_pca_path = Path('assets') / 'concatenated_pca' / 'y_val.npy'
-    x_test_pca_path = Path('assets') / 'concatenated_pca' / 'x_test.npy'
-    y_test_pca_path = Path('assets') / 'concatenated_pca' / 'y_test.npy'
-
-    if os.path.exists(Path('assets') / 'concatenated_pca'):
-        print('>> Reading files with scaled and pca data previously computed...')
-        X_train = np.load(x_train_pca_path)
-        y_train = np.load(y_train_pca_path)
-        X_val = np.load(x_val_pca_path)
-        y_val = np.load(y_val_pca_path)
-        X_test = np.load(x_test_pca_path)
-        y_test = np.load(y_test_pca_path)
-
-    else:
-        os.mkdir(Path('assets') / 'concatenated_pca')
-        batchsize = params['preprocessing']['batchsize']
-
-        print(">> Fitting scaler...")
-        scaler = StandardScaler()
-        for chunk in tqdm(pd.read_csv(train_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_train_chunk = chunk.iloc[:, :-1]
-            scaler.partial_fit(X_train_chunk)
-
-        ipca = IncrementalPCA(n_components=params['pca']['n_components'])
-        X_train = []
-        y_train = []
-        X_val = []
-        y_val = []
-        X_test = []
-        y_test = []
-        print(">> Transforming train data with scaler and fitting incremental pca...")
-        for chunk in tqdm(pd.read_csv(train_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_train_chunk = chunk.iloc[:, :-1]
-            X_train_chunk_scaled = scaler.transform(X_train_chunk)
-            ipca.partial_fit(X_train_chunk_scaled)
-        print(">> Transforming train data with incremental pca...")
-        for chunk in tqdm(pd.read_csv(train_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_train_chunk = chunk.iloc[:, :-1]
-            y_train_chunk = chunk['label']
-            X_train_chunk_scaled = scaler.transform(X_train_chunk)
-            X_train_chunk_ipca = ipca.transform(X_train_chunk_scaled)
-            X_train.extend(X_train_chunk_ipca)
-            y_train.extend(y_train_chunk)
-        print(">> Transforming validation data with incremental pca...")
-        for chunk in tqdm(pd.read_csv(val_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_val_chunk = chunk.iloc[:, :-1]
-            y_val_chunk = chunk['label']
-            X_val_chunk_scaled = scaler.transform(X_val_chunk)
-            X_val_chunk_ipca = ipca.transform(X_val_chunk_scaled)
-            X_val.extend(X_val_chunk_ipca)
-            y_val.extend(y_val_chunk)
-        print(">> Transforming test data with incremental pca...")
-        for chunk in tqdm(pd.read_csv(test_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_test_chunk = chunk.iloc[:, :-1]
-            y_test_chunk = chunk['label']
-            X_test_chunk_scaled = scaler.transform(X_test_chunk)
-            X_test_chunk_ipca = ipca.transform(X_test_chunk_scaled)
-            X_test.extend(X_test_chunk_ipca)
-            y_test.extend(y_test_chunk)
-
-        X_train = np.asarray(X_train)
-        y_train = np.asarray(y_train)
-        X_val = np.asarray(X_val)
-        y_val = np.asarray(y_val)
-        X_test = np.asarray(X_test)
-        y_test = np.asarray(y_test)
-
-        print(">> Saving computed features on files in assets/concatenated_pca/ folder...")
-        np.save(x_train_pca_path, X_train)
-        np.save(y_train_pca_path, y_train)
-        np.save(x_val_pca_path, X_val)
-        np.save(y_val_pca_path, y_val)
-        np.save(x_test_pca_path, X_test)
-        np.save(y_test_pca_path, y_test)
-
-    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 def compute_patch_score(y, y_pred):

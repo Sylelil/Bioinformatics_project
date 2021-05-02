@@ -23,7 +23,7 @@ def get_classifier(hyperparam, method_name, balancing, random_state):
                                random_state=random_state)
     else:
         classifier = SGDClassifier(alpha=hyperparam,
-                                   max_iter=10,  # np.ceil(10**6 / n_samples)
+                                   max_iter=15,  # np.ceil(10**6 / n_samples)
                                    class_weight=('balanced' if balancing == 'weights' else None),
                                    random_state=random_state)
     return classifier
@@ -38,11 +38,11 @@ def shallow_classifier(args, params, train_filepath, val_filepath, test_filepath
        :param val_filepath: validation data path.
        :param test_filepath: test data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = common.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath, test_filepath)
 
     if args.balancing and args.balancing != 'weights':
         print(f">> Applying class balancing with {args.balancing}...")
-        balancer = utils.get_balancing_method(args.balancing, params)
+        balancer = common.get_balancing_method(args.balancing, params)
         X_train, y_train = balancer.fit_resample(X_train, y_train)
     if args.balancing:
         metric = metrics.accuracy_score

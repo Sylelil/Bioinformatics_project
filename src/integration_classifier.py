@@ -73,13 +73,15 @@ def main():
         print("%s not existing." % test_filepath_copied_genes)
         exit()
 
-    if args.method == 'svc' or args.method == 'sgd':
-        shallow_classification.shallow_classifier(args, params, train_filepath, val_filepath, test_filepath)
-    elif args.method == 'pca_nn':
-        nn_classification.pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
-    elif args.method == 'nn':
-        nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes, test_filepath_copied_genes)
-
+    if params['pca']['plot_cumulative_explained_variance']:
+        utils.plot_cumulative_explained_variance_pca(params, train_filepath, val_filepath, test_filepath)
+    else:
+        if args.method == 'svc' or args.method == 'sgd':
+            shallow_classification.shallow_classifier(args, params, train_filepath, val_filepath, test_filepath)
+        elif args.method == 'pca_nn':
+            nn_classification.pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
+        elif args.method == 'nn':
+            nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes, test_filepath_copied_genes)
 
 
 if __name__ == '__main__':

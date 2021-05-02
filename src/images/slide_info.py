@@ -2,7 +2,6 @@ import sys
 from openslide.deepzoom import DeepZoomGenerator
 from tqdm import tqdm
 import os
-
 from config import paths
 from . import utils
 import config.images.config as cfg
@@ -16,6 +15,7 @@ def read_slides_info_from_folder(lookup_dir):
     """
     X = []
     y = []
+
     for file in tqdm(os.listdir(lookup_dir), desc=">> Reading slides info...", file=sys.stdout):
         file_path = os.path.join(lookup_dir, file)
         slide = utils.open_wsi(file_path)

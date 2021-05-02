@@ -13,7 +13,7 @@ from .. import utils
 def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")
-    model = ResNet50(weights='imagenet', include_top=False)
+    model = ResNet50(weights='imagenet', include_top=True)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
 
     print(">> Pretrained model loaded")

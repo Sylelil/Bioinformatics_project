@@ -59,7 +59,7 @@ def load_selected_genes(selected_features_dir):
         :param selected_features_dir: Path
             directory containing the gene expression data
         :returns X: 2D-numpy array, shape = [n_samples, n_selected_features],
-            where n_samples is the number of samples and n_features is the number of selected features
+            where n_samples is the number of samples and n_selected_features is the number of selected features
         :return y: array-like, shape = [n_samples]
             labels (0/1)
         :return targets: array-like, shape = [n_samples]
@@ -222,7 +222,15 @@ def eval_asymmetry_and_kurt(df):
 
 
 def pca(X, y):
+    """
+        Description: Plot data in 2D with PCA, by considering the first 2 principal components
 
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
     pca = PCA(n_components=2, random_state=42)
     pca_results = pca.fit_transform(X)
     print('>> Cumulative explained variation for 2 principal components: {}'.format(
@@ -245,7 +253,16 @@ def pca(X, y):
 
 
 def pca_3D(X, y):
+    """
+        Description: Plot data in 3D with PCA, by considering the first 3 principal components
 
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+
+    """
     pca = PCA(n_components=3, random_state=42)
     pca_results = pca.fit_transform(X)
     print('>> Cumulative explained variation for 3 principal components: {}'.format(
@@ -269,7 +286,15 @@ def pca_3D(X, y):
 
 
 def tsne_pca(X, y):
+    """
+        Description: Plot data in 2D with t-SNE, by first applying PCA on the 50 principal components
 
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
     pca_50 = PCA(n_components=50, random_state=42)
     pca_result_50 = pca_50.fit_transform(X)
     print('>> Cumulative explained variation for 50 principal components: {}'.format(
@@ -295,6 +320,15 @@ def tsne_pca(X, y):
 
 
 def tsne(X, y):
+    """
+        Description: Plot data in 2D with t-SNE
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
 
     tsne = TSNE(n_components=2, random_state=42)
     tsne_results = tsne.fit_transform(X)
@@ -316,6 +350,15 @@ def tsne(X, y):
 
 
 def tsne_3D(X, y):
+    """
+        Description: Plot data in 3D with t-SNE
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+             labels (0/1)
+     """
 
     tsne = TSNE(n_components=3, random_state=42)
     tsne_results = tsne.fit_transform(X)
@@ -337,38 +380,29 @@ def tsne_3D(X, y):
     plt.show()
 
 
-def show_2D_svm_decision_boundary(params, X_train, y_train, X_test, y_test):
+def show_2D_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
+    """
+        Description: show 2D decision boundary for SVM fit on first 2 features
 
-    C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
-    param_grid = dict(svm__C=C_range)
+        :param X: 2D-numpy array, shape = [n_samples, 2],
+               where n_samples is the number of samples and 2 is the number of features.
 
-    # Show decision boundary
+        :param y: array-like, shape = [n_samples]
+                labels (0/1)
+    """
+
     h = .02  # step size in the mesh
     x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
     y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
 
-    # just plot the dataset first
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
 
-    # Put the result into a color plot
-    scaler = StandardScaler()
-    smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-    svm = SVC(kernel=params['kernel'])
-    imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
-
-    # define search
-    cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-    clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
-    clf.fit(X_train[:, :2], y_train)
     Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
-
-    pred = clf.predict(X_test[:, :2])
-    print(">> Test accuracy= %f" % accuracy_score(y_test, pred))
 
     # Plot the training points
     plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')

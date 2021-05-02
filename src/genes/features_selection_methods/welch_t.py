@@ -3,6 +3,20 @@ from . import common
 
 
 def genes_selection_welch_t(df, params, results_dir):
+    """
+        Description: Welch's t-test to perform genes selection
+
+        :param df: DataFrame, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of features.
+            - DataFrame.columns: contains the gene names
+            - DataFrame.index: contains the case_ids
+        :param params: Dictionary
+            configuration file parameters
+        :param results_dir: Path
+            directory to save results
+        :return welch_dict['genes_b']: array-like, shape = [num_selected_features]
+            differentially expressed genes in normal and tumor samples
+    """
 
     # Pre-filtering: Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")

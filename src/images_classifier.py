@@ -24,12 +24,15 @@ def main():
         sys.stderr.write("Invalid path for config file")
         exit(2)
 
-    # Read configuration file
+    # Read images features
 
     if args.classification_method == "svm":
         # TODO
         pass
     elif args.classification_method == "nn":
+        # TODO
+        pass
+    elif args.classification_method == "sgd_classifier":
         # TODO
         pass
     else:

@@ -14,6 +14,10 @@ from src.data_manipulation import split_data
 
 
 def main():
+    """
+         Description: Main performs preprocessing steps in order to select
+            most relevant features from gene expression data
+    """
     # Parse arguments from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg',

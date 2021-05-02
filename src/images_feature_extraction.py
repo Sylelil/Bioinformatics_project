@@ -58,6 +58,9 @@ def main():
     if not os.path.exists(paths.extracted_features_train):
         os.makedirs(paths.extracted_features_train)
 
+    if not os.path.exists(paths.extracted_features_val):
+        os.makedirs(paths.extracted_features_val)
+
     if not os.path.exists(paths.extracted_features_test):
         os.makedirs(paths.extracted_features_test)
 
@@ -81,8 +84,9 @@ def main():
                                        paths.low_res_tumor_images_dir, paths.tumor_masked_images_dir)
 
     slides_info = normal_slides_info + tumor_slides_info
-    print("\nSaving selected tiles on disk:")
-    preprocessing.extract_tiles_on_disk(slides_info)
+    if args.method == 'fine_tuning':
+        print("\nSaving selected tiles on disk:")
+        preprocessing.extract_tiles_on_disk(slides_info)
 
     print("\nReading split slides data:")
     images_splits_path = Path(paths.split_data_dir) / 'images'
@@ -96,6 +100,7 @@ def main():
 
     train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)
 
+    print(train_slides_info)
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
     train_slides_info_1 = [slide for slide in train_slides_info if slide['label'] == 1]

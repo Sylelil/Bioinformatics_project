@@ -92,7 +92,7 @@ def main():
         clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
         clf.fit(X_train[:, :2], y_train)
 
-        pred = clf.predict(X_test)
+        pred = clf.predict(X_test[:, :2])
         print(">> Test accuracy= %f" % accuracy_score(y_test, pred))
 
         # Show decision boundary for svm trained on the first 2 features

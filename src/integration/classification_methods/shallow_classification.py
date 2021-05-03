@@ -48,10 +48,8 @@ def shallow_classifier(args, params, train_filepath, val_filepath, test_filepath
         print(f">> Applying class balancing with {args.balancing}...")
         balancer = common.get_balancing_method(args.balancing, params)
         X_train, y_train = balancer.fit_resample(X_train, y_train)
-    if args.balancing:
-        metric = metrics.accuracy_score
-    else:
-        metric = metrics.matthews_corrcoef
+
+    metric = metrics.recall_score
 
     if args.classification_method == 'linearsvc':
         print(">> Finding best hyperparameter C for LinearSVC...")

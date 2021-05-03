@@ -85,6 +85,7 @@ def main():
         if not args.n_principal_components:
             print('error: missing argument <n_principal_components>.')
             exit()
+        params['pca']['n_components'] = args.n_principal_components
         utils.plot_explained_variance_pca(params, train_filepath, val_filepath, test_filepath)
     else:
         if args.classification_method == 'linearsvc' or args.classification_method == 'sgd':

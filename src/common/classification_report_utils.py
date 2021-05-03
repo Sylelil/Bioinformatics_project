@@ -45,6 +45,8 @@ def __compute_patient_score(y_pred_test):
     for filename in test_filenames:
         if filename not in filename_list:
             filename_list.append(filename)
+            # options = [f"{filename}_0", f"{filename}_1"]
+            # patient_info = test_info_df.loc[test_info_df['filename'].isin(options)]
             patient_info = test_info_df.loc[test_info_df['filename'] == filename]
             y_pred_patient = list(patient_info['y_pred_test'])
             y_patient = list(patient_info['label'])

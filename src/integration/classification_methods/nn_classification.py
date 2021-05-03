@@ -12,8 +12,37 @@ from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
+import tensorflow.keras.backend as K
+from sklearn import metrics
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+
+def binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight):
+
+    TN = tf.logical_and(K.eval(y_true) == 0, K.eval(y_pred) == 0)
+    TP = tf.logical_and(K.eval(y_true) == 1, K.eval(y_pred) == 1)
+
+    FP = tf.logical_and(K.eval(y_true) == 0, K.eval(y_pred) == 1)
+    FN = tf.logical_and(K.eval(y_true) == 1, K.eval(y_pred) == 0)
+
+    # Converted as Keras Tensors
+    TN = K.sum(K.variable(TN))
+    FP = K.sum(K.variable(FP))
+
+    specificity = TN / (TN + FP + K.epsilon())
+    recall = TP / (TP + FN + K.epsilon())
+
+    return 1.0 - (recall_weight*recall + spec_weight*specificity)
+
+
+def custom_loss(recall_weight, spec_weight):
+
+    def recall_spec_loss(y_true, y_pred):
+        return binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight)
+
+    # Returns the (y_true, y_pred) loss function
+    return recall_spec_loss
 
 
 def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
@@ -36,9 +65,13 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
         keras.layers.Dropout(0.5),
         keras.layers.Dense(1, activation='sigmoid', bias_initializer=output_bias),
     ])
+    # loss = custom_loss(recall_weight=0.9, spec_weight=0.1)
     model.compile(optimizer=keras.optimizers.Adam(lr=1e-3),
                   loss=keras.losses.BinaryCrossentropy(),
-                  metrics=metrics)
+                  # loss=loss,
+                  metrics=metrics,
+                  # run_eagerly=True
+                  )
     return model
 
 
@@ -78,6 +111,8 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
     test_scores_list = model.evaluate(X_test, (None if use_generators else y_test), batch_size=mlp_settings['BATCH_SIZE'],
                                  verbose=0)
     test_scores = dict(zip(model.metrics_names, test_scores_list))
+    y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
+    test_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_test, y_pred_test_labels)
 
     return y_pred_test, y_pred_train, test_scores, history
 
@@ -106,7 +141,7 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
         'n_input_features': params['pca']['n_components'],
         'EPOCHS': params['nn']['epochs'],
         'BATCH_SIZE': params['nn']['batchsize'],
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_recall',
                                                            verbose=1,
                                                            patience=10,
                                                            mode='max',
@@ -194,7 +229,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
         'n_input_features': n_features,
         'EPOCHS': params['nn']['epochs'],
         'BATCH_SIZE': batchsize,
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_recall',
                                                            verbose=1,
                                                            patience=10,
                                                            mode='max',

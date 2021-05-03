@@ -9,6 +9,7 @@ from imblearn.over_sampling import RandomOverSampler, SMOTE
 from imblearn.combine import SMOTEENN
 from imblearn.under_sampling import ClusterCentroids
 import tensorflow.keras.backend as K
+import tensorflow_addons as tfa
 
 
 ''' Metrics for shallow classification: '''
@@ -23,32 +24,6 @@ METRICS_skl = [
 ]
 
 
-def matthews_correlation(y_true, y_pred):
-    """
-       Description: Compute Matthews Correlation Coefficient.
-       :param y_true: ground truth labels.
-       :param y_pred: predicted labels.
-       :returns: Matthews Correlation Coefficient.
-    """
-
-    y_pred_pos = K.round(K.clip(y_pred, 0, 1))
-    y_pred_neg = 1 - y_pred_pos
-
-    y_pos = K.round(K.clip(y_true, 0, 1))
-    y_neg = 1 - y_pos
-
-    tp = K.sum(y_pos * y_pred_pos)
-    tn = K.sum(y_neg * y_pred_neg)
-
-    fp = K.sum(y_neg * y_pred_pos)
-    fn = K.sum(y_pos * y_pred_neg)
-
-    numerator = (tp * tn - fp * fn)
-    denominator = K.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-
-    return numerator / (denominator + K.epsilon())
-
-
 ''' Metrics for nn classification: '''
 METRICS_keras = [
     keras.metrics.TruePositives(name='tp'),
@@ -56,7 +31,6 @@ METRICS_keras = [
     keras.metrics.TrueNegatives(name='tn'),
     keras.metrics.FalseNegatives(name='fn'),
     keras.metrics.BinaryAccuracy(name='accuracy'),
-    matthews_correlation,
     keras.metrics.Precision(name='precision'),
     keras.metrics.Recall(name='recall'),
     keras.metrics.AUC(name='auc'),

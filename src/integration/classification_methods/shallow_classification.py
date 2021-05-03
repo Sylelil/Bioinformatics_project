@@ -1,24 +1,25 @@
 import os
 from pathlib import Path
 
-from pandas import DataFrame
 from sklearn.linear_model import SGDClassifier
-from sklearn.metrics import plot_confusion_matrix, plot_roc_curve
-from sklearn.model_selection import KFold
 from sklearn.svm import LinearSVC
-from tqdm import tqdm
 
 from config import paths
-from src.integration import utils, plots
+from src.common import classification_report_utils
+from src.integration import utils
 from src.integration.classification_methods import common
 from sklearn import metrics
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-from src.data_manipulation import concatenate_features
 
 
 def get_classifier(hyperparam, method_name, balancing, random_state):
+    """
+       Description: Get classifier method.
+       :param hyperparam: hyperparameter to be set.
+       :param method_name: method name.
+       :param balancing: class balancing method.
+       :param random_state: random state.
+       :returns: classifier method.
+    """
     if method_name == 'linearsvc':
         classifier = LinearSVC(C=hyperparam,
                                class_weight=('balanced' if balancing == 'weights' else None),
@@ -109,9 +110,8 @@ def shallow_classifier(args, params, train_filepath, val_filepath, test_filepath
     experiment_info['Class balancing method'] = str(args.balancing)
     experiment_info['Best hyperparameter'] = f"{'C' if args.classification_method == 'linearsvc' else 'alpha'}={best_hyperparam}"
     experiment_info['Best validation score'] = f"{metric.__name__}={best_score}"
-    utils.generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info)
+    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info)
 
     # generate plots:
-    #utils.generate_classification_plots(results_path, best_classifier, X_train, y_train, X_test, y_test)
-    utils.generate_classification_plots(results_path, y_test, y_pred_test, y_train, y_pred_train)
+    classification_report_utils.generate_classification_plots(results_path, y_test, y_pred_test, y_train, y_pred_train)
     print('>> Done')

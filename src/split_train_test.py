@@ -1,7 +1,7 @@
 import argparse
 import os
 from pathlib import Path
-from src.data_manipulation import split_data
+from src.common import split_data
 from config import paths
 
 

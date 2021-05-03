@@ -6,38 +6,14 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 from config import paths
-from src.integration import data_generator, plots, utils
+from src.integration import data_generator, utils
+from src.common import plots, classification_report_utils
 from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-
-
-def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history):
-    # path to save results:
-    experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
-    results_path = Path(paths.integration_classification_results_dir) / experiment_descr
-    if not os.path.exists(results_path):
-        os.makedirs(results_path)
-
-    # convert predicted probabilities (output of sigmoid) to 0/1 labels:
-    y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
-    y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
-
-    # generate classification report:
-    experiment_info = {}
-    experiment_info['Classification method'] = str(args.classification_method)
-    experiment_info['PCA n. components'] = str(params['pca']['n_components'])
-    experiment_info['Class balancing method'] = str(args.balancing)
-    utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
-
-    # generate plots:
-    plots.plot_train_val_results(history, results_path)
-    utils.generate_classification_plots(results_path, y_test, y_pred_test_labels, y_train, y_pred_train_labels)
-
-    print('>> Done')
 
 
 def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
@@ -47,7 +23,7 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
        :param units_1: number of units in first dense layer.
        :param units_2: number of units in second dense layer.
        :param metrics: metrics list.
-       :param output_bias: output bias.
+       :param output_bias: output bias (default: None).
        :returns: MLP model.
     """
     if output_bias is not None:
@@ -68,7 +44,7 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
 
 def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, use_generators=False):
     """
-       Description: Train and test MLP classifier and show results.
+       Description: Train and test MLP classifier.
        :param X_train: train data.
        :param y_train: train labels.
        :param X_val: validation data.
@@ -76,7 +52,8 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
        :param X_test: test data.
        :param y_test: test labels.
        :param mlp_settings: dictionary with MLP settings.
-       :param use_generators: either or not to get data as generators.
+       :param use_generators: either or not to get data as generators (default: False).
+       :returns: y_pred_test, y_pred_train, test_scores, history: validation and test results
     """
 
     print(">> Creating MultiLayer Perceptron model...")
@@ -97,7 +74,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
     y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
 
-    print('Evaluating model on the test dataset...')
+    print('>> Evaluating model on test data...')
     test_scores_list = model.evaluate(X_test, (None if use_generators else y_test), batch_size=mlp_settings['BATCH_SIZE'],
                                  verbose=0)
     test_scores = dict(zip(model.metrics_names, test_scores_list))
@@ -234,3 +211,39 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
                                                                use_generators=True)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
+
+
+def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history):
+    """
+       Description: Generate classification report and plots.
+       :param args: arguments.
+       :param params: parameters.
+       :param y_test: ground truth test labels.
+       :param y_pred_test: predicted test labels.
+       :param y_train: ground truth train labels.
+       :param y_pred_train: predicted train labels.
+       :param test_scores: dictionary with scores of test classification.
+       :param history: model history.
+    """
+    # path to save results:
+    experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
+    results_path = Path(paths.integration_classification_results_dir) / experiment_descr
+    if not os.path.exists(results_path):
+        os.makedirs(results_path)
+
+    # convert predicted probabilities (output of sigmoid) to 0/1 labels:
+    y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
+    y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
+
+    # generate classification report:
+    experiment_info = {}
+    experiment_info['Classification method'] = str(args.classification_method)
+    experiment_info['PCA n. components'] = str(params['pca']['n_components'])
+    experiment_info['Class balancing method'] = str(args.balancing)
+    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
+
+    # generate plots:
+    plots.plot_train_val_results(history, results_path)
+    classification_report_utils.generate_classification_plots(results_path, y_test, y_pred_test_labels, y_train, y_pred_train_labels)
+
+    print('>> Done')

@@ -2,7 +2,7 @@ import argparse
 import os
 from pathlib import Path
 from config import paths
-from src.data_manipulation import concatenate_features
+from src.common import concatenate_features
 
 
 def main():

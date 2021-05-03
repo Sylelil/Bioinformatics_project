@@ -1,15 +1,13 @@
 from pathlib import Path
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib as mpl
 from sklearn import metrics
-import numpy as np
 
 mpl.rcParams['figure.figsize'] = (12, 10)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-
+'''
 def plot_loss2(model_history):
     """
        Description: Plot loss.
@@ -27,11 +25,11 @@ def plot_loss2(model_history):
     plt.legend(loc='upper left')
     plt.title('Model Loss')
     plt.show()
+'''
 
-
-def plot_loss(history, label, n):
+def __plot_loss(history, label, n):
     """
-       Description: Plot loss.
+       Description: Private function. Plot train and validation loss.
        :param history: model history.
        :param label: label string.
        :param n: color number.
@@ -48,9 +46,9 @@ def plot_loss(history, label, n):
     plt.legend(loc='upper right')
 
 
-def plot_metrics(history):
+def __plot_metrics(history):
     """
-       Description: Plot metrics.
+       Description: Private function. Plot train and validation metrics scores.
        :param history: model history.
     """
     metrics = ['loss', 'prc', 'precision', 'recall']
@@ -72,12 +70,25 @@ def plot_metrics(history):
         plt.legend()
 
 
+def plot_train_val_results(history, save_path):
+    """
+       Description: Plot train and validation loss and metrics scores.
+       :param history: model history.
+       :param save_path: path to save figures.
+    """
+    __plot_loss(history, 'loss', 0)
+    plt.savefig(Path(save_path) / 'train_val_loss')
+    plt.figure()
+    __plot_metrics(history)
+    plt.savefig(Path(save_path) / 'train_val_metrics')
+    plt.figure()
+
+
 def plot_cm(labels, predictions):
     """
        Description: Plot Confusion Matrix.
        :param labels: ground truth labels.
        :param predictions: predicted labels.
-       :param p: threshold.
     """
     cm = metrics.confusion_matrix(labels, predictions)
     plt.figure(figsize=(5, 5))
@@ -128,13 +139,5 @@ def plot_prc(name, labels, predictions, **kwargs):
     ax = plt.gca()
     ax.set_aspect('equal')
 
-
-def plot_train_val_results(history, save_path):
-    plot_loss(history, 'loss', 0)
-    plt.savefig(Path(save_path) / 'train_val_loss')
-    plt.figure()
-    plot_metrics(history)
-    plt.savefig(Path(save_path) / 'train_val_metrics')
-    plt.figure()
 
 

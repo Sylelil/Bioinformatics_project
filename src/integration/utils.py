@@ -273,6 +273,8 @@ def read_config_file(config_file_path):
     params['nn'] = {}
     params['nn']['epochs'] = config.getint('nn', 'epochs')
     params['nn']['batchsize'] = config.getint('nn', 'batchsize')
+    params['nn']['units_1'] = config.getint('nn', 'units_1')
+    params['nn']['units_2'] = config.getint('nn', 'units_2')
 
     # pca
     params['pca'] = {}

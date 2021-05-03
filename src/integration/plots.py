@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib as mpl
@@ -42,6 +44,8 @@ def plot_loss(history, label, n):
                linestyle="--")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.title('Model Loss')
+    plt.legend(loc='upper right')
 
 
 def plot_metrics(history):
@@ -51,8 +55,8 @@ def plot_metrics(history):
     """
     metrics = ['loss', 'prc', 'precision', 'recall']
     for n, metric in enumerate(metrics):
-        name = metric.replace("_"," ").capitalize()
-        plt.subplot(2,2,n+1)
+        name = metric.replace("_", " ").capitalize()
+        plt.subplot(2, 2, n+1)
         plt.plot(history.epoch, history.history[metric], color=colors[0], label='Train')
         plt.plot(history.epoch, history.history['val_'+metric],
                  color=colors[0], linestyle="--", label='Val')
@@ -63,7 +67,7 @@ def plot_metrics(history):
         elif metric == 'auc':
             plt.ylim([0.8, 1])
         else:
-            plt.ylim([0, 1])
+            plt.ylim([0, 1.1])
 
         plt.legend()
 
@@ -125,10 +129,12 @@ def plot_prc(name, labels, predictions, **kwargs):
     ax.set_aspect('equal')
 
 
-def plot_train_val_results(history):
-    plot_loss(history, 'Training and validation loss', 0)
+def plot_train_val_results(history, save_path):
+    plot_loss(history, 'loss', 0)
+    plt.savefig(Path(save_path) / 'train_val_loss')
     plt.figure()
     plot_metrics(history)
+    plt.savefig(Path(save_path) / 'train_val_metrics')
     plt.figure()
 
 

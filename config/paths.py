@@ -36,7 +36,7 @@ low_res_normal_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' /
 low_res_tumor_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 'img_tumor'
 
 # results/concatenated_results
-concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'
+concatenated_results_dir = Path('C:\\') / 'Users' / 'rosee' / 'Downloads' / 'assets' / 'concatenated_results'
 concatenated_pca_dir = BASE_DIR / 'results' / 'concatenated_pca'
 integration_classification_results_dir = BASE_DIR / 'results' / 'integration_classification'
 

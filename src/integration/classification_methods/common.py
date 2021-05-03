@@ -8,6 +8,8 @@ from config import paths
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from imblearn.combine import SMOTEENN
 from imblearn.under_sampling import ClusterCentroids
+import tensorflow.keras.backend as K
+
 
 METRICS_skl = [
     metrics.accuracy_score,
@@ -20,16 +22,36 @@ METRICS_skl = [
 ]
 
 
+def matthews_correlation(y_true, y_pred):
+    y_pred_pos = K.round(K.clip(y_pred, 0, 1))
+    y_pred_neg = 1 - y_pred_pos
+
+    y_pos = K.round(K.clip(y_true, 0, 1))
+    y_neg = 1 - y_pos
+
+    tp = K.sum(y_pos * y_pred_pos)
+    tn = K.sum(y_neg * y_pred_neg)
+
+    fp = K.sum(y_neg * y_pred_pos)
+    fn = K.sum(y_pos * y_pred_neg)
+
+    numerator = (tp * tn - fp * fn)
+    denominator = K.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+
+    return numerator / (denominator + K.epsilon())
+
+
 METRICS_keras = [
     keras.metrics.TruePositives(name='tp'),
     keras.metrics.FalsePositives(name='fp'),
     keras.metrics.TrueNegatives(name='tn'),
     keras.metrics.FalseNegatives(name='fn'),
     keras.metrics.BinaryAccuracy(name='accuracy'),
+    matthews_correlation,
     keras.metrics.Precision(name='precision'),
     keras.metrics.Recall(name='recall'),
     keras.metrics.AUC(name='auc'),
-    keras.metrics.AUC(name='prc', curve='PR'), # precision-recall curve
+    keras.metrics.AUC(name='prc', curve='PR'),  # precision-recall curve
 ]
 
 
@@ -95,8 +117,7 @@ def compute_patient_score(y_pred_test):
     test_data_info_path = Path(paths.concatenated_results_dir) / 'test' / 'concat_data_info.csv'
     test_info_df = pd.read_csv(test_data_info_path)
     test_info_df['y_pred_test'] = y_pred_test
-    # test_filenames_file = Path(paths.filename_splits_dir) / 'test_filenames.npy'
-    test_filenames_file = Path(paths.filename_splits_dir) / 'test_caseids.npy'
+    test_filenames_file = Path(paths.filename_splits_dir) / 'test_filenames.npy'
     test_filenames = np.load(test_filenames_file)
     filename_list = []
 
@@ -104,9 +125,7 @@ def compute_patient_score(y_pred_test):
     for filename in test_filenames:
         if filename not in filename_list:
             filename_list.append(filename)
-            options = [f"{filename}_0", f"{filename}_1"]
-            # patient_info = test_info_df.loc[test_info_df['filename'] == filename]
-            patient_info = test_info_df.loc[test_info_df['filename'].isin(options)]
+            patient_info = test_info_df.loc[test_info_df['filename'] == filename]
             y_pred_patient = list(patient_info['y_pred_test'])
             y_patient = list(patient_info['label'])
             per_patient_patch_score = compute_patch_score(y_patient, y_pred_patient)

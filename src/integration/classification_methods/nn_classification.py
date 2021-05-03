@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
-def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores):
+def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history):
     # path to save results:
     experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
@@ -34,6 +34,7 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
     utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
 
     # generate plots:
+    plots.plot_train_val_results(history, results_path)
     utils.generate_classification_plots(results_path, y_test, y_pred_test_labels, y_train, y_pred_train_labels)
 
     print('>> Done')
@@ -52,7 +53,8 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
     if output_bias is not None:
         output_bias = tf.keras.initializers.Constant(output_bias)
     model = keras.Sequential([
-        keras.layers.Dense(units_1, activation='relu', input_shape=(n_input_features,)),
+        keras.layers.InputLayer(input_shape=(n_input_features,)),
+        keras.layers.Dense(units_1, activation='relu', ),
         keras.layers.Dropout(0.5),
         keras.layers.Dense(units_2, activation='relu'),
         keras.layers.Dropout(0.5),
@@ -92,8 +94,6 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
                         class_weight=mlp_settings['class_weight'],
                         verbose=2)
 
-    plots.plot_train_val_results(history)
-
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
     y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
 
@@ -102,7 +102,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
                                  verbose=0)
     test_scores = dict(zip(model.metrics_names, test_scores_list))
 
-    return y_pred_test, y_pred_train, test_scores
+    return y_pred_test, y_pred_train, test_scores, history
 
 
 def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -129,20 +129,20 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
         'n_input_features': params['pca']['n_components'],
         'EPOCHS': params['nn']['epochs'],
         'BATCH_SIZE': params['nn']['batchsize'],
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_prc',
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
                                                            verbose=1,
                                                            patience=10,
                                                            mode='max',
                                                            restore_best_weights=True),
         'class_weight': class_weight,
-        'units_1': 32,
-        'units_2': 16,
+        'units_1': params['nn']['units_1'],
+        'units_2': params['nn']['units_2'],
     }
 
-    y_pred_test, y_pred_train, test_scores = mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test,
+    y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test,
                                                                mlp_settings)
 
-    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores)
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
 
 
 def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
@@ -217,7 +217,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
         'n_input_features': n_features,
         'EPOCHS': params['nn']['epochs'],
         'BATCH_SIZE': batchsize,
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='val_prc',
+        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
                                                            verbose=1,
                                                            patience=10,
                                                            mode='max',
@@ -227,10 +227,10 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
         'units_2': 1024,
     }
 
-    y_pred_test, y_pred_train, test_scores = mpl_classify(X_train=train_generator, y_train=y_train,
+    y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=train_generator, y_train=y_train,
                                                                X_val=val_generator, y_val=y_val,
                                                                X_test=test_generator, y_test=y_test,
                                                                mlp_settings=mlp_settings,
                                                                use_generators=True)
 
-    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores)
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)

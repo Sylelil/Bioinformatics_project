@@ -115,7 +115,7 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
         X_test = np.load(Path(concatenated_pca_path) / 'x_test.npy')
         y_test = np.load(Path(concatenated_pca_path) / 'y_test.npy')
     else:
-        os.mkdir(concatenated_pca_path)
+        os.makedirs(concatenated_pca_path)
         X_train, y_train, X_val, y_val, X_test, y_test = __scaling_pca(params, concatenated_pca_path, train_filepath,
                                                                        val_filepath, test_filepath)
 
@@ -247,7 +247,7 @@ def generate_classification_plots(save_path, y_test, y_pred_test, y_train, y_pre
     plt.show()
 
 
-def read_config_file(config_file_path):
+def read_config_file(config_file_path, classification_method):
     """
        Description: Read configuration parameters.
        :param config_file_path: Path of the configuration file.
@@ -269,12 +269,22 @@ def read_config_file(config_file_path):
     params['preprocessing'] = {}
     params['preprocessing']['batchsize'] = config.getint('preprocessing', 'batchsize')
 
-    # nn
-    params['nn'] = {}
-    params['nn']['epochs'] = config.getint('nn', 'epochs')
-    params['nn']['batchsize'] = config.getint('nn', 'batchsize')
-    params['nn']['units_1'] = config.getint('nn', 'units_1')
-    params['nn']['units_2'] = config.getint('nn', 'units_2')
+    if classification_method == 'nn':
+        # nn
+        params['nn'] = {}
+        params['nn']['epochs'] = config.getint('nn', 'epochs')
+        params['nn']['batchsize'] = config.getint('nn', 'batchsize')
+        params['nn']['units_1'] = config.getint('nn', 'units_1')
+        params['nn']['units_2'] = config.getint('nn', 'units_2')
+        params['nn']['lr'] = config.getfloat('nn', 'lr')
+    elif classification_method == 'pca_nn':
+        # pca_nn
+        params['pca_nn'] = {}
+        params['pca_nn']['epochs'] = config.getint('pca_nn', 'epochs')
+        params['pca_nn']['batchsize'] = config.getint('pca_nn', 'batchsize')
+        params['pca_nn']['units_1'] = config.getint('pca_nn', 'units_1')
+        params['pca_nn']['units_2'] = config.getint('pca_nn', 'units_2')
+        params['pca_nn']['lr'] = config.getfloat('pca_nn', 'lr')
 
     # pca
     params['pca'] = {}

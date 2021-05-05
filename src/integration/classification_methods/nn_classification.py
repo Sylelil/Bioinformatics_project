@@ -1,3 +1,4 @@
+import math
 import os
 from tqdm import tqdm
 import pandas as pd
@@ -40,10 +41,11 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
     print('>> Done')
 
 
-def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
+def make_model(n_input_features, lr, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
     """
        Description: Create MLP model.
        :param n_input_features: number of input features.
+       :param lr: learning rate.
        :param units_1: number of units in first dense layer.
        :param units_2: number of units in second dense layer.
        :param metrics: metrics list.
@@ -60,13 +62,14 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
         keras.layers.Dropout(0.5),
         keras.layers.Dense(1, activation='sigmoid', bias_initializer=output_bias),
     ])
-    model.compile(optimizer=keras.optimizers.Adam(lr=1e-3),
+    model.compile(optimizer=keras.optimizers.Adam(lr=lr),
                   loss=keras.losses.BinaryCrossentropy(),
                   metrics=metrics)
     return model
 
 
-def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, use_generators=False):
+def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer, scaler, train_path,
+                 use_generators=False):
     """
        Description: Train and test MLP classifier and show results.
        :param X_train: train data.
@@ -80,26 +83,52 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
     """
 
     print(">> Creating MultiLayer Perceptron model...")
-    model = make_model(mlp_settings['n_input_features'], units_1=mlp_settings['units_1'],
+    model = make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
                        units_2=mlp_settings['units_2'])
     model.summary()
 
     print(">> Fitting model on train data...")
+    print("num val steps: " + str(math.ceil(len(y_val) / mlp_settings['BATCH_SIZE'])))
+    print("num train steps: " + str(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE'])))
+    print("num test steps: " + str(math.ceil(len(y_test) / mlp_settings['BATCH_SIZE'])))
     history = model.fit(x=X_train,
                         y=(None if use_generators else y_train),
+                        steps_per_epoch=(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE']) if use_generators else None),
                         batch_size=mlp_settings['BATCH_SIZE'],
                         epochs=mlp_settings['EPOCHS'],
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_val, (None if use_generators else y_val)),
+                        validation_steps=(math.ceil(len(y_val) / mlp_settings['BATCH_SIZE']) if use_generators else None),
                         class_weight=mlp_settings['class_weight'],
-                        verbose=2)
+                        verbose=1)
 
-    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'])
-    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'])
+    X_train = data_generator.csv_data_generator(train_path,
+                                                        batchsize=mlp_settings['BATCH_SIZE'],
+                                                        scaler=scaler,
+                                                        mode='eval',
+                                                        balancer=balancer)
+    print("Predict on train..")
+    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'],
+                                 steps=((len(y_train) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
+                                 )
+    print("Predict on test..")
+    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'],
+                                steps=((len(y_test) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
+                                )
+    print("Len test")
+    print(len(y_pred_test))
+    print(len(y_test))
+
+    print("Len train")
+    print(len(y_pred_train))
+    print(len(y_train))
 
     print('Evaluating model on the test dataset...')
-    test_scores_list = model.evaluate(X_test, (None if use_generators else y_test), batch_size=mlp_settings['BATCH_SIZE'],
-                                 verbose=0)
+    test_scores_list = model.evaluate(X_test, (None if use_generators else y_test),
+                                      batch_size=mlp_settings['BATCH_SIZE'],
+                                      verbose=1,
+                                      steps=((len(y_test) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
+                                      )
     test_scores = dict(zip(model.metrics_names, test_scores_list))
 
     return y_pred_test, y_pred_train, test_scores, history
@@ -116,6 +145,12 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
     """
     X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath,
                                                                                test_filepath)
+    train_len = len(y_train)
+    val_len = len(y_val)
+    test_len = len(y_test)
+    print(f'>> train len = {train_len}')
+    print(f'>> val len = {val_len}')
+    print(f'>> test len = {test_len}')
 
     class_weight = None
     if args.balancing and args.balancing != 'weights':
@@ -127,20 +162,22 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
 
     mlp_settings = {
         'n_input_features': params['pca']['n_components'],
-        'EPOCHS': params['nn']['epochs'],
-        'BATCH_SIZE': params['nn']['batchsize'],
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
-                                                           verbose=1,
-                                                           patience=10,
-                                                           mode='max',
-                                                           restore_best_weights=True),
+        'EPOCHS': params['pca_nn']['epochs'],
+        'BATCH_SIZE': params['pca_nn']['batchsize'],
+        'early_stopping': tf.keras.callbacks.EarlyStopping(
+            monitor='val_recall',
+            verbose=1,
+            patience=10,
+            mode='max',
+            restore_best_weights=True),
+        'learning_rate': params['pca_nn']['lr'],
         'class_weight': class_weight,
-        'units_1': params['nn']['units_1'],
-        'units_2': params['nn']['units_2'],
+        'units_1': params['pca_nn']['units_1'],
+        'units_2': params['pca_nn']['units_2'],
     }
 
     y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test,
-                                                               mlp_settings)
+                                                                   mlp_settings)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
 
@@ -185,6 +222,13 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
             y_test_chunk = chunk['label']
             y_test.extend(y_test_chunk)
 
+    train_len = len(y_train)
+    val_len = len(y_val)
+    test_len = len(y_test)
+    print(f'>> train len = {train_len}')
+    print(f'>> val len = {val_len}')
+    print(f'>> test len = {test_len}')
+
     # get number of features
     with open(train_filepath, "r") as f:
         line = f.readline()
@@ -202,35 +246,42 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     train_generator = data_generator.csv_data_generator(train_filepath,
                                                         batchsize=batchsize,
                                                         scaler=scaler,
+                                                        mode='train',
                                                         balancer=balancer)
     print(f">> Creating validation data generator with scaler...")
     val_generator = data_generator.csv_data_generator(val_filepath,
                                                       batchsize=batchsize,
                                                       scaler=scaler,
+                                                      mode='train',
                                                       balancer=None)
     print(f">> Creating test data generator with scaler...")
     test_generator = data_generator.csv_data_generator(test_filepath,
                                                        batchsize=batchsize,
                                                        scaler=scaler,
+                                                       mode='eval',
                                                        balancer=None)
     mlp_settings = {
         'n_input_features': n_features,
         'EPOCHS': params['nn']['epochs'],
         'BATCH_SIZE': batchsize,
-        'early_stopping': tf.keras.callbacks.EarlyStopping(monitor='accuracy' if args.balancing else 'matthews_correlation',
-                                                           verbose=1,
-                                                           patience=10,
-                                                           mode='max',
-                                                           restore_best_weights=True),
+        'early_stopping': tf.keras.callbacks.EarlyStopping(
+            monitor='val_recall',
+            verbose=1,
+            patience=10,
+            mode='max',
+            restore_best_weights=True),
+        'learning_rate': params['nn']['lr'],
         'class_weight': class_weight,
-        'units_1': 2048,
-        'units_2': 1024,
+        'units_1': params['nn']['units_1'],
+        'units_2': params['nn']['units_2'],
     }
 
     y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=train_generator, y_train=y_train,
-                                                               X_val=val_generator, y_val=y_val,
-                                                               X_test=test_generator, y_test=y_test,
-                                                               mlp_settings=mlp_settings,
-                                                               use_generators=True)
+                                                                   X_val=val_generator, y_val=y_val,
+                                                                   X_test=test_generator, y_test=y_test,
+                                                                   mlp_settings=mlp_settings,
+                                                                   balancer=balancer, scaler=scaler,
+                                                                   train_path= train_filepath,
+                                                                   use_generators=True)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)

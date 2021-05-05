@@ -1,3 +1,4 @@
+from tensorflow_addons.metrics import MatthewsCorrelationCoefficient
 from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
@@ -47,7 +48,7 @@ METRICS_keras = [
     keras.metrics.TrueNegatives(name='tn'),
     keras.metrics.FalseNegatives(name='fn'),
     keras.metrics.BinaryAccuracy(name='accuracy'),
-    matthews_correlation,
+    #MatthewsCorrelationCoefficient(name='matthews_correlation', num_classes=1),
     keras.metrics.Precision(name='precision'),
     keras.metrics.Recall(name='recall'),
     keras.metrics.AUC(name='auc'),

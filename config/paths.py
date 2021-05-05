@@ -38,5 +38,7 @@ low_res_tumor_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 
 # results/concatenated_results
 concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'
 concatenated_pca_dir = BASE_DIR / 'results' / 'concatenated_pca'
+
+# results/integration_classification
 integration_classification_results_dir = BASE_DIR / 'results' / 'integration_classification'
 

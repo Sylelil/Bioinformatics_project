@@ -23,65 +23,6 @@ def remove_genes_with_median_0(data_frame):
     return data_frame, removed_genes
 
 
-def anderson_normality_test(data_frame_0, data_frame_1):
-    """
-    Description: Anderson test
-    :param data_frame_0: data frame containing gene expression values of normal patients
-    :param data_frame_1: data frame containing gene expression values of tumor patients
-    :return: genes names for which normality check holds
-    """
-    normal_genes = []
-    for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
-        statistic_0, pvalue_0, alpha_0 = stats.anderson(data_frame_0[gene])
-        pvalue_0_max = max(pvalue_0)
-
-        statistic_1, pvalue_1, alpha_1 = stats.anderson(data_frame_1[gene])
-        pvalue_1_max = max(pvalue_1)
-
-        if statistic_0 < pvalue_0_max and statistic_1 < pvalue_1_max:
-            normal_genes.append(gene)
-
-    return normal_genes
-
-
-def shapiro_normality_test(data_frame_0, data_frame_1, alpha):
-    """
-    Description: Shapiro test
-    :param alpha:
-    :param data_frame_0: data frame containing gene expression values of normal patients
-    :param data_frame_1: data frame containing gene expression values of tumor patients
-    :return: genes names for which normality check holds
-    """
-    normal_genes = []
-    for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
-        statistic_0, pvalue_0 = stats.shapiro(data_frame_0[gene])
-        statistic_1, pvalue_1 = stats.shapiro(data_frame_1[gene])
-
-        if pvalue_0 > alpha and pvalue_1 > alpha:
-            normal_genes.append(gene)
-
-    return normal_genes
-
-
-def normal_test(data_frame_0, data_frame_1, alpha):
-    """
-    Description: Normal test
-    :param alpha:
-    :param data_frame_0: data frame containing gene expression values of normal patients
-    :param data_frame_1: data frame containing gene expression values of tumor patients
-    :return: genes names for which normality check holds
-    """
-    normal_genes = []
-    for gene in tqdm(data_frame_0.columns, desc="Checking normality for each gene...", file=sys.stdout):
-        statistic_0, pvalue_0 = stats.normaltest(data_frame_0[gene])
-        statistic_1, pvalue_1 = stats.normaltest(data_frame_1[gene])
-
-        if pvalue_0 > alpha and pvalue_1 > alpha:
-            normal_genes.append(gene)
-
-    return normal_genes
-
-
 def mann_whitney_u_test(data_frame_0, data_frame_1, alpha):
     """
     Description: Non-parametric statistical test

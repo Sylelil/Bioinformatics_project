@@ -129,23 +129,8 @@ def read_config_file(config_file_path, section):
         if config['svm_t_rfe']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
             params['scoring_name'] = config['svm_t_rfe']['scoring']
-        elif config['svm_t_rfe']['scoring'] == 'matt_coef':
-            params['scoring'] = make_scorer(metrics.matthews_corrcoef)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
         elif config['svm_t_rfe']['scoring'] == 'recall':
             params['scoring'] = make_scorer(metrics.recall_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
-        elif config['svm_t_rfe']['scoring'] == 'precision':
-            params['scoring'] = make_scorer(metrics.precision_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
-        elif config['svm_t_rfe']['scoring'] == 'f1_score':
-            params['scoring'] = make_scorer(metrics.f1_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
-        elif config['svm_t_rfe']['scoring'] == 'sensitivity':
-            params['scoring'] = make_scorer(sensitivity_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
-        elif config['svm_t_rfe']['scoring'] == 'specificity':
-            params['scoring'] = make_scorer(specificity_score)
             params['scoring_name'] = config['svm_t_rfe']['scoring']
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
@@ -196,29 +181,6 @@ def read_config_file(config_file_path, section):
         exit(1)
 
     return params
-
-
-def eval_asymmetry_and_kurt(df):
-    n_skew_pos = 0
-    n_skew_neg = 0
-    n_kurt_1 = 0
-    n_kurt_2 = 0
-
-    for gene in tqdm(df.columns, desc="Evaluate asymmetry and kurt...", file=sys.stdout):
-        if stats.skew(df[gene]) > 0.5:
-            n_skew_pos += 1
-        elif stats.skew(df[gene]) < -0.5:
-            n_skew_neg += 1
-        if stats.kurtosis(df[gene]) > 0:
-            n_kurt_1 += 1
-        elif stats.kurtosis(df[gene]) < 0:
-            n_kurt_2 += 1
-
-    print(">> Percentage of genes with asymmetric distribution (verso sx): %.3f" % (100 * (n_skew_pos / len(df.columns))))
-    print(">> Percentage of genes with asymmetric distribution (verso dx): %.3f" % (100 * (n_skew_neg / len(df.columns))))
-    print(">> Percentage of genes with platykurtic distribution: %.3f" % (100 * (n_kurt_2 / len(df.columns))))
-    print(">> Percentage of genes with leptokurtic distribution: %.3f" % (100 * (n_kurt_1 / len(df.columns))))
-    return n_skew_pos, n_skew_neg, n_kurt_1, n_kurt_2
 
 
 def pca(X, y):

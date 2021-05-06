@@ -6,6 +6,7 @@ from os import path
 from pathlib import Path
 
 from config import paths
+from config.paths import BASE_DIR
 from genes import methods
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from genes.features_selection_methods.welch_t import genes_selection_welch_t
@@ -45,14 +46,17 @@ def main():
         sys.stderr.write(f'{paths.split_data_dir} does not exists')
         exit(2)
 
+    # config folder
+    genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
+
     if not os.path.exists(paths.welch_t_results_dir):
         os.makedirs(paths.welch_t_results_dir)
 
     if not os.path.exists(paths.svm_t_rfe_results_dir):
         os.makedirs(paths.svm_t_rfe_results_dir)
 
-    if not os.path.exists(paths.genes_config_dir):
-        os.makedirs(paths.genes_config_dir)
+    if not os.path.exists(genes_config_dir):
+        os.makedirs(genes_config_dir)
 
     if not os.path.exists(paths.welch_t_selected_features_train):
         os.makedirs(paths.welch_t_selected_features_train)
@@ -61,7 +65,6 @@ def main():
         os.makedirs(paths.welch_t_selected_features_test)
 
     if not os.path.exists(paths.svm_t_rfe_selected_features_train):
-        print("ok")
         os.makedirs(paths.svm_t_rfe_selected_features_train)
 
     if not os.path.exists(paths.svm_t_rfe_selected_features_test):
@@ -102,9 +105,6 @@ def main():
     n_features = len(X_train_val.columns)
     print(f">> Number of features (genes): {n_features}\n")
 
-    # Evaluate normality by skewness and kourt
-    methods.eval_asymmetry_and_kurt(X_train_val)
-
     # Apply logarithmic transformation on gene expression data
     # Description : x = Log(x+1), where x is the gene expression value
     print(f'\nLogarithmic transformation on gene expression data:'
@@ -140,7 +140,7 @@ def main():
 
     elif args.method == 'svm_t_rfe':
         # feature selection
-        selected_genes = genes_selection_svm_t_rfe(X_train_val, y_train_val, params, paths.svm_t_rfe_results_dir, paths.genes_config_dir)
+        selected_genes = genes_selection_svm_t_rfe(X_train_val, y_train_val, params, paths.svm_t_rfe_results_dir, genes_config_dir)
 
         # save selected genes on file
         selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \

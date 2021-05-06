@@ -2,9 +2,6 @@ from pathlib import Path
 
 BASE_DIR = Path('.')
 
-# config folder
-genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
-
 # assets folder
 images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI
 genes_dir = BASE_DIR / 'assets' / 'genes_files'      # Path ai dati di genomica

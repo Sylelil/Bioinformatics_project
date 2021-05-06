@@ -33,6 +33,11 @@ def main():
     if not os.path.exists(paths.split_data_dir):
         sys.stderr.write(f"File \"{paths.split_data_dir}\" not found")
         exit(1)
+        
+    normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
+    tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
+    low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
+    low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
 
     if not path.exists(paths.images_results):
         os.makedirs(paths.images_results)
@@ -43,17 +48,17 @@ def main():
     if not os.path.exists(paths.selected_tiles_dir):
         os.makedirs(paths.selected_tiles_dir)
 
-    if not os.path.exists(paths.normal_masked_images_dir):
-        os.makedirs(paths.normal_masked_images_dir)
+    if not os.path.exists(normal_masked_images_dir):
+        os.makedirs(normal_masked_images_dir)
 
-    if not os.path.exists(paths.tumor_masked_images_dir):
-        os.makedirs(paths.tumor_masked_images_dir)
+    if not os.path.exists(tumor_masked_images_dir):
+        os.makedirs(tumor_masked_images_dir)
 
-    if not os.path.exists(paths.low_res_normal_images_dir):
-        os.makedirs(paths.low_res_normal_images_dir)
+    if not os.path.exists(low_res_normal_images_dir):
+        os.makedirs(low_res_normal_images_dir)
 
-    if not os.path.exists(paths.low_res_tumor_images_dir):
-        os.makedirs(paths.low_res_tumor_images_dir)
+    if not os.path.exists(low_res_tumor_images_dir):
+        os.makedirs(low_res_tumor_images_dir)
 
     if not os.path.exists(paths.extracted_features_train):
         os.makedirs(paths.extracted_features_train)
@@ -75,13 +80,13 @@ def main():
     preprocessing.preprocessing_images(normal_slides_info, paths.selected_coords_dir,
                                        os.path.join(paths.images_results, "normal_filter_info.txt"),
                                        os.path.join(paths.images_results, "normal_tiles_info.txt"),
-                                       paths.low_res_normal_images_dir, paths.normal_masked_images_dir)
+                                       low_res_normal_images_dir, normal_masked_images_dir)
 
     print("\nTumor images preprocessing:")
     preprocessing.preprocessing_images(tumor_slides_info, paths.selected_coords_dir,
                                        os.path.join(paths.images_results, "tumor_filter_info.txt"),
                                        os.path.join(paths.images_results, "normal_tiles_info.txt"),
-                                       paths.low_res_tumor_images_dir, paths.tumor_masked_images_dir)
+                                       low_res_tumor_images_dir, tumor_masked_images_dir)
 
     slides_info = normal_slides_info + tumor_slides_info
     if args.method == 'fine_tuning':

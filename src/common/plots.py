@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib as mpl
 from sklearn import metrics
+import numpy as np
 
 mpl.rcParams['figure.figsize'] = (12, 10)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -44,6 +45,7 @@ def __plot_loss(history, label, n):
     plt.ylabel('Loss')
     plt.title('Model Loss')
     plt.legend(loc='upper right')
+    plt.grid(True)
 
 
 def __plot_metrics(history):
@@ -138,6 +140,20 @@ def plot_prc(name, labels, predictions, **kwargs):
     plt.grid(True)
     ax = plt.gca()
     ax.set_aspect('equal')
+
+
+def plot_explained_variance(explained_variance_ratio, path_to_save, n_components):
+    print(">> Plotting individual and cumulative explained variance...")
+    plt.figure()
+    plt.plot(np.cumsum(explained_variance_ratio), label='Cumulative explained variance', linewidth=2, marker='.')
+    plt.plot(explained_variance_ratio, label='Individual explained variance', linewidth=2, marker='.')
+    plt.ylabel('Explained variance ratio')
+    plt.xlabel('Number of components')
+    plt.legend(loc='best')
+    plt.grid(True)
+    plt.savefig(Path(path_to_save) / f'explained_variance_{n_components}')
+    plt.show()
+    print('>> Done.')
 
 
 

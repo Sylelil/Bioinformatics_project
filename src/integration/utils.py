@@ -10,6 +10,7 @@ from sklearn.decomposition import IncrementalPCA
 import matplotlib.pyplot as plt
 
 from config import paths
+from src.common import plots
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -90,6 +91,25 @@ def __scaling_pca(params, concatenated_pca_path, train_filepath, val_filepath, t
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 
+def get_concatenated_data(data_path):
+    """
+       Description: Apply StandardScaler and IncrementalPCA to data.
+       :param train_filepath: path of train data.
+       :param val_filepath: path of validation data.
+       :param test_filepath: path of test data.
+       :returns: X_train, y_train, X_val, y_val, X_test, y_test: data and labels
+    """
+    print('>> Reading data files...')
+    X_train = pd.read_csv(Path(data_path) / 'x_train.csv', delimiter=',', header=None).values
+    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values
+    X_val = pd.read_csv(Path(data_path) / 'x_val.csv', delimiter=',', header=None).values
+    y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values
+    X_test = pd.read_csv(Path(data_path) / 'x_test.csv', delimiter=',', header=None).values
+    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
+
+    return X_train, y_train.ravel().astype(int), X_val, y_val.ravel().astype(int), X_test, y_test.ravel().astype(int)
+
+
 def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
     """
        Description: Apply StandardScaler and IncrementalPCA to data.
@@ -99,7 +119,16 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
        :param test_filepath: path of test data.
        :returns: X_train, y_train, X_val, y_val, X_test, y_test: data and labels
     """
-    concatenated_pca_path = paths.concatenated_pca_dir / f"concatenated_pca_{params['pca']['n_components']}"
+    X_train = None
+    y_train = None
+    X_val = None
+    y_val = None
+    X_test = None
+    y_test = None
+    if params['general']['use_pca_scaled_features']:
+        concatenated_pca_path = paths.concatenated_results_dir / f"pca_{params['pca']['n_components']}"
+    else:
+        concatenated_pca_path = paths.concatenated_pca_dir / f"concatenated_pca_{params['pca']['n_components']}"
 
     if os.path.exists(concatenated_pca_path):
         print('>> Reading files with scaled and pca data previously computed...')
@@ -110,9 +139,13 @@ def compute_scaling_pca(params, train_filepath, val_filepath, test_filepath):
         X_test = np.load(Path(concatenated_pca_path) / 'x_test.npy')
         y_test = np.load(Path(concatenated_pca_path) / 'y_test.npy')
     else:
-        os.mkdir(concatenated_pca_path)
-        X_train, y_train, X_val, y_val, X_test, y_test = __scaling_pca(params, concatenated_pca_path, train_filepath,
-                                                                       val_filepath, test_filepath)
+        if params['general']['use_pca_scaled_features']:
+            print(f'error: path does not exist: {concatenated_pca_path}.')
+            exit()
+        else:
+            os.mkdir(concatenated_pca_path)
+            X_train, y_train, X_val, y_val, X_test, y_test = __scaling_pca(params, concatenated_pca_path, train_filepath,
+                                                                           val_filepath, test_filepath)
 
     return X_train, y_train, X_val, y_val, X_test, y_test
 
@@ -126,15 +159,7 @@ def plot_explained_variance_pca(params, train_filepath, val_filepath, test_filep
     explained_variance_ratio = __scaling_pca(params, concatenated_pca_path, train_filepath,
                                                                  val_filepath, test_filepath,
                                                                  get_explained_variance_ratio=True)
-    print(">> Plotting individual and cumulative explained variance...")
-    plt.figure()
-    plt.plot(np.cumsum(explained_variance_ratio), label='Cumulative explained variance', linewidth=2, marker='.')
-    plt.plot(explained_variance_ratio, label='Individual explained variance', linewidth=2, marker='.')
-    plt.ylabel('Explained variance ratio')
-    plt.xlabel('Number of components')
-    plt.legend(loc='best')
-    plt.savefig(Path(concatenated_pca_path) / 'explained_variance')
-    plt.show()
+    plots.plot_explained_variance(explained_variance_ratio, concatenated_pca_path)
     print('>> Done.')
 
 
@@ -155,10 +180,17 @@ def read_config_file(config_file_path):
         params['general']['random_state'] = None
     else:
         params['general']['random_state'] = config.getint('general', 'random_state')
+    params['general']['use_pca_scaled_features'] = config.getboolean('general', 'use_pca_scaled_features')
 
     # preprocessing
     params['preprocessing'] = {}
     params['preprocessing']['batchsize'] = config.getint('preprocessing', 'batchsize')
+
+    params['linearsvc'] = {}
+    params['linearsvc']['max_iter'] = config.getint('linearsvc', 'max_iter')
+
+    params['sgd'] = {}
+    params['sgd']['max_iter'] = config.getint('sgd', 'max_iter')
 
     # nn
     params['nn'] = {}

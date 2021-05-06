@@ -36,13 +36,39 @@ def binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight):
     return 1.0 - (recall_weight*recall + spec_weight*specificity)
 
 
-def custom_loss(recall_weight, spec_weight):
+# def custom_loss(recall_weight, spec_weight):
+#
+#     def recall_spec_loss(y_true, y_pred):
+#         return binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight)
+#
+#     # Returns the (y_true, y_pred) loss function
+#     return recall_spec_loss
 
-    def recall_spec_loss(y_true, y_pred):
-        return binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight)
 
-    # Returns the (y_true, y_pred) loss function
-    return recall_spec_loss
+def custom_loss(y_true, y_pred):
+    print('custom loss-----------------')
+    TN = tf.logical_and(K.eval(y_true) == 0, K.eval(y_pred) == 0)
+    TP = tf.logical_and(K.eval(y_true) == 1, K.eval(y_pred) == 1)
+
+    FP = tf.logical_and(K.eval(y_true) == 0, K.eval(y_pred) == 1)
+    FN = tf.logical_and(K.eval(y_true) == 1, K.eval(y_pred) == 0)
+
+    # Converted as Keras Tensors
+    TN = tf.reduce_sum(tf.cast(TN, tf.int64)).astype('int64')
+    # TN = tf.math.count_nonzero(TN)
+    #TN = K.sum(K.variable(TN))
+    print(TN)
+    FP = tf.reduce_sum(tf.cast(FP, tf.int64)).astype('int64')
+    # FP = tf.math.count_nonzero(FP)
+    # FP = K.sum(K.variable(FP))
+    print(FP)
+
+    specificity = TN / (TN + FP + K.epsilon())
+    recall = TP / (TP + FN + K.epsilon())
+
+    recall_weight = 0.9
+    spec_weight = 0.1
+    return 1.0 - (recall_weight * recall + spec_weight * specificity)
 
 
 def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
@@ -61,14 +87,14 @@ def make_model(n_input_features, units_1, units_2, metrics=common.METRICS_keras,
         keras.layers.InputLayer(input_shape=(n_input_features,)),
         keras.layers.Dense(units_1, activation='relu', ),
         keras.layers.Dropout(0.5),
-        keras.layers.Dense(units_2, activation='relu'),
-        keras.layers.Dropout(0.5),
+        # keras.layers.Dense(units_2, activation='relu'),
+        # keras.layers.Dropout(0.5),
         keras.layers.Dense(1, activation='sigmoid', bias_initializer=output_bias),
     ])
     # loss = custom_loss(recall_weight=0.9, spec_weight=0.1)
     model.compile(optimizer=keras.optimizers.Adam(lr=1e-3),
                   loss=keras.losses.BinaryCrossentropy(),
-                  # loss=loss,
+                  # loss=custom_loss,
                   metrics=metrics,
                   # run_eagerly=True
                   )
@@ -117,7 +143,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, u
     return y_pred_test, y_pred_train, test_scores, history
 
 
-def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
+def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath, data_path):
     """
        Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
        :param args: arguments.

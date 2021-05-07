@@ -8,7 +8,7 @@ from config import paths
 from images import preprocessing, slide_info
 from images.features_extraction_methods.fine_tuning import fine_tuning
 from images.features_extraction_methods.fixed_feature_generator import fixed_feature_generator
-from src.data_manipulation import split_data
+from src.common import split_data
 
 
 def main():
@@ -33,6 +33,11 @@ def main():
     if not os.path.exists(paths.split_data_dir):
         sys.stderr.write(f"File \"{paths.split_data_dir}\" not found")
         exit(1)
+        
+    normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
+    tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
+    low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
+    low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
 
     normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'

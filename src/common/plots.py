@@ -1,9 +1,14 @@
 from pathlib import Path
-import matplotlib.pyplot as plt
-import seaborn as sns
 import matplotlib as mpl
-from sklearn import metrics
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib.colors import ListedColormap
+from sklearn import metrics
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
 
 mpl.rcParams['figure.figsize'] = (12, 10)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -27,6 +32,7 @@ def plot_loss2(model_history):
     plt.title('Model Loss')
     plt.show()
 '''
+
 
 def __plot_loss(history, label, n):
     """
@@ -155,5 +161,206 @@ def plot_explained_variance(explained_variance_ratio, path_to_save, n_components
     plt.show()
     print('>> Done.')
 
+
+def pca(X, y):
+    """
+        Description: Plot data in 2D with PCA, by considering the first 2 principal components
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
+    pca = PCA(n_components=2, random_state=42)
+    pca_results = pca.fit_transform(X)
+    print('>> Cumulative explained variation for 2 principal components: {}'.format(
+        np.sum(pca.explained_variance_ratio_)))
+
+    df_pca = pd.DataFrame(
+        dict(pca_one=pca_results[:, 0], pca_two=pca_results[:, 1], y=y))
+    plt.figure(figsize=(16, 7))
+    sns.scatterplot(
+        x="pca_one", y="pca_two",
+        hue="y",
+        palette=sns.color_palette("hls", 2),
+        data=df_pca,
+        legend="full",
+        alpha=0.9,
+    )
+    plt.xlabel('pca_one')
+    plt.ylabel('pca_two')
+    plt.show()
+
+
+def pca_3D(X, y):
+    """
+        Description: Plot data in 3D with PCA, by considering the first 3 principal components
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+
+    """
+    pca = PCA(n_components=3, random_state=42)
+    pca_results = pca.fit_transform(X)
+    print('>> Cumulative explained variation for 3 principal components: {}'.format(
+        np.sum(pca.explained_variance_ratio_)))
+
+    ax = plt.figure(figsize=(16, 10)).gca(projection='3d')
+    scatter = ax.scatter(
+        xs=pca_results[:, 0],
+        ys=pca_results[:, 1],
+        zs=pca_results[:, 2],
+        c=y,
+        cmap='tab10'
+    )
+    legend = ax.legend(*scatter.legend_elements())
+    ax.set_xlabel('pca-one')
+    ax.set_ylabel('pca-two')
+    ax.set_zlabel('pca-three')
+    ax.add_artist(legend)
+
+    plt.show()
+
+
+def tsne_pca(X, y):
+    """
+        Description: Plot data in 2D with t-SNE, by first applying PCA on the 50 principal components
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
+    pca_50 = PCA(n_components=50, random_state=42)
+    pca_result_50 = pca_50.fit_transform(X)
+    print('>> Cumulative explained variation for 50 principal components: {}'.format(
+        np.sum(pca_50.explained_variance_ratio_)))
+
+    tsne = TSNE(n_components=2, random_state=42)
+    tsne_pca_results = tsne.fit_transform(pca_result_50)
+
+    df_tsne_pca = pd.DataFrame(
+        dict(tsne_pca50_one=tsne_pca_results[:, 0], tsne_pca50_two=tsne_pca_results[:, 1], y=y))
+    plt.figure(figsize=(16, 7))
+    sns.scatterplot(
+        x="tsne_pca50_one", y="tsne_pca50_two",
+        hue="y",
+        palette=sns.color_palette("hls", 2),
+        data=df_tsne_pca,
+        legend="full",
+        alpha=0.9,
+    )
+    plt.xlabel('tsne_pca50_one')
+    plt.ylabel('tsne_pca50_two')
+    plt.show()
+
+
+def tsne(X, y):
+    """
+        Description: Plot data in 2D with t-SNE
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+            labels (0/1)
+    """
+
+    tsne = TSNE(n_components=2, random_state=42)
+    tsne_results = tsne.fit_transform(X)
+
+    df_tsne = pd.DataFrame(
+        dict(tsne_one=tsne_results[:, 0], tsne_two=tsne_results[:, 1], y=y))
+    plt.figure(figsize=(16, 7))
+    sns.scatterplot(
+        x="tsne_one", y="tsne_two",
+        hue="y",
+        palette=sns.color_palette("hls", 2),
+        data=df_tsne,
+        legend="full",
+        alpha=0.9,
+    )
+    plt.xlabel('tsne_one')
+    plt.ylabel('tsne_two')
+    plt.show()
+
+
+def tsne_3D(X, y):
+    """
+        Description: Plot data in 3D with t-SNE
+
+        :param X: 2D-numpy array, shape = [n_samples, n_features],
+            where n_samples is the number of samples and n_features is the number of SCALED features.
+
+        :param y: array-like, shape = [n_samples]
+             labels (0/1)
+     """
+
+    tsne = TSNE(n_components=3, random_state=42)
+    tsne_results = tsne.fit_transform(X)
+
+    ax = plt.figure(figsize=(16, 10)).gca(projection='3d')
+    scatter = ax.scatter(
+        xs=tsne_results[:, 0],
+        ys=tsne_results[:, 1],
+        zs=tsne_results[:, 2],
+        c=y,
+        cmap='tab10'
+    )
+    legend = ax.legend(*scatter.legend_elements())
+    ax.set_xlabel('tsne-one')
+    ax.set_ylabel('tsne-two')
+    ax.set_zlabel('tsne-three')
+    ax.add_artist(legend)
+
+    plt.show()
+
+
+def show_2D_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
+    """
+        Description: show 2D decision boundary for SVM fit on first 2 features
+
+        :param clf: SVM classifier
+
+        :param X_train: 2D-numpy array, shape = [n_samples, 2],
+               where n_samples is the number of training samples and 2 is the number of SCALED features.
+
+        :param y_train: array-like, shape = [n_samples]
+                training labels (0/1)
+
+        :param X_test: 2D-numpy array, shape = [n_samples, 2],
+               where n_samples is the number of test samples and 2 is the number of SCALED features.
+
+        :param y_test: array-like, shape = [n_samples]
+                test labels (0/1)
+    """
+
+    h = .02  # step size in the mesh
+    x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
+    y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+
+    cm = plt.cm.RdBu
+    cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+
+    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+
+    # Plot the training points
+    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')
+    # Plot the testing points
+    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.6, edgecolors='k')
+    plt.xlim(xx.min(), xx.max())
+    plt.ylim(yy.min(), yy.max())
+    plt.xticks(())
+    plt.yticks(())
+    plt.show()
 
 

@@ -2,7 +2,6 @@ import argparse
 import math
 import os
 import sys
-from os import path
 from pathlib import Path
 from config.paths import BASE_DIR
 from config import paths
@@ -38,7 +37,7 @@ def main():
         sys.stderr.write(f'{paths.genes_dir} does not exists')
         exit(2)
 
-    if not path.exists(args.cfg) or (not path.isfile(args.cfg)):
+    if not os.path.exists(args.cfg) or (not os.path.isfile(args.cfg)):
         sys.stderr.write("Invalid path for config file")
         exit(2)
 

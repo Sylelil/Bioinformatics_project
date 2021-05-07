@@ -159,112 +159,8 @@ def plot_explained_variance_pca(params, train_filepath, val_filepath, test_filep
     explained_variance_ratio = __scaling_pca(params, concatenated_pca_path, train_filepath,
                                                                  val_filepath, test_filepath,
                                                                  get_explained_variance_ratio=True)
-    plots.plot_explained_variance(explained_variance_ratio, concatenated_pca_path)
+    plots.plot_explained_variance(explained_variance_ratio, concatenated_pca_path) # TODO n_componets
     print('>> Done.')
-
-    
-def __classification_report(y_test, y_pred_test, test_scores):
-    report = {}
-
-    # compute confusion matrix values:
-    confusion_matrix = metrics.confusion_matrix(y_test, y_pred_test)
-    report['Normal Detected (True Negatives)'] = confusion_matrix[0][0]
-    report['Normal Incorrectly Detected (False Positives)'] = confusion_matrix[0][1]
-    report['Tumor Missed (False Negatives)'] = confusion_matrix[1][0]
-    report['Tumor Detected (True Positives)'] = confusion_matrix[1][1]
-    report['Total Tumor'] = np.sum(confusion_matrix[1])
-
-    # add test scores:
-    report.update(test_scores)
-
-    # compute patch score and patient score:
-    report['patch_score'] = common.compute_patch_score(y_test, y_pred_test)
-    report['patient_avg_score'], patent_stddev_score = common.compute_patient_score(y_pred_test)
-
-    # compute further per-class scores:
-    per_class_report_dict = metrics.classification_report(y_test, y_pred_test)
-
-    return report, per_class_report_dict
-
-
-def __print_classification_report(experiment_info, report, per_class_report, file=sys.stdout):
-    print('Experiment details:', file=file)
-    print('-------------------', file=file)
-    for k, v in experiment_info.items():
-        print("{:<50} {:<15}".format(k, v), file=file)
-    print(file=file)
-
-    print('Test results:', file=file)
-    print('-------------', file=file)
-    for k, v in report.items():
-        print("{:<50} {:<15}".format(k, v), file=file)
-    print(file=file)
-    print(per_class_report, file=file)
-
-
-def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info):
-    # generate report:
-    print('>> Generating classification report...')
-    report, per_class_report = __classification_report(y_test, y_pred_test, test_scores)
-
-    # print on stdout:
-    __print_classification_report(experiment_info, report, per_class_report)
-
-    # print on file:
-    report_path = Path(save_path) / 'report.txt'
-    print(f'>> Saving classification report on file {report_path}...')
-    with open(report_path, 'w') as f:
-        __print_classification_report(experiment_info, report, per_class_report, file=f)
-
-'''
-def generate_classification_plots(save_path, classifier, X_train, y_train, X_test, y_test):
-    print(f'Generating classification plots, saved in {save_path}...')
-
-    # plot confusion matrix
-    plt.figure()
-    metrics.plot_confusion_matrix(classifier, X_test, y_test, values_format='')
-    plt.savefig(Path(save_path) / 'confusion_matrix')
-
-    # plot roc
-    plt.figure()
-    metrics.plot_roc_curve(classifier, X_train, y_train, ax=plt.gca(), name="Train")
-    metrics.plot_roc_curve(classifier, X_test, y_test, ax=plt.gca(), name="Test")
-    plt.legend(loc='lower right')
-    plt.savefig(Path(save_path) / 'roc')
-
-    # plot precision-recall curve
-    plt.figure()
-    metrics.plot_precision_recall_curve(classifier, X_train, y_train, ax=plt.gca(), name="Train")
-    metrics.plot_precision_recall_curve(classifier, X_test, y_test, ax=plt.gca(), name="Test")
-    plt.legend(loc='lower right')
-    plt.savefig(Path(save_path) / 'prc')
-
-    plt.show()
-'''
-
-def generate_classification_plots(save_path, y_test, y_pred_test, y_train, y_pred_train):
-    print(f'>> Generating classification plots and saving them in {save_path}...')
-
-    # plot confusion matrix
-    plt.figure()
-    plots.plot_cm(y_test, y_pred_test)
-    plt.savefig(Path(save_path) / 'confusion_matrix')
-
-    # plot roc
-    plt.figure()
-    plots.plot_roc("Train", y_train, y_pred_train)
-    plots.plot_roc("Test", y_test, y_pred_test)
-    plt.legend(loc='lower right')
-    plt.savefig(Path(save_path) / 'roc')
-
-    # plot precision-recall curve
-    plt.figure()
-    plots.plot_prc("Train", y_train, y_pred_train)
-    plots.plot_prc("Test", y_test, y_pred_test)
-    plt.legend(loc='lower right')
-    plt.savefig(Path(save_path) / 'prc')
-
-    plt.show()
 
 
 def read_config_file(config_file_path, classification_method):
@@ -307,14 +203,14 @@ def read_config_file(config_file_path, classification_method):
         params['pca_nn']['units_2'] = config.getint('pca_nn', 'units_2')
         params['pca_nn']['lr'] = config.getfloat('pca_nn', 'lr')
     elif classification_method == 'linearsvc':
-      params['linearsvc'] = {}
-      params['linearsvc']['max_iter'] = config.getint('linearsvc', 'max_iter')
+        params['linearsvc'] = {}
+        params['linearsvc']['max_iter'] = config.getint('linearsvc', 'max_iter')
     elif classification_method == 'sgd':
-      params['sgd'] = {}
-      params['sgd']['max_iter'] = config.getint('sgd', 'max_iter')
+        params['sgd'] = {}
+        params['sgd']['max_iter'] = config.getint('sgd', 'max_iter')
     else:
-      print("Invalid classification method")
-      exit(-1)
+        print("Invalid classification method")
+        exit(-1)
 
     # pca
     params['pca'] = {}

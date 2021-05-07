@@ -36,3 +36,8 @@ concatenated_pca_dir = BASE_DIR / 'results' / 'concatenated_pca'
 # results/integration_classification
 integration_classification_results_dir = BASE_DIR / 'results' / 'integration_classification'
 
+# results/genes_classification
+genes_classification_results_dir = BASE_DIR / 'results' / 'genes_classification'
+
+# results/images_classification
+images_classification_results_dir = BASE_DIR / 'results' / 'images_classification'

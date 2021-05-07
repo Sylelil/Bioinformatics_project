@@ -177,7 +177,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
     return y_pred_test, y_pred_train, test_scores, history
 
 
-def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath, data_path):
+def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     """
        Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
        :param args: arguments.

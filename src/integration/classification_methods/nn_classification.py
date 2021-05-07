@@ -98,7 +98,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
                         epochs=mlp_settings['EPOCHS'],
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_val, (None if use_generators else y_val)),
-                        validation_steps=(math.ceil(len(y_val) / mlp_settings['BATCH_SIZE']) if use_generators else None),
+                        validation_steps=((len(y_val) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None),
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
@@ -252,7 +252,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     val_generator = data_generator.csv_data_generator(val_filepath,
                                                       batchsize=batchsize,
                                                       scaler=scaler,
-                                                      mode='train',
+                                                      mode='eval',
                                                       balancer=None)
     print(f">> Creating test data generator with scaler...")
     test_generator = data_generator.csv_data_generator(test_filepath,

@@ -102,11 +102,12 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
-    X_train = data_generator.csv_data_generator(train_path,
-                                                        batchsize=mlp_settings['BATCH_SIZE'],
-                                                        scaler=scaler,
-                                                        mode='eval',
-                                                        balancer=balancer)
+    if use_generators:
+        X_train = data_generator.csv_data_generator(train_path,
+                                                    batchsize=mlp_settings['BATCH_SIZE'],
+                                                    scaler=scaler,
+                                                    mode='eval',
+                                                    balancer=balancer)
     print("Predict on train..")
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'],
                                  steps=((len(y_train) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
@@ -281,7 +282,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
                                                                    X_test=test_generator, y_test=y_test,
                                                                    mlp_settings=mlp_settings,
                                                                    balancer=balancer, scaler=scaler,
-                                                                   train_path= train_filepath,
+                                                                   train_path=train_filepath,
                                                                    use_generators=True)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)

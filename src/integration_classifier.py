@@ -5,10 +5,7 @@ from config import paths
 from src.integration import utils
 from src.integration.classification_methods import nn_classification, shallow_classification
 import matplotlib.pyplot as plt
-USE_GPU = False
-if not USE_GPU:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-import tensorflow as tf
+
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
@@ -46,7 +43,6 @@ def args_parse():
 
 
 def main():
-
     """
        Description: Train and test classifier on concatenated features, with possible preprocessing techniques and class balancing.
     """
@@ -105,8 +101,8 @@ def main():
             params['pca']['n_components'] = args.n_principal_components
             nn_classification.pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath)
         elif args.classification_method == 'nn':
-            with tf.device('/cpu:0'):
-                nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes, test_filepath_copied_genes)
+            nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes,
+                                            test_filepath_copied_genes)
 
 
 if __name__ == '__main__':

@@ -68,7 +68,7 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=common.METRICS_ke
     return model
 
 
-def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer, scaler, train_path,
+def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer=None, scaler=None, train_path=None,
                  use_generators=False):
     """
        Description: Train and test MLP classifier and show results.
@@ -79,6 +79,9 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
        :param X_test: test data.
        :param y_test: test labels.
        :param mlp_settings: dictionary with MLP settings.
+       :balancer: balancing method.
+       :scaler: scaling method.
+       :train_path: path to training data.
        :param use_generators: either or not to get data as generators.
     """
 

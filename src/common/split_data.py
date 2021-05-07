@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from src.genes import methods
+from src.genes import utils
 from src.images import slide_info
 import numpy as np
 
@@ -64,9 +64,9 @@ def get_genes_split_data(lookup_dir, val_data=True):
         print("%s not existing." % test_filepath)
         exit()
 
-    X_train, y_train = methods.read_genes_from_folder(train_filepath)
-    X_val, y_val = methods.read_genes_from_folder(val_filepath)
-    X_test, y_test = methods.read_genes_from_folder(test_filepath)
+    X_train, y_train = utils.read_genes_from_folder(train_filepath)
+    X_val, y_val = utils.read_genes_from_folder(val_filepath)
+    X_test, y_test = utils.read_genes_from_folder(test_filepath)
 
     if val_data:
         return X_train, X_val, X_test, y_train, y_val, y_test

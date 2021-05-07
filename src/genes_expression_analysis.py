@@ -3,13 +3,10 @@ import math
 import os
 import sys
 from pathlib import Path
-from config.paths import BASE_DIR
 from config import paths
 from config.paths import BASE_DIR
-from genes import methods
-from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
-from genes.features_selection_methods.welch_t import genes_selection_welch_t
-
+from genes import utils
+from genes.features_selection_method.svm_t_rfe import genes_selection_svm_t_rfe
 from src.common import split_data
 
 
@@ -27,8 +24,9 @@ def main():
 
     parser.add_argument('--method',
                         help='Feature extraction method',
-                        choices=['welch_t', 'svm_t_rfe'],
+                        choices=['svm_t_rfe'],
                         required=True,
+                        default='svm_t_rfe',
                         type=str)
 
     args = parser.parse_args()
@@ -44,26 +42,15 @@ def main():
     if not os.path.exists(paths.split_data_dir):
         sys.stderr.write(f'{paths.split_data_dir} does not exists')
         exit(2)
-    
-    genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
 
     # config folder
     genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
-
-    if not os.path.exists(paths.welch_t_results_dir):
-        os.makedirs(paths.welch_t_results_dir)
 
     if not os.path.exists(paths.svm_t_rfe_results_dir):
         os.makedirs(paths.svm_t_rfe_results_dir)
 
     if not os.path.exists(genes_config_dir):
         os.makedirs(genes_config_dir)
-
-    if not os.path.exists(paths.welch_t_selected_features_train):
-        os.makedirs(paths.welch_t_selected_features_train)
-
-    if not os.path.exists(paths.welch_t_selected_features_test):
-        os.makedirs(paths.welch_t_selected_features_test)
 
     if not os.path.exists(paths.svm_t_rfe_selected_features_train):
         os.makedirs(paths.svm_t_rfe_selected_features_train)
@@ -75,7 +62,7 @@ def main():
         os.makedirs(paths.svm_t_rfe_selected_features_val)
 
     # Read configuration file
-    params = methods.read_config_file(args.cfg, args.method)
+    params = utils.read_config_file(args.cfg, args.method)
 
     print("\nReading split gene expression data:")
     genes_splits_path = Path(paths.split_data_dir) / 'genes'
@@ -117,55 +104,29 @@ def main():
     print(">> Done")
 
     print("\nDifferentially gene expression analysis [DGEA]")
-    if args.method == 'welch_t':
-        # feature selection
-        selected_genes = genes_selection_welch_t(X_train_val, params, paths.welch_t_results_dir)
 
+    if args.method == 'svm_t_rfe':
+        # feature selection
+        selected_genes = genes_selection_svm_t_rfe(X_train_val, y_train_val, params, paths.svm_t_rfe_results_dir,
+                                                   genes_config_dir)
         # save selected genes on file
-        selected_genes_file = str(params['alpha']) + "_selected_genes.txt"
-        selected_genes_path = os.path.join(paths.welch_t_results_dir, selected_genes_file)
-        fp = open(selected_genes_path, "w")
+        fp = open(paths.svm_t_rfe_results_dir / "selected_genes.txt", "w")
         for gene in selected_genes:
             fp.write("%s\n" % gene)
         fp.close()
 
         # saving selected features
         print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], paths.welch_t_selected_features_train)
+        utils.save_selected_genes(X_train[selected_genes], paths.svm_t_rfe_selected_features_train)
 
         print("\nSaving selected validation gene features on disk...")
-        methods.save_selected_genes(X_val[selected_genes], paths.welch_t_selected_features_val)
+        utils.save_selected_genes(X_val[selected_genes], paths.svm_t_rfe_selected_features_val)
 
         print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], paths.welch_t_selected_features_test)
-
-    elif args.method == 'svm_t_rfe':
-        # feature selection
-        selected_genes = genes_selection_svm_t_rfe(X_train_val, y_train_val, params, paths.svm_t_rfe_results_dir, genes_config_dir)
-
-        # save selected genes on file
-        selected_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                              str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
-                              params['scoring_name'] + "_selected_genes.txt"
-
-        selected_genes_path = os.path.join(paths.svm_t_rfe_results_dir, selected_genes_file)
-        fp = open(selected_genes_path, "w")
-        for gene in selected_genes:
-            fp.write("%s\n" % gene)
-        fp.close()
-
-        # saving selected features
-        print("\nSaving selected training gene features on disk...")
-        methods.save_selected_genes(X_train[selected_genes], paths.svm_t_rfe_selected_features_train)
-
-        print("\nSaving selected validation gene features on disk...")
-        methods.save_selected_genes(X_val[selected_genes], paths.svm_t_rfe_selected_features_val)
-
-        print("\nSaving selected test gene features on disk...")
-        methods.save_selected_genes(X_test[selected_genes], paths.svm_t_rfe_selected_features_test)
+        utils.save_selected_genes(X_test[selected_genes], paths.svm_t_rfe_selected_features_test)
 
     else:
-        sys.stderr.write("Invalid value for <feature extraction method>")
+        sys.stderr.write("Invalid value for <feature selection method>")
         exit(1)
 
 

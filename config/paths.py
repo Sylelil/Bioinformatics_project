@@ -13,9 +13,6 @@ filename_splits_dir = BASE_DIR / 'assets' / 'filename_splits'  # filename splitt
 # results/feature_extraction/genes
 welch_t_results_dir = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'welch_t'
 svm_t_rfe_results_dir = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'svm_t_rfe'
-welch_t_selected_features_train = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'welch_t' / 'selected_features' / 'train'
-welch_t_selected_features_test = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'welch_t' / 'selected_features' / 'test'
-welch_t_selected_features_val = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'welch_t' / 'selected_features' / 'val'
 svm_t_rfe_selected_features_train = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'svm_t_rfe' / 'selected_features' / 'train'
 svm_t_rfe_selected_features_test = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'svm_t_rfe' / 'selected_features' / 'test'
 svm_t_rfe_selected_features_val = BASE_DIR / 'results' / 'feature_extraction' / 'genes' / 'svm_t_rfe' / 'selected_features' / 'val'
@@ -27,7 +24,6 @@ extracted_features_test = BASE_DIR / 'results' / 'feature_extraction' / 'images'
 extracted_features_val = BASE_DIR / 'results' / 'feature_extraction' / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'val'
 selected_coords_dir = BASE_DIR / 'results' / 'feature_extraction' / 'images' / 'selected_tiles' / 'coords'
 selected_tiles_dir = BASE_DIR / 'results' / 'feature_extraction' / 'images' / 'selected_tiles' / 'tiles'
-
 
 # results/concatenated_results
 concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'

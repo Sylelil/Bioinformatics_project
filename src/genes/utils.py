@@ -112,15 +112,16 @@ def read_config_file(config_file_path, section):
         params['cv_outer'] = config.getint('svm_t_rfe', 'cv_outer')
         params['top_ranked'] = config.getint('svm_t_rfe', 'top_ranked')
         params['t_stat_threshold'] = config.getfloat('svm_t_rfe', 't_stat_threshold')
+        params['scoring_name'] = config['svm_t_rfe']['scoring']
+
         if config['svm_t_rfe']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
         elif config['svm_t_rfe']['scoring'] == 'recall':
             params['scoring'] = make_scorer(metrics.recall_score)
-            params['scoring_name'] = config['svm_t_rfe']['scoring']
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
+
         if config['svm_t_rfe']['kernel'] == 'linear' or config['svm_t_rfe']['kernel'] == 'rbf':
             params['kernel'] = config['svm_t_rfe']['kernel']
         else:
@@ -130,6 +131,8 @@ def read_config_file(config_file_path, section):
         params['random_state'] = config.getint('general', 'random_state')
         params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
+        params['scoring_name'] = config['svm']['scoring']
+
         if config['svm']['kernel'] == 'linear' or config['svm']['kernel'] == 'rbf':
             params['kernel'] = config['svm']['kernel']
         else:
@@ -137,13 +140,18 @@ def read_config_file(config_file_path, section):
             exit(1)
         if config['svm']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
+        elif config['svm']['scoring'] == 'recall':
+            params['scoring'] = make_scorer(metrics.recall_score)
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
+
     elif section == 'perceptron':
         params['random_state'] = config.getint('general', 'random_state')
         params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('perceptron', 'cv_grid_search_acc')
+        params['scoring_name'] = config['perceptron']['scoring']
+
         if config['perceptron']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
         elif config['perceptron']['scoring'] == 'recall':
@@ -151,10 +159,13 @@ def read_config_file(config_file_path, section):
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
+
     elif section == 'sgd_classifier':
         params['random_state'] = config.getint('general', 'random_state')
         params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('sgd_classifier', 'cv_grid_search_acc')
+        params['scoring_name'] = config['sgd_classifier']['scoring']
+
         if config['sgd_classifier']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
         elif config['sgd_classifier']['scoring'] == 'recall':
@@ -162,6 +173,7 @@ def read_config_file(config_file_path, section):
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
+
     else:
         sys.stderr.write("Invalid value for <section> in config file")
         exit(1)

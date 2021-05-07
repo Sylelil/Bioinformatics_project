@@ -64,7 +64,7 @@ def __compute_patient_score(y_pred_test, lookup_dir):
     return patient_avg_score, patent_stddev_score
 
 
-def __classification_report(y_test, y_pred_test, test_scores, lookup_dir):
+def __classification_report(y_test, y_pred_test, test_scores, lookup_dir=None, patch_classification=True):
     """
        Description: Private function. Generate classification report.
        :param y_test: ground truth test labels.
@@ -86,8 +86,9 @@ def __classification_report(y_test, y_pred_test, test_scores, lookup_dir):
     report.update(test_scores)
 
     # compute patch score and patient score:
-    report['patch_score'] = __compute_patch_score(y_test, y_pred_test)
-    report['patient_avg_score'], patent_stddev_score = __compute_patient_score(y_pred_test, lookup_dir)
+    if patch_classification:
+        report['patch_score'] = __compute_patch_score(y_test, y_pred_test)
+        report['patient_avg_score'], patent_stddev_score = __compute_patient_score(y_pred_test, lookup_dir)
 
     # compute further per-class scores:
     per_class_report = metrics.classification_report(y_test, y_pred_test)
@@ -117,7 +118,7 @@ def __print_classification_report(experiment_info, report, per_class_report, fil
     print(per_class_report, file=file)
 
 
-def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info, lookup_dir=None):
+def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info, lookup_dir=None, patch_classification=True):
     """
        Description: Generate classification report.
        :param save_path: path to save report.
@@ -128,7 +129,7 @@ def generate_classification_report(save_path, y_test, y_pred_test, test_scores, 
     """
     # generate report:
     print('>> Generating classification report...')
-    report, per_class_report = __classification_report(y_test, y_pred_test, test_scores, lookup_dir)
+    report, per_class_report = __classification_report(y_test, y_pred_test, test_scores, lookup_dir, patch_classification)
 
     # print on stdout:
     __print_classification_report(experiment_info, report, per_class_report)

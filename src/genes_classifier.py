@@ -1,23 +1,22 @@
 import argparse
 import os
 import sys
-from os import path
-from imblearn.metrics import classification_report_imbalanced, sensitivity_score, specificity_score
+from pathlib import Path
 from imblearn.over_sampling import SMOTE
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import Perceptron, SGDClassifier
-from sklearn.metrics import accuracy_score, precision_score, average_precision_score, recall_score, \
-    plot_confusion_matrix, plot_roc_curve, roc_curve, precision_recall_fscore_support
-from sklearn.model_selection import KFold, GridSearchCV, StratifiedKFold, RepeatedStratifiedKFold
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import  GridSearchCV, StratifiedKFold
 from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
-import matplotlib.pyplot as plt
 from config import paths
-from genes import methods
-from common.plots import tsne_pca
-from common.plots import show_2D_svm_decision_boundary
+from genes import utils
+from common.plots import plot_tsne_pca
+from common.plots import plot_2D_svm_decision_boundary
 from common.classification_report_utils import generate_classification_plots
+from common.classification_report_utils import generate_classification_report
+from common.classification_metrics import METRICS_skl
 import numpy as np
 
 
@@ -55,16 +54,19 @@ def main():
         print("Directory " + str(paths.svm_t_rfe_selected_features_test) + " doesn't exists or is empty")
         exit(1)
 
-    if not path.exists(paths.genes_classification_results_dir):
-        os.makedirs(paths.genes_classification_results_dir)
+    # path to save results:
+    experiment_descr = f"CLF_{args.classification_method}"
+    results_path = Path(paths.genes_classification_results_dir) / experiment_descr
+    if not os.path.exists(results_path):
+        os.makedirs(results_path)
 
     # Read configuration file
-    params = methods.read_config_file(args.cfg, args.classification_method)
+    params = utils.read_config_file(args.cfg, args.classification_method)
 
     print("Reading gene expression data from disk..")
-    X_train, y_train, t_train = methods.load_selected_genes(paths.svm_t_rfe_selected_features_train)
-    X_val, y_val, t_val = methods.load_selected_genes(paths.svm_t_rfe_selected_features_val)
-    X_test, y_test, t_test = methods.load_selected_genes(paths.svm_t_rfe_selected_features_test)
+    X_train, y_train, t_train = utils.load_selected_genes(paths.svm_t_rfe_selected_features_train)
+    X_val, y_val, t_val = utils.load_selected_genes(paths.svm_t_rfe_selected_features_val)
+    X_test, y_test, t_test = utils.load_selected_genes(paths.svm_t_rfe_selected_features_test)
 
     # train + val
     X_train = np.concatenate((X_train, X_val), axis=0)
@@ -73,8 +75,8 @@ def main():
     # Data visualization
     print("\nData visualization:")
     scaler = StandardScaler()
-    tsne_pca(scaler.fit_transform(X_train), y_train)
-    tsne_pca(scaler.transform(X_test), y_test)
+    plot_tsne_pca(Path(paths.genes_classification_results_dir) / 'train_tsne_pca.png', scaler.fit_transform(X_train), y_train)
+    plot_tsne_pca(Path(paths.genes_classification_results_dir) / 'test_tsne_pca.png', scaler.transform(X_test), y_test)
 
     classifier_str = ''
     param_grid = {}
@@ -102,7 +104,7 @@ def main():
 
         # Show decision boundary for svm trained on the first 2 features
         scaler = StandardScaler()
-        show_2D_svm_decision_boundary(clf, scaler.fit_transform(X_train[:, :2]), y_train, scaler.transform(X_test[:, :2]), y_test)
+        plot_2D_svm_decision_boundary(Path(results_path) / '2D_svm_decision_boundary.png', clf, scaler.fit_transform(X_train[:, :2]), y_train, scaler.transform(X_test[:, :2]), y_test)
 
         # Fit svm model on all features
         # define model
@@ -144,43 +146,35 @@ def main():
 
     # best configuration
     print("\nResults with best parameters:")
-    print('>> Mean Cross-Validation Accuracy: %.3f' % results.best_score_)
+    print(f">> Mean cross-validated score of the best_estimator ({params['scoring_name']}): {results.best_score_}")
     print('>> Config: %s' % results.best_params_)
 
     # summarize all
     print("\nAll configurations of parameters:")
     means = results.cv_results_['mean_test_score']
-    params = results.cv_results_['params']
-    for mean, param in zip(means, params):
-        print(">> Mean Cross-Validation Accuracy = %.3f with: %r" % (mean, param))
+    clf_params = results.cv_results_['params']
+    for mean, param in zip(means, clf_params):
+        print(f">> Mean cross-validated score ({params['scoring_name']}) = {mean} with: {param}")
 
     print("Predict on train..")
     y_pred_train = clf.predict(X_train)
     print("Predict on test..")
     y_pred_test = clf.predict(X_test)
 
-    print("\nMetrics on test set:")
-    generate_classification_plots(paths.genes_classification_results_dir, y_test, y_pred_test, y_train, y_pred_train)
-    '''
-    print(">> Test accuracy: %f" % accuracy_score(y_test, y_pred_test))
-    average_precision = average_precision_score(y_test, y_pred_test, pos_label=1)
-    precision = precision_score(y_test, y_pred_test, average='binary', pos_label=1)
-    recall = recall_score(y_test, y_pred_test, average='binary', pos_label=1)
-    sensitivity = sensitivity_score(y_test, y_pred_test, average='binary', pos_label=1)
-    specificity = specificity_score(y_test, y_pred_test, average='binary', pos_label=1)
+    test_scores = {}
+    for metr in METRICS_skl:
+        test_scores[metr.__name__] = metr(y_test, y_pred_test)
 
-    print('>> Average precision-recall score: %f' % average_precision)
-    print('>> Precision score: %f' % precision)
-    print('>> Recall score: %f' % recall)
-    print('>> sensitivity: %f' % sensitivity)
-    print('>> specificity: %f' % specificity)
+    # generate classification report:
+    experiment_info = {}
+    experiment_info['Classification method'] = str(args.classification_method)
+    experiment_info['Best hyperparameter'] = f"{'C' if args.classification_method == 'svm' else 'max_iter'}={results.best_params_}"
+    experiment_info['Mean cross-validated score'] = f"{params['scoring_name']} = {results.best_score_}"
+    generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info, patch_classification=False)
 
-    print(classification_report_imbalanced(y_test, y_pred_test))
-    plot_confusion_matrix(clf, X_test, y_test)
-    plt.show()
-    plot_roc_curve(clf, X_test, y_test)
-    plt.show()
-    '''
+    # generate plots:
+    generate_classification_plots(results_path, y_test, y_pred_test, y_train, y_pred_train)
+    print('>> Done')
 
 
 if __name__ == "__main__":

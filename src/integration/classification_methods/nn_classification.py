@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 from config import paths
+from src.common.classification_metrics import METRICS_keras
 from src.integration import data_generator, utils
 from src.common import plots, classification_report_utils
 from src.integration.classification_methods import common
@@ -72,7 +73,7 @@ def custom_loss(y_true, y_pred):
     return 1.0 - (recall_weight * recall + spec_weight * specificity)
 
 
-def make_model(n_input_features, lr, units_1, units_2, metrics=common.METRICS_keras, output_bias=None):
+def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, output_bias=None):
     """
        Description: Create MLP model.
        :param n_input_features: number of input features.

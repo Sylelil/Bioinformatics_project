@@ -1,5 +1,7 @@
 import os
 import sys
+from pathlib import Path
+
 from numpy.linalg import norm
 from tqdm import tqdm
 import numpy as np
@@ -7,7 +9,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
-from . import common
+from . import methods
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
@@ -35,26 +37,9 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
             genes names selected with SVM-T-RFE algorithm
     """
 
-    # File names
-    ranking_genes_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                         str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
-                         params['scoring_name'] + "_ranked_genes.txt"
-
-    c_values_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                    str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
-                    params['scoring_name'] + "_cvalues.txt"
-
-    scores_plot = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
-                  str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" +\
-                  params['scoring_name'] + "_scores.png"
-
-    welch_t_p_values_plot = str(params['alpha']) + "_welch_t_p_values.png"
-
-    sorted_t_stats_plot = str(params['alpha']) + "_ sorted_t_stats.png"
-
     # Pre-filtering: Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
-    df, removed_genes = common.remove_genes_with_median_0(df)
+    df, removed_genes = methods.remove_genes_with_median_0(df)
     n_features = len(df.columns)  # update number of features
 
     print(f'>> Number of genes removed: {len(removed_genes)}'
@@ -65,7 +50,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # Welch t test
     print("\n[DGEA statistical test] Welch t-test statistics:")
-    welch_dict = common.welch_t_test(df_0, df_1, params['alpha'])
+    welch_dict = methods.welch_t_test(df_0, df_1, params['alpha'])
 
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
@@ -74,18 +59,18 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     # frequenza dei valori di p-value sotto l'ipotesi nulla
     plt.hist(welch_dict['all_p_values'])
     plt.xlabel("p values Welch t-test")
+    plt.savefig(Path(results_dir) / "welch_t_p_values.png")
     plt.show()
     plt.close()
-    #plt.savefig(os.path.join(results_dir, welch_t_p_values_plot))
 
     # Print t-statistics per selezionare i top che hanno t-statistics
     abs_t_statistics = [abs(x) for x in welch_dict['all_t_values']]
     sorted_t_statistics = sorted(abs_t_statistics)
     x = np.linspace(0, 30000, len(sorted_t_statistics))
     plt.plot(x, sorted_t_statistics)
+    plt.savefig(Path(results_dir) / "sorted_t_stats.png")
     plt.show()
     plt.close()
-    #plt.savefig(os.path.join(results_dir, sorted_t_stats_plot))
 
     welch_t_bonferroni_genes_path = os.path.join(results_dir, "welch_t_bonferroni_genes.txt")
     fp = open(welch_t_bonferroni_genes_path, "w")
@@ -103,13 +88,14 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # svm t rfe
     print("\n[DGEA svm-t-rfe]:")
-    path_to_c_values = os.path.join(config_dir, c_values_file)
 
     # Rank
-    ranked_genes = ranking_genes(df_reduced, y, selected_t_statistics, params, path_to_c_values)
+    c_values_file = str(params['alpha']) + "_" + str(params['t_stat_threshold']) + "_" + \
+                    str(params['theta']) + "_" + str(params['cv_grid_search_rank']) + "_" + \
+                    params['scoring_name'] + "_cvalues.txt"
+    ranked_genes = ranking_genes(df_reduced, y, selected_t_statistics, params, Path(config_dir) / c_values_file)
 
-    ranking_genes_path = os.path.join(results_dir, ranking_genes_file)
-    file_genes = open(ranking_genes_path, "w")
+    file_genes = open(Path(results_dir) / "ranked_genes.txt", "w")
     for gene_name in ranked_genes:
         file_genes.write("%s\n" % gene_name)
     file_genes.close()
@@ -127,9 +113,9 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.xlabel("Number of top ranked genes")
     plt.ylabel(params['scoring_name'])
     plt.margins(x=0)
+    plt.savefig(Path(results_dir) / "scores.png")
     plt.show()
     plt.close()
-    #plt.savefig(os.path.join(results_dir, scores_plot))
 
     num_selected = 200
     return ranked_genes[:num_selected]
@@ -161,7 +147,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         fp = open(path_to_c_values, 'r')
         lines = fp.readlines()
         for i, c in enumerate(lines):
-            if common.is_float(c):
+            if methods.is_float(c):
                 c_values.append(float(c))
             else:
                 print(f'Line {i} is corrupt!')

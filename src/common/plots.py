@@ -162,9 +162,11 @@ def plot_explained_variance(explained_variance_ratio, path_to_save, n_components
     print('>> Done.')
 
 
-def pca(X, y):
+def plot_pca(path_to_save, X, y):
     """
         Description: Plot data in 2D with PCA, by considering the first 2 principal components
+
+        :param path_to_save: path to save figure
 
         :param X: 2D-numpy array, shape = [n_samples, n_features],
             where n_samples is the number of samples and n_features is the number of SCALED features.
@@ -190,12 +192,15 @@ def pca(X, y):
     )
     plt.xlabel('pca_one')
     plt.ylabel('pca_two')
+    plt.savefig(path_to_save)
     plt.show()
 
 
-def pca_3D(X, y):
+def plot_pca_3D(path_to_save, X, y):
     """
         Description: Plot data in 3D with PCA, by considering the first 3 principal components
+
+        :param path_to_save: path to save figure
 
         :param X: 2D-numpy array, shape = [n_samples, n_features],
             where n_samples is the number of samples and n_features is the number of SCALED features.
@@ -222,13 +227,15 @@ def pca_3D(X, y):
     ax.set_ylabel('pca-two')
     ax.set_zlabel('pca-three')
     ax.add_artist(legend)
-
+    plt.savefig(path_to_save)
     plt.show()
 
 
-def tsne_pca(X, y):
+def plot_tsne_pca(path_to_save, X, y):
     """
         Description: Plot data in 2D with t-SNE, by first applying PCA on the 50 principal components
+
+        :param path_to_save: path to save figure
 
         :param X: 2D-numpy array, shape = [n_samples, n_features],
             where n_samples is the number of samples and n_features is the number of SCALED features.
@@ -257,12 +264,15 @@ def tsne_pca(X, y):
     )
     plt.xlabel('tsne_pca50_one')
     plt.ylabel('tsne_pca50_two')
+    plt.savefig(path_to_save)
     plt.show()
 
 
-def tsne(X, y):
+def plot_tsne(path_to_save, X, y):
     """
         Description: Plot data in 2D with t-SNE
+
+        :param path_to_save: path to save figure
 
         :param X: 2D-numpy array, shape = [n_samples, n_features],
             where n_samples is the number of samples and n_features is the number of SCALED features.
@@ -287,12 +297,15 @@ def tsne(X, y):
     )
     plt.xlabel('tsne_one')
     plt.ylabel('tsne_two')
+    plt.savefig(path_to_save)
     plt.show()
 
 
-def tsne_3D(X, y):
+def plot_tsne_3D(path_to_save, X, y):
     """
         Description: Plot data in 3D with t-SNE
+
+        :param path_to_save: path to save figure
 
         :param X: 2D-numpy array, shape = [n_samples, n_features],
             where n_samples is the number of samples and n_features is the number of SCALED features.
@@ -317,13 +330,15 @@ def tsne_3D(X, y):
     ax.set_ylabel('tsne-two')
     ax.set_zlabel('tsne-three')
     ax.add_artist(legend)
-
+    plt.savefig(path_to_save)
     plt.show()
 
 
-def show_2D_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
+def plot_2D_svm_decision_boundary(path_to_save, clf, X_train, y_train, X_test, y_test):
     """
         Description: show 2D decision boundary for SVM fit on first 2 features
+
+        :param path_to_save: path to save figure
 
         :param clf: SVM classifier
 
@@ -361,6 +376,7 @@ def show_2D_svm_decision_boundary(clf, X_train, y_train, X_test, y_test):
     plt.ylim(yy.min(), yy.max())
     plt.xticks(())
     plt.yticks(())
+    plt.savefig(path_to_save)
     plt.show()
 
 

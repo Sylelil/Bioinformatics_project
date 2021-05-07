@@ -1,14 +1,13 @@
 import os
 from pathlib import Path
-
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
-
 from config import paths
 from src.common import classification_report_utils
 from src.integration import utils
 from src.integration.classification_methods import common
 from sklearn import metrics
+from src.common.classification_metrics import METRICS_skl
 
 
 def get_classifier(hyperparam, method_name, balancing, random_state, max_iter=1000):
@@ -95,7 +94,7 @@ def shallow_classifier(args, params, train_filepath, val_filepath, test_filepath
     y_pred_train = best_classifier.predict(X_train)
 
     test_scores = {}
-    for metr in common.METRICS_skl:
+    for metr in METRICS_skl:
         test_scores[metr.__name__] = metr(y_test, y_pred_test)
 
     # path to save results:

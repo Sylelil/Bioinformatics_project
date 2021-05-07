@@ -39,6 +39,11 @@ def main():
     low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
     low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
 
+    normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
+    tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
+    low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
+    low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
+
     if not path.exists(paths.images_results):
         os.makedirs(paths.images_results)
 

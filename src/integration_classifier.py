@@ -5,6 +5,7 @@ from config import paths
 from src.integration import utils
 from src.integration.classification_methods import nn_classification, shallow_classification
 import matplotlib.pyplot as plt
+
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 import tensorflow as tf
 
@@ -54,7 +55,7 @@ def main():
     args = args_parse()
 
     # Read configuration file
-    params = utils.read_config_file(args.cfg)
+    params = utils.read_config_file(args.cfg, args.classification_method)
 
     data_path = args.data
     concatenated_results_path = paths.concatenated_results_dir
@@ -113,8 +114,8 @@ def main():
             nn_classification.pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath, data_path)
 
         elif args.classification_method == 'nn':
-            nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes, test_filepath_copied_genes, data_path)
-
+            nn_classification.nn_classifier(args, params, train_filepath_copied_genes, val_filepath_copied_genes,
+                                            test_filepath_copied_genes)
 
 if __name__ == '__main__':
     main()

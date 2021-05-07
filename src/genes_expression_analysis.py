@@ -6,6 +6,7 @@ from os import path
 from pathlib import Path
 from config.paths import BASE_DIR
 from config import paths
+from config.paths import BASE_DIR
 from genes import methods
 from genes.features_selection_methods.svm_t_rfe import genes_selection_svm_t_rfe
 from genes.features_selection_methods.welch_t import genes_selection_welch_t
@@ -45,6 +46,9 @@ def main():
         sys.stderr.write(f'{paths.split_data_dir} does not exists')
         exit(2)
     
+    genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
+
+    # config folder
     genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
 
     if not os.path.exists(paths.welch_t_results_dir):

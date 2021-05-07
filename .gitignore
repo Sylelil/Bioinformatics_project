@@ -31,8 +31,6 @@ venv/
 .vscode/
 .ipynb_checkpoints/
 assets/
-results/**/numpy_normal
-results/**/numpy_tumor
 results/feature_extraction/genes/svm_t_rfe/selected_features
 results/feature_extraction/images
 results/concatenated_pca

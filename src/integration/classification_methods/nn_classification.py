@@ -104,7 +104,7 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, ou
     return model
 
 
-def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer=None, scaler=None, train_path=None,
+def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer=None, scaler=None, data_path=None,
                  use_generators=False):
     """
        Description: Train and test MLP classifier.
@@ -115,9 +115,9 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
        :param X_test: test data.
        :param y_test: test labels.
        :param mlp_settings: dictionary with MLP settings.
-       :balancer: balancing method.
-       :scaler: scaling method.
-       :train_path: path to training data.
+       :param balancer: balancing method.
+       :param scaler: scaling method.
+       :param data_path: path to data.
        :param use_generators: either or not to get data as generators (default: False).
        :returns: y_pred_test, y_pred_train, test_scores, history: validation and test results
     """
@@ -143,10 +143,10 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
                         verbose=1)
 
     if use_generators:
-        X_train = data_generator.csv_data_generator(train_path,
+        X_train = data_generator.csv_data_generator(data_path,
                                                     batchsize=mlp_settings['BATCH_SIZE'],
                                                     scaler=scaler,
-                                                    mode='eval',
+                                                    dataset_name='eval',
                                                     balancer=balancer)
     print("Predict on train..")
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'],
@@ -178,7 +178,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
     return y_pred_test, y_pred_train, test_scores, history
 
 
-def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath, data_path):
+def pca_nn_classifier(args, params, data_path):
     """
        Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
        :param args: arguments.
@@ -187,8 +187,8 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath,
        :param val_filepath: validation data path.
        :param test_filepath: test data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = utils.compute_scaling_pca(params, train_filepath, val_filepath,
-                                                                               test_filepath)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path)
+
     train_len = len(y_train)
     val_len = len(y_val)
     test_len = len(y_test)
@@ -226,7 +226,7 @@ def pca_nn_classifier(args, params, train_filepath, val_filepath, test_filepath,
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
 
 
-def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
+def nn_classifier(args, params, data_path):
     """
        Description: Train and test MLP classifier using data generators from csv files, then show results.
        :param args: arguments.
@@ -236,35 +236,11 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
        :param test_filepath: test data path.
     """
     batchsize = params['nn']['batchsize']
-
     scaler = StandardScaler()
 
-    print(">> Fitting scaler on train data and extracting labels...")
-    if os.path.exists(Path('assets') / 'concatenated_pca'):
-        y_train_path = Path('assets') / 'concatenated_pca' / 'y_train.npy'
-        y_val_path = Path('assets') / 'concatenated_pca' / 'y_val.npy'
-        y_test_path = Path('assets') / 'concatenated_pca' / 'y_test.npy'
-        y_train = np.load(y_train_path)
-        y_val = np.load(y_val_path)
-        y_test = np.load(y_test_path)
-        for chunk in tqdm(pd.read_csv(train_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_train_chunk = chunk.iloc[:, :-1]
-            scaler.partial_fit(X_train_chunk)
-    else:
-        y_train = []
-        y_val = []
-        y_test = []
-        for chunk in tqdm(pd.read_csv(train_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            X_train_chunk = chunk.iloc[:, :-1]
-            scaler.partial_fit(X_train_chunk)
-            y_train_chunk = chunk['label']
-            y_train.extend(y_train_chunk)
-        for chunk in tqdm(pd.read_csv(val_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            y_val_chunk = chunk['label']
-            y_val.extend(y_val_chunk)
-        for chunk in tqdm(pd.read_csv(test_filepath, chunksize=batchsize, iterator=True, dtype='float64')):
-            y_test_chunk = chunk['label']
-            y_test.extend(y_test_chunk)
+    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values
+    y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values
+    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
 
     train_len = len(y_train)
     val_len = len(y_val)
@@ -274,11 +250,17 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
     print(f'>> test len = {test_len}')
 
     # get number of features
-    with open(train_filepath, "r") as f:
+    with open(Path(data_path) / 'x_train.csv', "r") as f:
         line = f.readline()
         line = line.strip().split(",")
-        n_features = len(line) - 1  # -1 because we don't want to consider label!
+        n_features = len(line)
 
+    # fit scaler on train data
+    for chunk in tqdm(pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
+        X_train_chunk = chunk.iloc[:, :-1]
+        scaler.partial_fit(X_train_chunk)
+
+    # get balancing method
     balancer = None
     class_weight = None
     if args.balancing and args.balancing != 'weights':
@@ -287,23 +269,26 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
         class_weight = common.compute_class_weights(y_train)
 
     print(f">> Creating train data generator with scaler and {args.balancing} balancer...")
-    train_generator = data_generator.csv_data_generator(train_filepath,
+    train_generator = data_generator.csv_data_generator(data_path,
                                                         batchsize=batchsize,
                                                         scaler=scaler,
-                                                        mode='train',
-                                                        balancer=balancer)
+                                                        balancer=balancer,
+                                                        dataset_name='train',
+                                                        mode='train')
     print(f">> Creating validation data generator with scaler...")
-    val_generator = data_generator.csv_data_generator(val_filepath,
+    val_generator = data_generator.csv_data_generator(data_path,
                                                       batchsize=batchsize,
                                                       scaler=scaler,
-                                                      mode='eval',
-                                                      balancer=None)
+                                                      balancer=None,
+                                                      dataset_name='val',
+                                                      mode='eval')
     print(f">> Creating test data generator with scaler...")
-    test_generator = data_generator.csv_data_generator(test_filepath,
+    test_generator = data_generator.csv_data_generator(data_path,
                                                        batchsize=batchsize,
                                                        scaler=scaler,
-                                                       mode='eval',
-                                                       balancer=None)
+                                                       balancer=None,
+                                                       dataset_name='test',
+                                                       mode='eval')
     mlp_settings = {
         'n_input_features': n_features,
         'EPOCHS': params['nn']['epochs'],
@@ -325,7 +310,7 @@ def nn_classifier(args, params, train_filepath, val_filepath, test_filepath):
                                                                    X_test=test_generator, y_test=y_test,
                                                                    mlp_settings=mlp_settings,
                                                                    balancer=balancer, scaler=scaler,
-                                                                   train_path=train_filepath,
+                                                                   data_path=data_path,
                                                                    use_generators=True)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)

@@ -26,7 +26,7 @@ def __compute_patch_score(y, y_pred):
     return patch_score
 
 
-def __compute_patient_score(y_pred_test, lookup_dir):
+def __compute_patient_score(y_pred_test):
     """
         Description: Private function. Compute the patient score, defined as the fraction of patches of a single patient
                     that were correctly classified (per-patient patch score), averaged over all the patients:
@@ -34,10 +34,7 @@ def __compute_patient_score(y_pred_test, lookup_dir):
         :param y_pred_test: list of predictions.
         :returns: patient_avg_score, patent_stddev_score
     """
-    if lookup_dir is None:
-        test_data_info_path = Path(paths.concatenated_results_dir) / 'info_test.csv'
-    else:
-        test_data_info_path = Path(lookup_dir) / 'info_test.csv'
+    test_data_info_path = Path(paths.integration_classification_data_dir) / 'info_test.csv'
     test_info_df = pd.read_csv(test_data_info_path)
     test_info_df['y_pred_test'] = y_pred_test
     test_filenames_file = Path(paths.filename_splits_dir) / 'test_filenames.npy'
@@ -48,8 +45,6 @@ def __compute_patient_score(y_pred_test, lookup_dir):
     for filename in test_filenames:
         if filename not in filename_list:
             filename_list.append(filename)
-            # options = [f"{filename}_0", f"{filename}_1"]
-            # patient_info = test_info_df.loc[test_info_df['filename'].isin(options)]
             patient_info = test_info_df.loc[test_info_df['filename'] == filename]
             y_pred_patient = list(patient_info['y_pred_test'])
             y_patient = list(patient_info['label'])
@@ -64,7 +59,7 @@ def __compute_patient_score(y_pred_test, lookup_dir):
     return patient_avg_score, patent_stddev_score
 
 
-def __classification_report(y_test, y_pred_test, test_scores, lookup_dir=None, patch_classification=True):
+def __classification_report(y_test, y_pred_test, test_scores, patch_classification=True):
     """
        Description: Private function. Generate classification report.
        :param y_test: ground truth test labels.
@@ -88,7 +83,7 @@ def __classification_report(y_test, y_pred_test, test_scores, lookup_dir=None, p
     # compute patch score and patient score:
     if patch_classification:
         report['patch_score'] = __compute_patch_score(y_test, y_pred_test)
-        report['patient_avg_score'], patent_stddev_score = __compute_patient_score(y_pred_test, lookup_dir)
+        report['patient_avg_score'], patent_stddev_score = __compute_patient_score(y_pred_test)
 
     # compute further per-class scores:
     per_class_report = metrics.classification_report(y_test, y_pred_test)
@@ -118,7 +113,7 @@ def __print_classification_report(experiment_info, report, per_class_report, fil
     print(per_class_report, file=file)
 
 
-def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info, lookup_dir=None, patch_classification=True):
+def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info, patch_classification=True):
     """
        Description: Generate classification report.
        :param save_path: path to save report.
@@ -129,7 +124,7 @@ def generate_classification_report(save_path, y_test, y_pred_test, test_scores, 
     """
     # generate report:
     print('>> Generating classification report...')
-    report, per_class_report = __classification_report(y_test, y_pred_test, test_scores, lookup_dir, patch_classification)
+    report, per_class_report = __classification_report(y_test, y_pred_test, test_scores, patch_classification)
 
     # print on stdout:
     __print_classification_report(experiment_info, report, per_class_report)

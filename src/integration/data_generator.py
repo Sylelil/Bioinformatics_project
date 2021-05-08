@@ -1,19 +1,23 @@
+from pathlib import Path
+
 import numpy as np
 
 
-def csv_data_generator(inputPath, batchsize, scaler, mode="train", balancer=None):
+def csv_data_generator(inputPath, batchsize, scaler, balancer=None, dataset_name="train", mode='train'):
     """
        Description: Return method corresponding to the parameter 'method'.
        :param inputPath: path where input data is located.
        :param batchsize: size of each batch.
        :param scaler: standard scaler model.
-       :param mode: train or test mode.
+       :param dataset_name: train or test mode.
        :param balancer: class balancing model.
        :yields: batch data and labels
     """
+    filepath_data = Path(inputPath) / f'x_{dataset_name}.csv'
+    filepath_labels = Path(inputPath) / f'y_{dataset_name}.csv'
+
     # open the CSV file for reading
-    with open(inputPath, "r") as f:
-        f.readline()  # skip first line of file with header
+    with open(filepath_data, "r") as f_data, open(filepath_labels, "r") as f_labels:
         while True:
             # initialize our batches of data and labels
             X = []
@@ -22,15 +26,17 @@ def csv_data_generator(inputPath, batchsize, scaler, mode="train", balancer=None
 
             while len(X) < batchsize:
                 # attempt to read the next line of the CSV file
-                line = f.readline()
+                line = f_data.readline()
+                label = f_labels.readline()
                 # check to see if the line is empty, indicating we have
                 # reached the end of the file
                 if line == "":
                     # reset the file pointer to the beginning of the file
                     # and re-read the line
-                    f.seek(0)
-                    f.readline()  # skip first line of file with header
-                    line = f.readline()
+                    f_data.seek(0)
+                    f_labels.seek(0)
+                    line = f_data.readline()
+                    label = f_labels.readline()
                     # if we are evaluating we should now break from our
                     # loop to ensure we don't continue to fill up the
                     # batch from samples at the beginning of the file
@@ -38,8 +44,7 @@ def csv_data_generator(inputPath, batchsize, scaler, mode="train", balancer=None
                         break
                 # extract label and data
                 line = line.strip().split(",")
-                label = int(line[-1])
-                data = np.array([np.float64(x) for x in line[:-1]])
+                data = np.array([np.float64(x) for x in line])
                 # update our corresponding batches lists
                 X.append(data)
                 y.append(label)

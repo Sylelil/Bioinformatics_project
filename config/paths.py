@@ -27,7 +27,7 @@ selected_tiles_dir = BASE_DIR / 'results' / 'feature_extraction' / 'images' / 's
 
 # results/concatenated_results
 concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'
-concatenated_pca_dir = BASE_DIR / 'results' / 'concatenated_pca'
+integration_classification_data_dir = concatenated_results_dir / 'pca_700'
 
 # results/integration_classification
 integration_classification_results_dir = BASE_DIR / 'results' / 'integration_classification'

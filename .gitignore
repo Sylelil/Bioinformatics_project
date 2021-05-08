@@ -31,6 +31,7 @@ venv/
 .vscode/
 .ipynb_checkpoints/
 assets/
+results/
 results/feature_extraction/genes/svm_t_rfe/selected_features
 results/feature_extraction/images
 results/concatenated_pca

@@ -77,7 +77,7 @@ def copy_gene_features(df_gene_features, gene_copy_ratio):
     return df_genes_copied
 
 
-def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, gene_copy_ratio=1):
+def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, gene_copy_ratio):
     """
        Description: Concatenate gene features (possibly copied according to specified ratio) with tile features.
        :param lookup_dir_tiles: lookup directory with tile features
@@ -91,12 +91,11 @@ def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, 
     print(f">> Concatenating {dataset_name} data (with gene copy ratio = {gene_copy_ratio}):")
     print('----------------------------------------------------------------------------------')
 
-    if gene_copy_ratio == 1:
-        filepath_data = Path(path_to_save) / 'concat_data.csv'
-        filepath_data_info = Path(path_to_save) / 'concat_data_info.csv'
-    else:
-        filepath_data = Path(path_to_save) / 'concat_data_copied.csv'
-        filepath_data_info = Path(path_to_save) / 'concat_data_info_copied.csv'
+    filepath_data = Path(path_to_save) / f'x_{dataset_name}.csv'
+    filepath_labels = Path(path_to_save) / f'y_{dataset_name}.csv'
+    filepath_data_info = Path(path_to_save) / f'info_{dataset_name}.csv'
+    num_files = 0
+    num_positive = 0
 
     # get gene data
     print('>> Reading gene data...')
@@ -108,8 +107,9 @@ def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, 
     duplicates = df_gene_features[df_gene_features.index.duplicated()].index.values.tolist()
     if len(duplicates) >= 1:
         print(f"error: found {len(duplicates)} duplicated filenames: {duplicates}")
+        exit()
         print(f">> Ignoring duplicates...")
-    df_gene_features = df_gene_features.drop(index=duplicates)
+        df_gene_features = df_gene_features.drop(index=duplicates)
 
     # copy gene data according to ratio:
     if gene_copy_ratio == 1:
@@ -117,15 +117,17 @@ def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, 
     else:
         df_genes_copied = copy_gene_features(df_gene_features, gene_copy_ratio)
 
-    # read tile features of each slide:
-    print('>> Reading slide data and concatenating with gene data...')
-    with open(filepath_data, mode='w') as f_data, open(filepath_data_info, mode='w') as f_data_info:
+    print(f'>> Concatenating {dataset_name} slide data with gene data...')
+    with open(filepath_data, mode='w') as f_data, \
+            open(filepath_data_info, mode='w') as f_info, \
+            open(filepath_labels, mode='w') as f_labels:
         i = 0
         for np_file in tqdm(os.listdir(lookup_dir_tiles)):
+            num_files += 1
             file_path = os.path.join(lookup_dir_tiles, np_file)
             filename = os.path.splitext(np_file)[0]
-            if filename in duplicates:
-                continue
+            if filename.endswith('1'):
+                num_positive += 1
 
             # get list of tile features of a single slide from file
             slide_data = np.load(file_path)
@@ -134,39 +136,49 @@ def concatenate(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, 
             #    [coordx_2,coordy_2, feat_t_1_2, feat_t_2_2, feat_t_3_2, ...]   # tile 2
             #    [coordx_3,coordy_3, feat_t_1_3, feat_t_2_3, feat_t_3_3, ...]   # tile 3
             #    [...]]                                                         # tile ...
+            slide_info = slide_data[:, [0, 1]]
+            slide_features = slide_data[:, 2:]
 
             # concatenation: append gene data with that filename to each row of slides dataframe
             gene_data = df_genes_copied.loc[filename, :].values.tolist()
-            gene_data_list = [gene_data] * slide_data.shape[0]
+            gene_data_list = [gene_data] * slide_features.shape[0]
 
-            concatenated_data = np.append(slide_data, gene_data_list, axis=1)
+            concatenated_data = np.append(slide_features, gene_data_list, axis=1)
             # shape of concatenated_data:
-            #   [[coordx_1,coordy_1, feat_t_1_1, feat_t_2_1, ... , feat_g_1, feat_g_2, ..., label]   # tile 1
-            #    [coordx_2,coordy_2, feat_t_1_2, feat_t_2_2, ... , feat_g_1, feat_g_2, ..., label]   # tile 2
-            #    [coordx_3,coordy_3, feat_t_1_3, feat_t_2_3, ... , feat_g_1, feat_g_2, ..., label]   # tile 3
-            #    [...]]                                                                              # tile ...
+            #   [[feat_t_1_1, feat_t_2_1, ... , feat_g_1, feat_g_2, ..., label]   # tile 1
+            #    [feat_t_1_2, feat_t_2_2, ... , feat_g_1, feat_g_2, ..., label]   # tile 2
+            #    [feat_t_1_3, feat_t_2_3, ... , feat_g_1, feat_g_2, ..., label]   # tile 3
+            #    [...]]                                                           # tile ...
+            concatenated_data_no_label = concatenated_data[:, :-1]
+            labels_list = concatenated_data[:, -1:]
 
-            data_info = concatenated_data[:, [0, 1, -1]]
-            filename_column = [filename] * data_info.shape[0]
+            # data info
+            label_column = [filename[-1]] * slide_info.shape[0]
+            label_column_np = np.asarray([label_column])
+            filename_column = [filename] * slide_info.shape[0]
             filename_column_np = np.asarray([filename_column])
-            data_info_2 = np.append(data_info, filename_column_np.T, axis=1)
-
-            concat_features_labels = concatenated_data[:, 2:]
-
-            # save to csv
+            data_info_2 = np.append(slide_info, filename_column_np.T, axis=1)
+            data_info_2 = np.append(data_info_2, label_column_np.T, axis=1)
+            # write header
             if i == 0:
                 i = 1
                 # write column names at beginning of file
-                f_data_info.write('coord1,coord2,label,filename\n')
-                col_names_data = [f'feat_{x}' for x in range(len(concat_features_labels[0]) - 1)]
-                col_names_data.append('label\n')
-                f_data.write(','.join(col_names_data))
-            np.savetxt(f_data, concat_features_labels, delimiter=',', fmt='%s')
-            np.savetxt(f_data_info, data_info_2, delimiter=',', fmt='%s')
+                f_info.write('coord1,coord2,filename,label\n')
 
-    print(f'>> Concatenated features saved in in {filepath_data}')
-    print(f'>> Data information saved in {filepath_data_info}')
-    print('>> Done')
+            # save on file
+            np.savetxt(f_info, data_info_2, delimiter=',', fmt='%s')
+            np.savetxt(f_data, concatenated_data_no_label, delimiter=',', fmt='%s')
+            np.savetxt(f_labels, labels_list, delimiter=',', fmt='%s')
+
+    print()
+    print(f'Total number of samples processed: {num_files}')
+    print(f'Number of positive samples: {num_positive}')
+    print(f'Number of negative samples: {num_files - num_positive}')
+    print()
+    print(f'Concatenated features saved in in {filepath_data}')
+    print(f'Data information saved in {filepath_data_info}')
+    print()
+    print('>> Done.')
 
 
 def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, n_components=None, scaler=None, ipca=None, scaler_concatenated=None):
@@ -183,7 +195,7 @@ def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_na
     """
     print()
     print('--------------------------------------------')
-    print(f">> Concatenating {dataset_name} data):")
+    print(f">> Concatenating {dataset_name} data:")
     print('--------------------------------------------')
 
     filepath_data = Path(path_to_save) / f'x_{dataset_name}.csv'
@@ -316,15 +328,14 @@ def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_na
             np.savetxt(f_data, scaled_concatenated_data_no_label, delimiter=',', fmt='%s')
             np.savetxt(f_labels, labels_list, delimiter=',', fmt='%s')
 
-        print()
-        print(f'Total number of samples processed: {num_files}')
-        print(f'Number of positive samples: {num_positive}')
-        print(f'Number of negative samples: {num_files - num_positive}')
-        print()
-        print(f'Concatenated features saved in in {filepath_data}')
-        print(f'Data information saved in {filepath_data_info}')
-        print()
-        print('>> Done.')
+    print()
+    print(f'Total number of samples processed: {num_files}')
+    print(f'Number of positive samples: {num_positive}')
+    print(f'Number of negative samples: {num_files - num_positive}')
+    print()
+    print(f'Concatenated features saved in in {filepath_data}')
+    print(f'Data information saved in {filepath_data_info}')
+    print()
+    print('>> Done.')
 
-        return scaler, ipca, scaler_concatenated
-
+    return scaler, ipca, scaler_concatenated

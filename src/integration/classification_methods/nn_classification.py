@@ -129,9 +129,9 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
     model.summary()
 
     print(">> Fitting model on train data...")
-    print("num val steps: " + str(math.ceil(len(y_val) / mlp_settings['BATCH_SIZE'])))
+    print("num val steps: " + (len(y_val) // mlp_settings['BATCH_SIZE'] + 1))
     print("num train steps: " + str(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE'])))
-    print("num test steps: " + str(math.ceil(len(y_test) / mlp_settings['BATCH_SIZE'])))
+    print("num test steps: " + (len(y_test) // mlp_settings['BATCH_SIZE'] + 1))
     history = model.fit(x=X_train,
                         y=(None if use_generators else y_train),
                         steps_per_epoch=(len(y_train) // mlp_settings['BATCH_SIZE'] if use_generators else None),
@@ -139,7 +139,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
                         epochs=mlp_settings['EPOCHS'],
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_val, (None if use_generators else y_val)),
-                        validation_steps=(len(y_val) // mlp_settings['BATCH_SIZE'] if use_generators else None),
+                        validation_steps=((len(y_val) // mlp_settings['BATCH_SIZE'] + 1) if use_generators else None),
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
@@ -313,7 +313,7 @@ def nn_classifier(args, params, data_path, n_features_images):
                                                       scaler=scaler,
                                                       n_features_images=n_features_images,
                                                       balancer=None,
-                                                      dataset_name='train',
+                                                      dataset_name='val',
                                                       mode='eval')
     print(f">> Creating test data generator with scaler...")
     test_generator = data_generator.csv_data_generator(data_path,
@@ -388,7 +388,6 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
     experiment_info['Class balancing method'] = str(args.balancing)
 
     test_data_info_path = data_path / 'info_test.csv'
-    print(test_data_info_path)
     classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores,
                                                                experiment_info, test_data_info_path=test_data_info_path)
 

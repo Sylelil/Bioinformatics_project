@@ -20,12 +20,12 @@ def args_parse():
                         type=str)
     parser.add_argument('--classification_method',
                         help='Classification method',
-                        choices=['linearsvc', 'sgd', 'nn', 'pca_nn'],
+                        choices=['linearsvc', 'sgdclassifier', 'nn', 'pca_nn'],
                         required=False,
                         type=str)
     parser.add_argument('--balancing',
                         help='Class balancing method',
-                        choices=['random_upsampling', 'combined', 'smote', 'weights'],
+                        choices=['random_upsampling', 'smoteenn', 'smote', 'weights'],
                         required=False,
                         type=str)
 
@@ -49,20 +49,14 @@ def main():
         print("%s not existing." % data_path)
         exit()
 
-    if args.classification_method == 'linearsvc' or args.classification_method == 'sgd':
-        # if not args.n_principal_components:
-        #     print('error: missing argument <n_principal_components>.')
-        #     exit()
-        shallow_classification.shallow_classifier(args, params, data_path)
+    if args.classification_method == 'linearsvc' or args.classification_method == 'sgdclassifier':
+        shallow_classification.shallow_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
 
     elif args.classification_method == 'pca_nn':
-        if not args.n_principal_components:
-            print('error: missing argument <n_principal_components>.')
-            exit()
-        nn_classification.pca_nn_classifier(args, params, data_path)
+        nn_classification.pca_nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
 
     elif args.classification_method == 'nn':
-        nn_classification.nn_classifier(args, params, data_path)
+        nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
 
 
 if __name__ == '__main__':

@@ -22,12 +22,10 @@ def get_balancing_method(method, params):
     """
     if method == 'random_upsampling':
         return RandomOverSampler(random_state=params['general']['random_state'])
-    elif method == 'combined':
+    elif method == 'smoteenn':
         return SMOTEENN(random_state=params['general']['random_state'])
     elif method == 'smote':
         return SMOTE(random_state=params['general']['random_state'])
-    elif method == 'downsampling':
-        return ClusterCentroids(random_state=params['general']['random_state'])
     return None
 
 

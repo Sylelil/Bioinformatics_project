@@ -173,7 +173,7 @@ def main():
     generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info, patch_classification=False)
 
     # generate plots:
-    generate_classification_plots(results_path, y_test, y_pred_test, y_train, y_pred_train)
+    generate_classification_plots(results_path, clf, X_test, y_test, X_train, y_train)
     print('>> Done')
 
 

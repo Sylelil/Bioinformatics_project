@@ -13,26 +13,6 @@ from sklearn.manifold import TSNE
 mpl.rcParams['figure.figsize'] = (12, 10)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-'''
-def plot_loss2(model_history):
-    """
-       Description: Plot loss.
-       :param model_history: model history.
-    """
-    train_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][0]
-    valid_loss=[value for key, value in model_history.items() if 'loss' in key.lower()][1]
-    fig, ax1 = plt.subplots()
-    color = 'tab:blue'
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Loss', color=color)
-    ax1.plot(train_loss, '--', color=color, label='Train Loss')
-    ax1.plot(valid_loss, color=color, label='Valid Loss')
-    ax1.tick_params(axis='y', labelcolor=color)
-    plt.legend(loc='upper left')
-    plt.title('Model Loss')
-    plt.show()
-'''
-
 
 def __plot_loss(history, label, n):
     """
@@ -56,10 +36,10 @@ def __plot_loss(history, label, n):
 
 def __plot_metrics(history):
     """
-       Description: Private function. Plot train and validation metrics scores.
+       Description: Private function. Plot train and validation metrics scores for NN.
        :param history: model history.
     """
-    metrics = ['loss', 'prc', 'precision', 'recall']
+    metrics = ['loss', 'accuracy', 'precision', 'recall']
     for n, metric in enumerate(metrics):
         name = metric.replace("_", " ").capitalize()
         plt.subplot(2, 2, n+1)
@@ -75,6 +55,7 @@ def __plot_metrics(history):
         else:
             plt.ylim([0, 1.1])
 
+        plt.title(f'Model {name}')
         plt.legend()
 
 
@@ -100,7 +81,7 @@ def plot_cm(labels, predictions):
     """
     cm = metrics.confusion_matrix(labels, predictions)
     plt.figure(figsize=(5, 5))
-    sns.heatmap(cm, annot=True, fmt="d")
+    sns.heatmap(cm, annot=True, fmt="d", cmap="viridis")
     plt.title('Confusion matrix')
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
@@ -117,7 +98,7 @@ def plot_roc(name, labels, predictions, **kwargs):
     fp, tp, _ = metrics.roc_curve(labels, predictions)
     auc = metrics.roc_auc_score(labels, predictions)
 
-    plt.plot(fp, tp, label=f'{name}, auc={auc}', linewidth=2, **kwargs)
+    plt.plot(fp, tp, label=f'{name}, AUC={auc}', linewidth=2, **kwargs)
     plt.xlabel('False positive rate (Positive label: 1)')
     plt.ylabel('True positive rate (Positive label: 1)')
     plt.xlim([-0.1, 1.1])
@@ -125,7 +106,8 @@ def plot_roc(name, labels, predictions, **kwargs):
     plt.grid(True)
     ax = plt.gca()
     ax.set_aspect('equal')
-    plt.legend(loc=0)
+    plt.title('ROC curve')
+    plt.legend(loc='lower right')
 
 
 def plot_prc(name, labels, predictions, **kwargs):
@@ -133,12 +115,13 @@ def plot_prc(name, labels, predictions, **kwargs):
        Description: Plot Precision-Recall curve.
        :param name: title.
        :param labels: ground truth labels.
-       :param predictions: predicted labels.
+       :param predictions: predicted scores.
        :param **kwargs: plot arguments.
     """
     precision, recall, _ = metrics.precision_recall_curve(labels, predictions)
+    ap = metrics.average_precision_score(labels, predictions)
 
-    plt.plot(precision, recall, label=name, linewidth=2, **kwargs)
+    plt.plot(recall, precision, label=f'{name}, AP={ap}', linewidth=2, **kwargs)
     plt.xlabel('Recall (Positive label: 1)')
     plt.ylabel('Precision (Positive label: 1)')
     plt.xlim([-0.1, 1.1])
@@ -146,6 +129,8 @@ def plot_prc(name, labels, predictions, **kwargs):
     plt.grid(True)
     ax = plt.gca()
     ax.set_aspect('equal')
+    plt.title('Precision-Recall curve')
+    plt.legend(loc='lower right')
 
 
 def plot_explained_variance(explained_variance_ratio, path_to_save, n_components):
@@ -380,3 +365,48 @@ def plot_2D_svm_decision_boundary(path_to_save, clf, X_train, y_train, X_test, y
     plt.show()
 
 
+def plot_2D_svm_decision_boundary_integration(path_to_save, clf, X_train, y_train, X_test, y_test):
+    """
+        Description: show 2D decision boundary for SVM fit on first 2 features
+
+        :param path_to_save: path to save figure
+
+        :param clf: SVM classifier
+
+        :param X_train: 2D-numpy array, shape = [n_samples, 2],
+               where n_samples is the number of training samples and 2 is the number of SCALED features.
+
+        :param y_train: array-like, shape = [n_samples]
+                training labels (0/1)
+
+        :param X_test: 2D-numpy array, shape = [n_samples, 2],
+               where n_samples is the number of test samples and 2 is the number of SCALED features.
+
+        :param y_test: array-like, shape = [n_samples]
+                test labels (0/1)
+    """
+
+    h = .02  # step size in the mesh
+    x_min, x_max = min(X_train[:, 0].min(), X_test[:, 0].min()) - .5, max(X_train[:, 0].max(), X_test[:, 0].max()) + .5
+    y_min, y_max = min(X_train[:, 1].min(), X_test[:, 1].min()) - .5, max(X_train[:, 1].max(), X_test[:, 1].max()) + .5
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+
+    cm = plt.cm.RdBu
+    cm_bright = ListedColormap(['#FF0000', '#FFFF00'])
+    cm_bright2 = ListedColormap(['#00A000', '#0000FF'])
+
+    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+
+    # Plot the training points
+    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright2, edgecolors='k')
+    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')
+    # Plot the testing points
+    plt.xlim(xx.min(), xx.max())
+    plt.ylim(yy.min(), yy.max())
+    plt.xticks(())
+    plt.yticks(())
+    plt.savefig(path_to_save)
+    plt.show()

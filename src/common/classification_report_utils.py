@@ -121,6 +121,7 @@ def generate_classification_report(save_path, y_test, y_pred_test, test_scores, 
        :param y_pred_test: predicted test labels.
        :param test_scores: dictionary with scores of test classification.
        :param experiment_info: dictionary with experiment information.
+       :param patch_classification: whether to compute patch score or not (default:true)
     """
     # generate report:
     print('>> Generating classification report...')
@@ -136,9 +137,57 @@ def generate_classification_report(save_path, y_test, y_pred_test, test_scores, 
         __print_classification_report(experiment_info, report, per_class_report, file=f)
 
 
-def generate_classification_plots(save_path, y_test, y_pred_test, y_train, y_pred_train):
+def generate_classification_plots(save_path, classifier, X_test, y_test, X_train, y_train):
     """
        Description: Generate classification plots: confusion matrix, ROC curve, Precision-Recall curve.
+       :param X_train: train data.
+       :param X_test: test data.
+       :param classifier: classifier.
+       :param save_path: path to save plots.
+       :param y_test: ground truth test labels.
+       :param y_train: ground truth train labels.
+    """
+    print(f'>> Generating classification plots and saving them in {save_path}...')
+
+    # plot confusion matrix
+    plt.figure()
+    metrics.plot_confusion_matrix(classifier, X_test, y_test)
+    plt.savefig(Path(save_path) / 'confusion_matrix')
+
+    # plot roc
+    plt.figure()
+    ax = plt.gca()
+    metrics.plot_roc_curve(classifier, X_train, y_train, name='Train', ax=ax)
+    metrics.plot_roc_curve(classifier, X_test, y_test, name='Test', ax=ax)
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
+    plt.grid(True)
+    ax.set_aspect('equal')
+    plt.legend(loc='lower right')
+    plt.title('ROC curve')
+    plt.savefig(Path(save_path) / 'roc')
+
+    # plot precision-recall curve
+    plt.figure()
+    ax = plt.gca()
+    metrics.plot_precision_recall_curve(classifier, X_train, y_train, name='Train', ax=ax)
+    metrics.plot_precision_recall_curve(classifier, X_test, y_test, name='Test', ax=ax)
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
+    plt.grid(True)
+    ax.set_aspect('equal')
+    plt.legend(loc='lower right')
+    plt.title('Precision-Recall curve')
+    plt.savefig(Path(save_path) / 'prc')
+
+    plt.show()
+
+
+def generate_classification_plots_nn(save_path, y_test, y_pred_test, pred_proba_test, y_train, y_pred_train, pred_proba_train):
+    """
+       Description: Generate classification plots for NN: confusion matrix, ROC curve, Precision-Recall curve.
+       :param pred_proba_train: probability of the sample for each class of train data
+       :param pred_proba_test: probability of the sample for each class of test data
        :param save_path: path to save plots.
        :param y_test: ground truth test labels.
        :param y_pred_test: predicted test labels.
@@ -154,16 +203,14 @@ def generate_classification_plots(save_path, y_test, y_pred_test, y_train, y_pre
 
     # plot roc
     plt.figure()
-    plots.plot_roc("Train", y_train, y_pred_train)
-    plots.plot_roc("Test", y_test, y_pred_test)
-    plt.legend(loc='lower right')
+    plots.plot_roc("Train", y_train, pred_proba_train)
+    plots.plot_roc("Test", y_test, pred_proba_test)
     plt.savefig(Path(save_path) / 'roc')
 
     # plot precision-recall curve
     plt.figure()
-    plots.plot_prc("Train", y_train, y_pred_train)
-    plots.plot_prc("Test", y_test, y_pred_test)
-    plt.legend(loc='lower right')
+    plots.plot_prc("Train", y_train, pred_proba_train)
+    plots.plot_prc("Test", y_test, pred_proba_test)
     plt.savefig(Path(save_path) / 'prc')
 
     plt.show()

@@ -104,10 +104,11 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, ou
     return model
 
 
-def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, balancer=None, scaler=None, data_path=None,
+def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, n_features_images, balancer=None, scaler=None, data_path=None,
                  use_generators=False):
     """
        Description: Train and test MLP classifier.
+       :param n_features_images: number of features of images to be considered.
        :param X_train: train data.
        :param y_train: train labels.
        :param X_val: validation data.
@@ -146,6 +147,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
         X_train = data_generator.csv_data_generator(data_path,
                                                     batchsize=mlp_settings['BATCH_SIZE'],
                                                     scaler=scaler,
+                                                    n_features_images=n_features_images,
                                                     dataset_name='eval',
                                                     balancer=balancer)
     print("Predict on train..")
@@ -178,16 +180,15 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, b
     return y_pred_test, y_pred_train, test_scores, history
 
 
-def pca_nn_classifier(args, params, data_path):
+def pca_nn_classifier(args, params, data_path, n_features_images):
     """
        Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
        :param args: arguments.
        :param params: configuration parameters.
-       :param train_filepath: train data path.
-       :param val_filepath: validation data path.
-       :param test_filepath: test data path.
+       :param data_path: data path.
+       :param n_features_images: number of features of images to be considered
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path, n_features_images)
 
     train_len = len(y_train)
     val_len = len(y_val)
@@ -195,6 +196,16 @@ def pca_nn_classifier(args, params, data_path):
     print(f'>> train len = {train_len}')
     print(f'>> val len = {val_len}')
     print(f'>> test len = {test_len}')
+
+    # get number of features
+    if n_features_images:
+        n_features = n_features_images
+    else:
+        with open(Path(data_path) / 'x_train.csv', "r") as f:
+            line = f.readline()
+            line = line.strip().split(",")
+            n_features = len(line)
+    print(f'>> n. features = {n_features}')
 
     class_weight = None
     if args.balancing and args.balancing != 'weights':
@@ -205,7 +216,7 @@ def pca_nn_classifier(args, params, data_path):
         class_weight = common.compute_class_weights(y_train)
 
     mlp_settings = {
-        'n_input_features': params['pca']['n_components'],
+        'n_input_features': n_features,
         'EPOCHS': params['pca_nn']['epochs'],
         'BATCH_SIZE': params['pca_nn']['batchsize'],
         'early_stopping': tf.keras.callbacks.EarlyStopping(
@@ -220,20 +231,22 @@ def pca_nn_classifier(args, params, data_path):
         'units_2': params['pca_nn']['units_2'],
     }
 
-    y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test,
-                                                                   mlp_settings)
+    y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=X_train, y_train=y_train,
+                                                                   X_val=X_val, y_val=y_val,
+                                                                   X_test=X_test, y_test=y_test,
+                                                                   mlp_settings=mlp_settings,
+                                                                   n_features_images=n_features_images)
 
-    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path)
 
 
-def nn_classifier(args, params, data_path):
+def nn_classifier(args, params, data_path, n_features_images):
     """
        Description: Train and test MLP classifier using data generators from csv files, then show results.
        :param args: arguments.
        :param params: configuration parameters.
-       :param train_filepath: train data path.
-       :param val_filepath: validation data path.
-       :param test_filepath: test data path.
+       :param data_path: data path.
+       :param n_features_images: number of features of images to be considered
     """
     batchsize = params['nn']['batchsize']
     scaler = StandardScaler()
@@ -250,15 +263,21 @@ def nn_classifier(args, params, data_path):
     print(f'>> test len = {test_len}')
 
     # get number of features
-    with open(Path(data_path) / 'x_train.csv', "r") as f:
-        line = f.readline()
-        line = line.strip().split(",")
-        n_features = len(line)
+    if n_features_images:
+        n_features = n_features_images
+    else:
+        with open(Path(data_path) / 'x_train.csv', "r") as f:
+            line = f.readline()
+            line = line.strip().split(",")
+            n_features = len(line)
+    print(f'>> n. features = {n_features}')
 
     # fit scaler on train data
     for chunk in tqdm(pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
-        X_train_chunk = chunk.iloc[:, :-1]
-        scaler.partial_fit(X_train_chunk)
+        if n_features_images:
+            scaler.partial_fit(chunk[:, :n_features_images])
+        else:
+            scaler.partial_fit(chunk)
 
     # get balancing method
     balancer = None
@@ -272,6 +291,7 @@ def nn_classifier(args, params, data_path):
     train_generator = data_generator.csv_data_generator(data_path,
                                                         batchsize=batchsize,
                                                         scaler=scaler,
+                                                        n_features_images=n_features_images,
                                                         balancer=balancer,
                                                         dataset_name='train',
                                                         mode='train')
@@ -279,6 +299,7 @@ def nn_classifier(args, params, data_path):
     val_generator = data_generator.csv_data_generator(data_path,
                                                       batchsize=batchsize,
                                                       scaler=scaler,
+                                                      n_features_images=n_features_images,
                                                       balancer=None,
                                                       dataset_name='val',
                                                       mode='eval')
@@ -286,6 +307,7 @@ def nn_classifier(args, params, data_path):
     test_generator = data_generator.csv_data_generator(data_path,
                                                        batchsize=batchsize,
                                                        scaler=scaler,
+                                                       n_features_images=n_features_images,
                                                        balancer=None,
                                                        dataset_name='test',
                                                        mode='eval')
@@ -309,27 +331,30 @@ def nn_classifier(args, params, data_path):
                                                                    X_val=val_generator, y_val=y_val,
                                                                    X_test=test_generator, y_test=y_test,
                                                                    mlp_settings=mlp_settings,
+                                                                   n_features_images=n_features_images,
                                                                    balancer=balancer, scaler=scaler,
                                                                    data_path=data_path,
                                                                    use_generators=True)
 
-    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history)
+    generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path)
 
 
-def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history):
+def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path):
     """
        Description: Generate classification report and plots.
        :param args: arguments.
-       :param params: parameters.
        :param y_test: ground truth test labels.
        :param y_pred_test: predicted test labels.
        :param y_train: ground truth train labels.
        :param y_pred_train: predicted train labels.
        :param test_scores: dictionary with scores of test classification.
        :param history: model history.
+       :param data_path: data path.
     """
     # path to save results:
-    experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
+    experiment_descr = f"DATA_{os.path.split(data_path)[1]}_CLF_{args.classification_method}_{params[args.classification_method]['lr']}_{params[args.classification_method]['epochs']}_{params[args.classification_method]['units_1']}_BAL_{args.balancing}"
+    if params['general']['n_features_images']:
+        experiment_descr += f"_FEATIMG_{params['general']['n_features_images']}"
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
     if not os.path.exists(results_path):
         os.makedirs(results_path)
@@ -337,16 +362,22 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
     # convert predicted probabilities (output of sigmoid) to 0/1 labels:
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
     y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
+    pred_proba_test = y_pred_test
+    pred_proba_train = y_pred_train
 
     # generate classification report:
     experiment_info = {}
+    experiment_info['Data folder'] = str(data_path)
+    experiment_info['Selected features'] = f"{params['general']['n_features_images']} image features, no gene features" if params['general']['n_features_images'] else 'All'
     experiment_info['Classification method'] = str(args.classification_method)
-    experiment_info['PCA n. components'] = str(params['pca']['n_components'])
+    experiment_info['Learning rate'] = params[args.classification_method]['lr']
+    experiment_info['N. epochs'] = params[args.classification_method]['epochs']
+    experiment_info['N. units hidden layer'] = params[args.classification_method]['units_1']
     experiment_info['Class balancing method'] = str(args.balancing)
     classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
 
     # generate plots:
     plots.plot_train_val_results(history, results_path)
-    classification_report_utils.generate_classification_plots(results_path, y_test, y_pred_test_labels, y_train, y_pred_train_labels)
+    classification_report_utils.generate_classification_plots_nn(results_path, y_test, y_pred_test_labels, pred_proba_test, y_train, y_pred_train_labels, pred_proba_train)
 
     print('>> Done')

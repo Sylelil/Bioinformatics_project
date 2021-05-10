@@ -3,14 +3,16 @@ from pathlib import Path
 import numpy as np
 
 
-def csv_data_generator(inputPath, batchsize, scaler, balancer=None, dataset_name="train", mode='train'):
+def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer=None, dataset_name="train", mode='train'):
     """
-       Description: Return method corresponding to the parameter 'method'.
+       Description: Data generator from csv file.
+       :param n_features_images: number of features of images to be considered.
        :param inputPath: path where input data is located.
        :param batchsize: size of each batch.
        :param scaler: standard scaler model.
        :param dataset_name: train or test mode.
        :param balancer: class balancing model.
+       :param mode: mode (default: 'train')
        :yields: batch data and labels
     """
     filepath_data = Path(inputPath) / f'x_{dataset_name}.csv'
@@ -45,6 +47,8 @@ def csv_data_generator(inputPath, batchsize, scaler, balancer=None, dataset_name
                 # extract label and data
                 line = line.strip().split(",")
                 data = np.array([np.float64(x) for x in line])
+                if n_features_images:
+                    data = data[:n_features_images]
                 # update our corresponding batches lists
                 X.append(data)
                 y.append(label)

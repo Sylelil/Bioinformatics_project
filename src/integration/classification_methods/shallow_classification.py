@@ -4,6 +4,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
 from config import paths
 from src.common import classification_report_utils
+from src.common.plots import plot_2D_svm_decision_boundary, plot_2D_svm_decision_boundary_integration
 from src.integration import utils
 from src.integration.classification_methods import common
 from sklearn import metrics
@@ -13,6 +14,7 @@ from src.common.classification_metrics import METRICS_skl
 def get_classifier(hyperparam, method_name, balancing, random_state, max_iter=1000):
     """
        Description: Get classifier method.
+       :param max_iter: maximum number of iterations.
        :param hyperparam: hyperparameter to be set.
        :param method_name: method name.
        :param balancing: class balancing method.
@@ -33,14 +35,15 @@ def get_classifier(hyperparam, method_name, balancing, random_state, max_iter=10
     return classifier
 
 
-def shallow_classifier(args, params, data_path):
+def shallow_classifier(args, params, data_path, n_features_images):
     """
        Description: Train and test shallow classifier, then show results.
+       :param n_features_images: number of features of images to be considered.
        :param args: arguments.
        :param params: configuration parameters.
        :param data_path: data path.
     """
-    X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path)
+    X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path, n_features_images)
 
     if args.balancing and args.balancing != 'weights':
         print(f">> Applying class balancing with {args.balancing}...")
@@ -48,6 +51,7 @@ def shallow_classifier(args, params, data_path):
         X_train, y_train = balancer.fit_resample(X_train, y_train)
 
     metric = metrics.recall_score
+    # metric = metrics.matthews_corrcoef
 
     if args.classification_method == 'linearsvc':
         print(">> Finding best hyperparameter C for LinearSVC...")
@@ -66,9 +70,10 @@ def shallow_classifier(args, params, data_path):
                                     random_state=params['general']['random_state'],
                                     max_iter=params[args.classification_method]['max_iter'])
         classifier.fit(X_train, y_train)
+        #plot_2D_svm_decision_boundary_integration(data_path, classifier, X_train, y_train, X_val, y_val)
         y_pred = classifier.predict(X_val)
         score = metric(y_val, y_pred)
-        print(f"    Validation {metric.__name__}: {score}")
+        print(f"    Validation {metric.__name__}: {score}; \n{metrics.precision_score(y_val, y_pred)}\n{metrics.confusion_matrix(y_val, y_pred)}\n")
         if score > best_score:
             best_score = score
             best_hyperparam = hyperparam
@@ -95,20 +100,23 @@ def shallow_classifier(args, params, data_path):
         test_scores[metr.__name__] = metr(y_test, y_pred_test)
 
     # path to save results:
-    experiment_descr = f"CLF_{args.classification_method}_PCA_{params['pca']['n_components']}_BAL_{args.balancing}"
+    experiment_descr = f"DATA_{os.path.split(data_path)[1]}_CLF_{args.classification_method}_BAL_{args.balancing}"
+    if n_features_images:
+        experiment_descr += f'_FEATIMG_{n_features_images}'
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
     if not os.path.exists(results_path):
         os.makedirs(results_path)
 
     # generate classification report:
     experiment_info = {}
+    experiment_info['Data folder'] = str(data_path)
+    experiment_info['Selected features'] = f'{n_features_images} image features, no gene features' if n_features_images else 'All'
     experiment_info['Classification method'] = str(args.classification_method)
-    experiment_info['PCA n. components'] = str(params['pca']['n_components'])
     experiment_info['Class balancing method'] = str(args.balancing)
     experiment_info['Best hyperparameter'] = f"{'C' if args.classification_method == 'linearsvc' else 'alpha'}={best_hyperparam}"
     experiment_info['Best validation score'] = f"{metric.__name__}={best_score}"
     classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info)
 
     # generate plots:
-    classification_report_utils.generate_classification_plots(results_path, y_test, y_pred_test, y_train, y_pred_train)
+    classification_report_utils.generate_classification_plots(results_path, best_classifier, X_test, y_test, X_train, y_train)
     print('>> Done')

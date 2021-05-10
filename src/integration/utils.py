@@ -13,7 +13,7 @@ from config import paths
 from src.common import plots
 
 
-def get_concatenated_data(data_path):
+def get_concatenated_data(data_path, n_features_images=None):
     """
        Description: Apply StandardScaler and IncrementalPCA to data.
        :param data_path: path of data.
@@ -26,6 +26,12 @@ def get_concatenated_data(data_path):
     y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values
     X_test = pd.read_csv(Path(data_path) / 'x_test.csv', delimiter=',', header=None).values
     y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
+
+    if n_features_images:
+        n = n_features_images
+        X_train = X_train[:, 0:n]
+        X_val = X_val[:, 0:n]
+        X_test = X_test[:, 0:n]
 
     return X_train, y_train.ravel().astype(int), X_val, y_val.ravel().astype(int), X_test, y_test.ravel().astype(int)
 
@@ -42,12 +48,13 @@ def read_config_file(config_file_path):
 
     # general
     params['general'] = {}
-    random_state = config['general']['random_state']
-    if random_state == 'None' or random_state == '':
-        params['general']['random_state'] = None
-    else:
-        params['general']['random_state'] = config.getint('general', 'random_state')
+    params['general']['random_state'] = config.getint('general', 'random_state')
     params['general']['use_pca_scaled_features'] = config.getboolean('general', 'use_pca_scaled_features')
+    n_features_images = config['general']['n_features_images']
+    if n_features_images == 'None' or n_features_images == '':
+        params['general']['n_features_images'] = None
+    else:
+        params['general']['n_features_images'] = config.getint('general', 'n_features_images')
 
     # preprocessing
     params['preprocessing'] = {}
@@ -74,8 +81,8 @@ def read_config_file(config_file_path):
     params['linearsvc']['max_iter'] = config.getint('linearsvc', 'max_iter')
 
     # sgd
-    params['sgd'] = {}
-    params['sgd']['max_iter'] = config.getint('sgd', 'max_iter')
+    params['sgdclassifier'] = {}
+    params['sgdclassifier']['max_iter'] = config.getint('sgdclassifier', 'max_iter')
 
     # pca
     params['pca'] = {}

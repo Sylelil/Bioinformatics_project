@@ -29,7 +29,6 @@ def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer
             while len(X) < batchsize:
                 # attempt to read the next line of the CSV file
                 line = f_data.readline()
-                label = f_labels.readline()
                 # check to see if the line is empty, indicating we have
                 # reached the end of the file
                 if line == "":
@@ -38,12 +37,12 @@ def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer
                     f_data.seek(0)
                     f_labels.seek(0)
                     line = f_data.readline()
-                    label = f_labels.readline()
                     # if we are evaluating we should now break from our
                     # loop to ensure we don't continue to fill up the
                     # batch from samples at the beginning of the file
                     if mode == "eval":
                         break
+                label = int(f_labels.readline().strip('\n'))
                 # extract label and data
                 line = line.strip().split(",")
                 data = np.array([np.float64(x) for x in line])

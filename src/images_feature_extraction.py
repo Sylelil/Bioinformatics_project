@@ -33,11 +33,6 @@ def main():
     if not os.path.exists(paths.split_data_dir):
         sys.stderr.write(f"File \"{paths.split_data_dir}\" not found")
         exit(1)
-        
-    normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
-    tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
-    low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
-    low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
 
     normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'

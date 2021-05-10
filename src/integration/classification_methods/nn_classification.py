@@ -17,11 +17,11 @@ import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
 from sklearn import metrics
 
+
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
 def binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight):
-
     TN = tf.logical_and(K.eval(y_true) == 0, K.eval(y_pred) == 0)
     TP = tf.logical_and(K.eval(y_true) == 1, K.eval(y_pred) == 1)
 
@@ -35,7 +35,7 @@ def binary_recall_specificity(y_true, y_pred, recall_weight, spec_weight):
     specificity = TN / (TN + FP + K.epsilon())
     recall = TP / (TP + FN + K.epsilon())
 
-    return 1.0 - (recall_weight*recall + spec_weight*specificity)
+    return 1.0 - (recall_weight * recall + spec_weight * specificity)
 
 
 # def custom_loss(recall_weight, spec_weight):
@@ -58,7 +58,7 @@ def custom_loss(y_true, y_pred):
     # Converted as Keras Tensors
     TN = tf.reduce_sum(tf.cast(TN, tf.int64)).astype('int64')
     # TN = tf.math.count_nonzero(TN)
-    #TN = K.sum(K.variable(TN))
+    # TN = K.sum(K.variable(TN))
     print(TN)
     FP = tf.reduce_sum(tf.cast(FP, tf.int64)).astype('int64')
     # FP = tf.math.count_nonzero(FP)
@@ -95,7 +95,7 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, ou
         keras.layers.Dense(1, activation='sigmoid', bias_initializer=output_bias),
     ])
 
-    model.compile(optimizer=keras.optimizers.Adam(lr=lr),
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=lr),
                   loss=keras.losses.BinaryCrossentropy(),
                   # loss=custom_loss,
                   metrics=metrics,
@@ -104,8 +104,8 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, ou
     return model
 
 
-def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, n_features_images, balancer=None, scaler=None, data_path=None,
-                 use_generators=False):
+def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
+                 n_features_images, balancer=None, scaler=None, data_path=None, use_generators=False):
     """
        Description: Train and test MLP classifier.
        :param n_features_images: number of features of images to be considered.
@@ -134,12 +134,12 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, n
     print("num test steps: " + str(math.ceil(len(y_test) / mlp_settings['BATCH_SIZE'])))
     history = model.fit(x=X_train,
                         y=(None if use_generators else y_train),
-                        steps_per_epoch=(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE']) if use_generators else None),
+                        steps_per_epoch=(len(y_train) // mlp_settings['BATCH_SIZE'] if use_generators else None),
                         batch_size=mlp_settings['BATCH_SIZE'],
                         epochs=mlp_settings['EPOCHS'],
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_val, (None if use_generators else y_val)),
-                        validation_steps=((len(y_val) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None),
+                        validation_steps=(len(y_val) // mlp_settings['BATCH_SIZE'] if use_generators else None),
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
@@ -148,8 +148,10 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, n
                                                     batchsize=mlp_settings['BATCH_SIZE'],
                                                     scaler=scaler,
                                                     n_features_images=n_features_images,
-                                                    dataset_name='eval',
-                                                    balancer=balancer)
+                                                    balancer=balancer,
+                                                    dataset_name='train',
+                                                    mode='eval')
+
     print("Predict on train..")
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'],
                                  steps=((len(y_train) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
@@ -166,13 +168,23 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings, n
     print(len(y_pred_train))
     print(len(y_train))
 
+    if use_generators:
+        X_test = data_generator.csv_data_generator(data_path,
+                                                   batchsize=mlp_settings['BATCH_SIZE'],
+                                                   scaler=scaler,
+                                                   n_features_images=n_features_images,
+                                                   balancer=None,
+                                                   dataset_name='test',
+                                                   mode='eval')
+
     print('Evaluating model on the test dataset...')
     test_scores_list = model.evaluate(X_test, (None if use_generators else y_test),
                                       batch_size=mlp_settings['BATCH_SIZE'],
                                       verbose=1,
-                                      steps=((len(y_test) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
+                                      steps=(
+                                          (len(y_test) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
                                       )
-    
+
     test_scores = dict(zip(model.metrics_names, test_scores_list))
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
     test_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_test, y_pred_test_labels)
@@ -251,9 +263,9 @@ def nn_classifier(args, params, data_path, n_features_images):
     batchsize = params['nn']['batchsize']
     scaler = StandardScaler()
 
-    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values
-    y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values
-    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
+    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values.ravel().astype(int)
+    y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values.ravel().astype(int)
+    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values.ravel().astype(int)
 
     train_len = len(y_train)
     val_len = len(y_val)
@@ -301,7 +313,7 @@ def nn_classifier(args, params, data_path, n_features_images):
                                                       scaler=scaler,
                                                       n_features_images=n_features_images,
                                                       balancer=None,
-                                                      dataset_name='val',
+                                                      dataset_name='train',
                                                       mode='eval')
     print(f">> Creating test data generator with scaler...")
     test_generator = data_generator.csv_data_generator(data_path,
@@ -374,7 +386,11 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
     experiment_info['N. epochs'] = params[args.classification_method]['epochs']
     experiment_info['N. units hidden layer'] = params[args.classification_method]['units_1']
     experiment_info['Class balancing method'] = str(args.balancing)
-    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores, experiment_info)
+
+    test_data_info_path = data_path / 'info_test.csv'
+    print(test_data_info_path)
+    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test_labels, test_scores,
+                                                               experiment_info, test_data_info_path=test_data_info_path)
 
     # generate plots:
     plots.plot_train_val_results(history, results_path)

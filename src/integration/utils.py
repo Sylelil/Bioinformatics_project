@@ -50,15 +50,13 @@ def read_config_file(config_file_path):
     params['general'] = {}
     params['general']['random_state'] = config.getint('general', 'random_state')
     params['general']['use_pca_scaled_features'] = config.getboolean('general', 'use_pca_scaled_features')
+    params['general']['n_components'] = config.getint('general', 'num_principal_components')
+    params['general']['gene_copy_ratio'] = config.getint('general', 'gene_copy_ratio')
     n_features_images = config['general']['n_features_images']
     if n_features_images == 'None' or n_features_images == '':
         params['general']['n_features_images'] = None
     else:
         params['general']['n_features_images'] = config.getint('general', 'n_features_images')
-
-    # preprocessing
-    params['preprocessing'] = {}
-    params['preprocessing']['batchsize'] = config.getint('preprocessing', 'batchsize')
 
     # nn
     params['nn'] = {}
@@ -83,10 +81,6 @@ def read_config_file(config_file_path):
     # sgd
     params['sgdclassifier'] = {}
     params['sgdclassifier']['max_iter'] = config.getint('sgdclassifier', 'max_iter')
-
-    # pca
-    params['pca'] = {}
-    params['pca']['n_components'] = None
 
     return params
 

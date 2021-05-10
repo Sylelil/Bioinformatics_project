@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 from imblearn.over_sampling import SMOTE
 from sklearn.base import BaseEstimator
@@ -12,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from config import paths
 from genes import utils
-from common.plots import plot_tsne_pca
+from common.plots import plot_tsne_pca, plot_pca
 from common.plots import plot_2D_svm_decision_boundary
 from common.classification_report_utils import generate_classification_plots
 from common.classification_report_utils import generate_classification_report
@@ -68,6 +69,15 @@ def main():
     X_val, y_val, t_val = utils.load_selected_genes(paths.svm_t_rfe_selected_features_val)
     X_test, y_test, t_test = utils.load_selected_genes(paths.svm_t_rfe_selected_features_test)
 
+    print("Len X_train" + str(len(X_train)))
+    print("Len X_val" + str(len(X_val)))
+    print("Len X_test" + str(len(X_test)))
+    print(Counter(y_val).keys())
+    print(Counter(y_val).values())
+
+    print(Counter(y_test).keys())
+    print(Counter(y_test).values())
+
     # train + val
     X_train = np.concatenate((X_train, X_val), axis=0)
     y_train = y_train + y_val
@@ -75,8 +85,8 @@ def main():
     # Data visualization
     print("\nData visualization:")
     scaler = StandardScaler()
-    plot_tsne_pca(Path(paths.genes_classification_results_dir) / 'train_tsne_pca.png', scaler.fit_transform(X_train), y_train)
-    plot_tsne_pca(Path(paths.genes_classification_results_dir) / 'test_tsne_pca.png', scaler.transform(X_test), y_test)
+    plot_pca(Path(paths.genes_classification_results_dir) / 'train_tsne_pca.png', scaler.fit_transform(X_train), y_train)
+    plot_pca(Path(paths.genes_classification_results_dir) / 'test_tsne_pca.png', scaler.transform(X_test), y_test)
 
     classifier_str = ''
     param_grid = {}

@@ -129,9 +129,9 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
     model.summary()
 
     print(">> Fitting model on train data...")
-    print("num val steps: " + (len(y_val) // mlp_settings['BATCH_SIZE'] + 1))
+    print("num val steps: " + str(len(y_val) // mlp_settings['BATCH_SIZE'] + 1))
     print("num train steps: " + str(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE'])))
-    print("num test steps: " + (len(y_test) // mlp_settings['BATCH_SIZE'] + 1))
+    print("num test steps: " + str(len(y_test) // mlp_settings['BATCH_SIZE'] + 1))
     history = model.fit(x=X_train,
                         y=(None if use_generators else y_train),
                         steps_per_epoch=(len(y_train) // mlp_settings['BATCH_SIZE'] if use_generators else None),

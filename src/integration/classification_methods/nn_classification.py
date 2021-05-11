@@ -130,7 +130,7 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
 
     print(">> Fitting model on train data...")
     print("num val steps: " + str(len(y_val) // mlp_settings['BATCH_SIZE'] + 1))
-    print("num train steps: " + str(math.ceil(len(y_train) / mlp_settings['BATCH_SIZE'])))
+    print("num train steps: " + str(len(y_train) // mlp_settings['BATCH_SIZE']))
     print("num test steps: " + str(len(y_test) // mlp_settings['BATCH_SIZE'] + 1))
     history = model.fit(x=X_train,
                         y=(None if use_generators else y_train),
@@ -287,7 +287,7 @@ def nn_classifier(args, params, data_path, n_features_images):
     # fit scaler on train data
     for chunk in tqdm(pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
         if n_features_images:
-            scaler.partial_fit(chunk[:, :n_features_images])
+            scaler.partial_fit(chunk.iloc[:, :n_features_images])
         else:
             scaler.partial_fit(chunk)
 

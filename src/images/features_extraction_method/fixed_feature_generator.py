@@ -10,7 +10,51 @@ import config.images.config as cfg
 from .. import utils
 
 
+def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir):
+    """
+         Description: Using ResNet50 (pretrained on imagenet) as backbone, in order to extract features from images
+
+         :param images_info: list of dictionaries, one for each slide.
+             Each dictionary contains some information related to the slide
+                 slide_info_dict = {
+                     'slide_path': file_path,
+                     'slide_name': file_name,  # slide name without extension
+                     'num_zoom_levels': zoom.level_count,
+                     'highest_zoom_level': highest_zoom_level,
+                     'slide_magnification': slide_magnification,
+                     'slide_width': width,
+                     'slide_height': height,
+                     'label': 0 if file_name.endswith("0") else 1,
+                 }
+
+         :param numpy_features_dir: Path
+             directory to save results, as one numpy file per slide
+
+         :param selected_tiles_dir: Path
+             directory containing selected tile coords, as one numpy file per slide
+     """
+
+    if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
+        if cfg.USE_GPU:
+            gpus = tf.config.experimental.list_physical_devices('GPU')
+
+            if gpus:
+                # Currently, memory growth needs to be the same across GPUs
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+
+            for slide_info in images_info:
+                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
+                    print("Skipping slide " + slide_info['slide_name'])
+                else:
+                    save_numpy_features(slide_info, numpy_features_dir, selected_tiles_dir)
+        else:
+            with tf.device('/cpu:0'):
+                multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir)
+
+
 def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
+
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")
     model = ResNet50(weights='imagenet', include_top=True)
@@ -102,24 +146,3 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
             print("Done extracting features from slide %d through %d" % (start_ind, end_ind))
 
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
-
-
-def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir):
-
-    if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
-        if cfg.USE_GPU:
-            gpus = tf.config.experimental.list_physical_devices('GPU')
-
-            if gpus:
-                # Currently, memory growth needs to be the same across GPUs
-                for gpu in gpus:
-                    tf.config.experimental.set_memory_growth(gpu, True)
-
-            for slide_info in images_info:
-                if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
-                    print("Skipping slide " + slide_info['slide_name'])
-                else:
-                    save_numpy_features(slide_info, numpy_features_dir, selected_tiles_dir)
-        else:
-            with tf.device('/cpu:0'):
-                multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir)

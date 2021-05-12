@@ -9,7 +9,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
-from . import methods
+from . import functions
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
@@ -39,7 +39,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # Pre-filtering: Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
-    df, removed_genes = methods.remove_genes_with_median_0(df)
+    df, removed_genes = functions.remove_genes_with_median_0(df)
     n_features = len(df.columns)  # update number of features
 
     print(f'>> Number of genes removed: {len(removed_genes)}'
@@ -50,7 +50,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # Welch t test
     print("\n[DGEA statistical test] Welch t-test statistics:")
-    welch_dict = methods.welch_t_test(df_0, df_1, params['alpha'])
+    welch_dict = functions.welch_t_test(df_0, df_1, params['alpha'])
 
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
@@ -147,7 +147,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         fp = open(path_to_c_values, 'r')
         lines = fp.readlines()
         for i, c in enumerate(lines):
-            if methods.is_float(c):
+            if functions.is_float(c):
                 c_values.append(float(c))
             else:
                 print(f'Line {i} is corrupt!')

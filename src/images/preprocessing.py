@@ -373,31 +373,14 @@ def extract_tiles_on_disk(slides_info):
         print(">> Selected tiles already saved on disk")
 
 
-def plot_random_selected_tiles(slide_info, normal_masked_images_dir, tumor_masked_images_dir,
-                               low_res_rand_tiles_dir_to_save, rand_tiles_dir_to_save, num_tiles=16):
+def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16):
     # Initialize deep zoom generator for the slide
-    image_dims = (slide_info['slide_width'], slide_info['slide_height'])
     slide = utils.open_wsi(slide_info['slide_path'])
     dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
 
     # Find the deep zoom level corresponding to the requested magnification
     dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'],
                                          cfg.DESIRED_MAGNIFICATION)
-    # dzg_level_x = dzg.level_count - 1
-    dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
-
-    # Calculate patch size in the mask
-    dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
-    mask_patch_size = int(np.ceil(cfg.TILE_SIZE * (dzg_downscaling / cfg.SCALE_FACTOR)))
-    # Deep zoom generator for the mask
-    if slide_info['slide_name'].endswith("_1"):
-        masked_images_pil_dir = tumor_masked_images_dir
-    else:
-        masked_images_pil_dir = normal_masked_images_dir
-
-    pil_masked_image = Image.open(os.path.join(masked_images_pil_dir, slide_info['slide_name'] + ".png"))
-    dzg_mask = DeepZoomGenerator(openslide.ImageSlide(pil_masked_image), tile_size=mask_patch_size,
-                                 overlap=cfg.OVERLAP)
 
     slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, slide_info['slide_name'] + '.npy'))
 
@@ -406,15 +389,6 @@ def plot_random_selected_tiles(slide_info, normal_masked_images_dir, tumor_maske
 
     imgs_index = np.random.choice(np.arange(len(slide_tiles_coords)), num_tiles, replace=False)
 
-    __plot_random_selected_tiles(slide_info['slide_name'], slide_tiles_coords, imgs_index, num_tiles, dzg,
-                                 dzg_level_x, rand_tiles_dir_to_save)
-
-    __plot_random_selected_tiles(slide_info['slide_name'], slide_tiles_coords, imgs_index, num_tiles, dzg_mask,
-                                 dzg_mask.level_count - 1, low_res_rand_tiles_dir_to_save)
-
-
-def __plot_random_selected_tiles(slide_name, slide_tiles_coords, imgs_index, num_tiles, zoom, zoom_level, dir_to_save):
-
     fig, axes = plt.subplots(nrows=int(num_tiles / np.sqrt(num_tiles)),
                              ncols=int(num_tiles / np.sqrt(num_tiles)),
                              figsize=(10, 10))
@@ -422,14 +396,14 @@ def __plot_random_selected_tiles(slide_name, slide_tiles_coords, imgs_index, num
 
     for idx, _ in enumerate(axes):
         coord = slide_tiles_coords[imgs_index[idx]]
-        X = zoom.get_tile(zoom_level, (coord[0], coord[1]))
+        X = dzg.get_tile(dzg_level_x, (coord[0], coord[1]))
         axes[idx].imshow(X=X)
         axes[idx].axis('off')
 
-    fig.suptitle(slide_name, fontsize=16)
+    fig.suptitle(slide_info['slide_name'], fontsize=16)
 
-    if not os.path.exists(dir_to_save):
-        os.makedirs(dir_to_save)
+    if not os.path.exists(rand_tiles_dir_to_save):
+        os.makedirs(rand_tiles_dir_to_save)
 
-    fig.savefig(dir_to_save / str(slide_name + '.png'))
+    fig.savefig(rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png'))
     plt.close()

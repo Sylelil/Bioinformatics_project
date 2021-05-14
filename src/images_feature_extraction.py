@@ -99,8 +99,7 @@ def main():
         os.makedirs(low_res_rand_tiles_dir)
 
     for slide in slides_info:
-        preprocessing.plot_random_selected_tiles(slide, normal_masked_images_dir, tumor_masked_images_dir,
-                                                 low_res_rand_tiles_dir, rand_tiles_dir, num_tiles=16)
+        preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
 
     if args.method == 'fine_tuning':
         print("\nSaving selected tiles on disk:")

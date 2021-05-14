@@ -5,7 +5,7 @@ import multiprocessing
 import openslide
 from PIL import Image
 from openslide.deepzoom import DeepZoomGenerator
-
+import matplotlib.pyplot as plt
 from config import paths
 from . import utils
 from skimage import img_as_bool
@@ -16,8 +16,8 @@ import hashlib
 import base64
 
 
-def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, images_dir, masked_images_dir):
-
+def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, images_dir,
+                         masked_images_dir):
     # Apply filters to down scaled images
     if len(os.listdir(masked_images_dir)) < len(slides_info):
         print(">> Apply filters to down scaled images:")
@@ -29,7 +29,7 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tile
     skipped = 0
     for slide in slides_info:
         if os.path.isfile(os.path.join(selected_tiles_dir, slide['slide_name'] + '.npy')):
-            skipped +=1
+            skipped += 1
 
     if skipped == len(slides_info):
         print(">> Selected tile coords already available on disk")
@@ -97,7 +97,8 @@ def apply_filters(start_ind, end_ind, slide_images, images_dir, masked_images_di
     string = ""
 
     for slide_num in range(start_ind - 1, end_ind):
-        scaled_image, scaled_w, scaled_h = utils.from_wsi_to_scaled_pillow_image(slide_images[slide_num]['slide_path'], cfg.SCALE_FACTOR)
+        scaled_image, scaled_w, scaled_h = utils.from_wsi_to_scaled_pillow_image(slide_images[slide_num]['slide_path'],
+                                                                                 cfg.SCALE_FACTOR)
         scaled_image.save(os.path.join(images_dir, slide_images[slide_num]['slide_name'] + ".png"))
         info = apply_filters_to_image(slide_images[slide_num], scaled_image, masked_images_dir)
         string += info + '\n'
@@ -183,7 +184,8 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(no_small_holes_otsu_mask, "Compl. Otsu mask(holes)")
 
     no_small_holes_otsu_mask = img_as_bool(no_small_holes_otsu_mask, force_copy=False)
-    segmented_image = utils.mask_rgb(rgb_pens, no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
+    segmented_image = utils.mask_rgb(rgb_pens,
+                                     no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
 
     string += utils.np_info(segmented_image, "Mask RGB", utils.Time().elapsed())
     string += '\n'
@@ -271,7 +273,8 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
     dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
 
     # Find the deep zoom level corresponding to the requested magnification
-    dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'], cfg.DESIRED_MAGNIFICATION)
+    dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'],
+                                         cfg.DESIRED_MAGNIFICATION)
     # dzg_level_x = dzg.level_count - 1
     dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
     dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
@@ -319,13 +322,14 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
                 coord = (col, row)
                 coords.append(coord)
 
-    info = (f"{slide_info['slide_name']}: num tiles selected = {len(coords)}, slide magnification = {slide_info['slide_magnification']}, "
-            f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{cfg.DESIRED_MAGNIFICATION}x), "
-            f"num tiles = {n_tiles}, tile size = {cfg.TILE_SIZE}, mask tile size = {mask_patch_size},"
-            f"slide dimensions = {image_dims}, slide dimensions (at %{cfg.DESIRED_MAGNIFICATION}x) = {dzg_level_x_dims},"
-            f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
+    info = (
+        f"{slide_info['slide_name']}: num tiles selected = {len(coords)}, slide magnification = {slide_info['slide_magnification']}, "
+        f"highest zoom level = {slide_info['highest_zoom_level']}, zoom level = {dzg_level_x} (at %{cfg.DESIRED_MAGNIFICATION}x), "
+        f"num tiles = {n_tiles}, tile size = {cfg.TILE_SIZE}, mask tile size = {mask_patch_size},"
+        f"slide dimensions = {image_dims}, slide dimensions (at %{cfg.DESIRED_MAGNIFICATION}x) = {dzg_level_x_dims},"
+        f"mask dimensions = {dzg_mask_dims}, mask num tiles = {dzg_mask_ntiles}")
     print(info)
-    #np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
+    # np.save(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'), coords)
     np.save(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'), coords)
 
     os.rename(os.path.join(selected_tiles_dir, 'tmp_' + slide_info['slide_name'] + '.npy'),
@@ -362,7 +366,44 @@ def extract_tiles_on_disk(slides_info):
             for index, coord in enumerate(slide_tiles_coords):
                 tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
                 np_tile = utils.normalize_staining(tile)
-                save_path = paths.selected_tiles_dir / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
+                save_path = paths.selected_tiles_dir / (
+                        hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
                 np.save(save_path, np_tile)
     else:
         print(">> Selected tiles already saved on disk")
+
+
+def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16):
+    # Initialize deep zoom generator for the slide
+    slide = utils.open_wsi(slide_info['slide_path'])
+    dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
+
+    # Find the deep zoom level corresponding to the requested magnification
+    dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'],
+                                         cfg.DESIRED_MAGNIFICATION)
+
+    slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, slide_info['slide_name'] + '.npy'))
+
+    if num_tiles > len(slide_tiles_coords):
+        num_tiles = len(slide_tiles_coords)
+
+    imgs_index = np.random.choice(np.arange(len(slide_tiles_coords)), num_tiles, replace=False)
+
+    fig, axes = plt.subplots(nrows=int(num_tiles / np.sqrt(num_tiles)),
+                             ncols=int(num_tiles / np.sqrt(num_tiles)),
+                             figsize=(10, 10))
+    axes = axes.ravel()
+
+    for idx, _ in enumerate(axes):
+        coord = slide_tiles_coords[imgs_index[idx]]
+        X = dzg.get_tile(dzg_level_x, (coord[0], coord[1]))
+        axes[idx].imshow(X=X)
+        axes[idx].axis('off')
+
+    fig.suptitle(slide_info['slide_name'], fontsize=16)
+
+    if not os.path.exists(rand_tiles_dir_to_save):
+        os.makedirs(rand_tiles_dir_to_save)
+
+    fig.savefig(rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png'))
+    plt.close()

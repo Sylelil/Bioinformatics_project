@@ -71,7 +71,7 @@ def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
 
     tiles = []
     print(">> Getting tiles..")
-    slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
+    slide_tiles_coords = np.load(os.path.join(selected_coords_dir, slide_info['slide_name'] + '.npy'))
     for coord in slide_tiles_coords:
         tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
         np_tile = utils.normalize_staining(tile)
@@ -96,16 +96,16 @@ def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
     np.save(os.path.join(path_to_save, slide_info['slide_name'] + '.npy'), X)
 
 
-def save_numpy_features_range(start_ind, end_ind, slides_info, images_save_dir, selected_tiles_dir):
+def save_numpy_features_range(start_ind, end_ind, slides_info, images_save_dir, selected_coords_dir):
     for slide_num in range(start_ind - 1, end_ind):
         if os.path.isfile(os.path.join(images_save_dir, slides_info[slide_num]['slide_name'] + '.npy')):
             print("Skipping slide " + slides_info[slide_num]['slide_name'])
         else:
-            save_numpy_features(slides_info[slide_num], images_save_dir, selected_tiles_dir)
+            save_numpy_features(slides_info[slide_num], images_save_dir, selected_coords_dir)
     return start_ind, end_ind
 
 
-def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir):
+def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_coords_dir):
     timer = utils.Time()
 
     # how many processes to use
@@ -127,7 +127,7 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
         end_index = num_process * images_per_process
         start_index = int(start_index)
         end_index = int(end_index)
-        tasks.append((start_index, end_index, images_info, numpy_features_dir, selected_tiles_dir))
+        tasks.append((start_index, end_index, images_info, numpy_features_dir, selected_coords_dir))
         if start_index == end_index:
             print("Task #" + str(num_process) + ": Process slide " + str(start_index))
         else:
@@ -146,3 +146,4 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_t
             print("Done extracting features from slide %d through %d" % (start_ind, end_ind))
 
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
+   

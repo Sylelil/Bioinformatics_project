@@ -20,9 +20,9 @@ svm_t_rfe_selected_features_val = BASE_DIR / svm_t_rfe_results_dir / 'selected_f
 images_results = BASE_DIR / 'results' / 'feature_extraction' / 'images'
 extracted_features_train = BASE_DIR / images_results / 'fixed_feature_generator' / 'extracted_features' / 'train'
 extracted_features_test = BASE_DIR / images_results / 'fixed_feature_generator' / 'extracted_features' / 'test'
-extracted_features_val = BASE_DIR / images_results / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'val'
-selected_coords_dir = BASE_DIR / images_results / 'images' / 'selected_tiles' / 'coords'
-selected_tiles_dir = BASE_DIR / images_results / 'images' / 'selected_tiles' / 'tiles'
+extracted_features_val = BASE_DIR / images_results / 'fixed_feature_generator' / 'extracted_features' / 'val'
+selected_coords_dir = BASE_DIR / images_results / 'selected_tiles' / 'coords'
+selected_tiles_dir = BASE_DIR / images_results / 'selected_tiles' / 'tiles'
 
 # results/concatenated_results
 concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'

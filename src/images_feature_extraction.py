@@ -85,10 +85,22 @@ def main():
     print("\nTumor images preprocessing:")
     preprocessing.preprocessing_images(tumor_slides_info, paths.selected_coords_dir,
                                        os.path.join(paths.images_results, "tumor_filter_info.txt"),
-                                       os.path.join(paths.images_results, "normal_tiles_info.txt"),
+                                       os.path.join(paths.images_results, "tumor_tiles_info.txt"),
                                        low_res_tumor_images_dir, tumor_masked_images_dir)
 
     slides_info = normal_slides_info + tumor_slides_info
+
+    rand_tiles_dir = paths.images_results / 'selected_tiles' / 'rand_tiles'
+    low_res_rand_tiles_dir = paths.images_results / 'selected_tiles' / 'low_res_rand_tiles'
+    if not os.path.exists(rand_tiles_dir):
+        os.makedirs(rand_tiles_dir)
+
+    if not os.path.exists(low_res_rand_tiles_dir):
+        os.makedirs(low_res_rand_tiles_dir)
+
+    for slide in slides_info:
+        preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
+
     if args.method == 'fine_tuning':
         print("\nSaving selected tiles on disk:")
         preprocessing.extract_tiles_on_disk(slides_info)

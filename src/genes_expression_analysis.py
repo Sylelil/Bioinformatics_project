@@ -12,7 +12,7 @@ from src.common import split_data
 
 def main():
     """
-         Description: Main performs preprocessing steps in order to select
+         Description: Main performing preprocessing steps in order to select
             most relevant features from gene expression data
     """
     # Parse arguments from command line
@@ -23,7 +23,7 @@ def main():
                         type=str)
 
     parser.add_argument('--method',
-                        help='Feature extraction method',
+                        help='Feature selection method',
                         choices=['svm_t_rfe'],
                         required=True,
                         default='svm_t_rfe',

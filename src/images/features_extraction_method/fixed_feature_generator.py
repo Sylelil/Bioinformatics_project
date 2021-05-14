@@ -51,6 +51,8 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir)
         else:
             with tf.device('/cpu:0'):
                 multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir)
+    else:
+        print(">> Extracted features already available on disk")
 
 
 def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
@@ -146,4 +148,3 @@ def multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_c
             print("Done extracting features from slide %d through %d" % (start_ind, end_ind))
 
     print(">> Time to extract features from all images (multiprocess): %s" % str(timer.elapsed()))
-   

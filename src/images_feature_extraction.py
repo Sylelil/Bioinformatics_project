@@ -24,6 +24,11 @@ def main():
                         required=True,
                         type=str)
 
+    parser.add_argument('--save_rand_tiles',
+                        help='Save random tiles',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
 
     if not os.path.exists(paths.images_dir):
@@ -90,16 +95,14 @@ def main():
 
     slides_info = normal_slides_info + tumor_slides_info
 
-    rand_tiles_dir = paths.images_results / 'selected_tiles' / 'rand_tiles'
-    low_res_rand_tiles_dir = paths.images_results / 'selected_tiles' / 'low_res_rand_tiles'
-    if not os.path.exists(rand_tiles_dir):
-        os.makedirs(rand_tiles_dir)
+    if args.save_rand_tiles:
+        print("Saving random tiles on disk...")
+        rand_tiles_dir = paths.images_results / 'selected_tiles' / 'rand_tiles'
+        if not os.path.exists(rand_tiles_dir):
+            os.makedirs(rand_tiles_dir)
 
-    if not os.path.exists(low_res_rand_tiles_dir):
-        os.makedirs(low_res_rand_tiles_dir)
-
-    for slide in slides_info:
-        preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
+        for slide in slides_info:
+            preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
 
     if args.method == 'fine_tuning':
         print("\nSaving selected tiles on disk:")
@@ -117,7 +120,6 @@ def main():
 
     train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)
 
-    print(train_slides_info)
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
     train_slides_info_1 = [slide for slide in train_slides_info if slide['label'] == 1]
@@ -141,20 +143,18 @@ def main():
     print("\nImages feature extraction:")
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
-
-        print(train_slides_info[0])
         fine_tuning(train_slides_info, test_slides_info, y_train, y_test)
 
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
 
-        print(">> Extracting features from training images:")
+        print("\n>> Extracting features from training images:")
         fixed_feature_generator(train_slides_info, paths.extracted_features_train, paths.selected_coords_dir)
 
-        print(">> Extracting features from val images:")
+        print("\n>> Extracting features from val images:")
         fixed_feature_generator(val_slides_info, paths.extracted_features_val, paths.selected_coords_dir)
 
-        print(">> Extracting features from test images:")
+        print("\n>> Extracting features from test images:")
         fixed_feature_generator(test_slides_info, paths.extracted_features_test, paths.selected_coords_dir)
 
     else:

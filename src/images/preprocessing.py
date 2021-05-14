@@ -407,3 +407,4 @@ def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16)
 
     fig.savefig(rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png'))
     plt.close()
+    print(f"Rand tiles for slide saved to {rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png')}")

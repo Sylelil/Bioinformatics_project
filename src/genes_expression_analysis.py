@@ -6,7 +6,7 @@ from pathlib import Path
 from config import paths
 from config.paths import BASE_DIR
 from genes import utils
-from genes.features_selection_method.svm_t_rfe import genes_selection_svm_t_rfe
+from genes.features_selection_method.svm_t_rfe_no_pipe import genes_selection_svm_t_rfe
 from src.common import split_data
 
 
@@ -79,6 +79,16 @@ def main():
 
     print("\nExploratory analysis:")
     # Compute number of samples
+    X_train_0 = X_train.loc[X_train.index.str.endswith('_0')]
+    X_train_1 = X_train.loc[X_train.index.str.endswith('_1')]
+    print(f'>> Train data:\n>> Tot = {len(X_train)}\n'
+          f'>> Tumor samples = {len(X_train_1)}\n>> Normal samples = {len(X_train_0)}\n')
+
+    X_val_0 = X_val.loc[X_val.index.str.endswith('_0')]
+    X_val_1 = X_val.loc[X_val.index.str.endswith('_1')]
+    print(f'>> Val data:\n>> Tot = {len(X_val)}\n'
+          f'>> Tumor samples = {len(X_val_1)}\n>> Normal samples = {len(X_val_0)}\n')
+
     X_train_val_0 = X_train_val.loc[X_train_val.index.str.endswith('_0')]
     X_train_val_1 = X_train_val.loc[X_train_val.index.str.endswith('_1')]
     print(f'>> Train + val (Tot training) data:\n>> Tot = {len(X_train_val)}\n'
@@ -91,7 +101,7 @@ def main():
 
     # Compute number of features
     n_features = len(X_train_val.columns)
-    print(f">> Number of features (genes): {n_features}\n")
+    print(f">> Number of features (genes): {n_features}")
 
     # Apply logarithmic transformation on gene expression data
     # Description : x = Log(x+1), where x is the gene expression value

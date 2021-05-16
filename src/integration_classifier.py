@@ -29,6 +29,11 @@ def args_parse():
                         required=False,
                         type=str)
 
+    parser.add_argument('--use_generator',
+                        help='Use generator to read data',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
     return args
 
@@ -72,7 +77,8 @@ def main():
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-        nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+
+        nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'], use_generator=args.use_generator)
 
 
 if __name__ == '__main__':

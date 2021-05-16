@@ -3,11 +3,14 @@ import math
 import os
 import sys
 from pathlib import Path
+from numpy import mean, std, median
+
 from config import paths
 from config.paths import BASE_DIR
 from genes import utils
 from genes.features_selection_method.svm_t_rfe_no_pipe import genes_selection_svm_t_rfe
-from src.common import split_data
+from src.common import split_data, plots
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -107,17 +110,17 @@ def main():
     # Description : x = Log(x+1), where x is the gene expression value
     print(f'\nLogarithmic transformation on gene expression data:'
           f'\n>> Computing logarithmic transformation...')
-    X_train = X_train.applymap(lambda x: math.log(x + 1, 10))
-    X_val = X_val.applymap(lambda x: math.log(x + 1, 10))
-    X_test = X_test.applymap(lambda x: math.log(x + 1, 10))
-    X_train_val = X_train.append(X_val, sort=False)
+    X_train_log = X_train.applymap(lambda x: math.log(x + 1, 10))
+    X_val_log = X_val.applymap(lambda x: math.log(x + 1, 10))
+    X_test_log = X_test.applymap(lambda x: math.log(x + 1, 10))
+    X_train_val_log = X_train_log.append(X_val_log, sort=False)
     print(">> Done")
 
     print("\nDifferentially gene expression analysis [DGEA]")
 
     if args.method == 'svm_t_rfe':
         # feature selection
-        selected_genes = genes_selection_svm_t_rfe(X_train_val, y_train_val, params, paths.svm_t_rfe_results_dir,
+        selected_genes = genes_selection_svm_t_rfe(X_train_val_log, y_train_val, params, paths.svm_t_rfe_results_dir,
                                                    genes_config_dir)
         # save selected genes on file
         fp = open(paths.svm_t_rfe_results_dir / "selected_genes.txt", "w")
@@ -125,15 +128,17 @@ def main():
             fp.write("%s\n" % gene)
         fp.close()
 
+        plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir)
+
         # saving selected features
         print("\nSaving selected training gene features on disk...")
-        utils.save_selected_genes(X_train[selected_genes], paths.svm_t_rfe_selected_features_train)
+        utils.save_selected_genes(X_train_log[selected_genes], paths.svm_t_rfe_selected_features_train)
 
         print("\nSaving selected validation gene features on disk...")
-        utils.save_selected_genes(X_val[selected_genes], paths.svm_t_rfe_selected_features_val)
+        utils.save_selected_genes(X_val_log[selected_genes], paths.svm_t_rfe_selected_features_val)
 
         print("\nSaving selected test gene features on disk...")
-        utils.save_selected_genes(X_test[selected_genes], paths.svm_t_rfe_selected_features_test)
+        utils.save_selected_genes(X_test_log[selected_genes], paths.svm_t_rfe_selected_features_test)
 
     else:
         sys.stderr.write("Invalid value for <feature selection method>")

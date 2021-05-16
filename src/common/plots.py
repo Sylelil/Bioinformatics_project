@@ -1,4 +1,6 @@
+import math
 from pathlib import Path
+
 import matplotlib as mpl
 import numpy as np
 import seaborn as sns
@@ -410,3 +412,26 @@ def plot_2D_svm_decision_boundary_integration(path_to_save, clf, X_train, y_trai
     plt.yticks(())
     plt.savefig(path_to_save)
     plt.show()
+
+
+def plot_features_box_plots(df, y, path_to_save):
+
+    df.insert(0, 'labels', y)
+
+    num_features = len(df.columns.tolist()[1:])
+    num_rows = math.ceil(num_features / 2)
+
+    fig, ax = plt.subplots(num_rows, 2, figsize=(28, 20))
+    axes = ax.reshape(-1)
+    for ax, column in zip(axes, df.columns.tolist()[1:]):
+        df.boxplot(column, ax=ax, by='labels', color="blue")
+        ax.title.set_color('red')
+        ax.title.set_size(20)
+        ax.set_xlabel('')
+    plt.suptitle('')
+    plt.xlabel('')
+    plt.tight_layout()
+    plt.savefig(Path(path_to_save) / "features_box_plots.png")
+    plt.show()
+    plt.close()
+

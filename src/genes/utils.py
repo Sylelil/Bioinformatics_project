@@ -112,11 +112,14 @@ def read_config_file(config_file_path, section):
         params['top_ranked'] = config.getint('svm_t_rfe', 'top_ranked')
         params['t_stat_threshold'] = config.getfloat('svm_t_rfe', 't_stat_threshold')
         params['scoring_name'] = config['svm_t_rfe']['scoring']
+        params['num_selected_genes'] = config.getint('svm_t_rfe', 'num_selected_genes')
 
         if config['svm_t_rfe']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
-        elif config['svm_t_rfe']['scoring'] == 'recall':
-            params['scoring'] = make_scorer(metrics.recall_score)
+        elif config['svm_t_rfe']['scoring'] == 'matthew_coeff':
+            params['scoring'] = make_scorer(metrics.matthews_corrcoef)
+        elif config['svm_t_rfe']['scoring'] == 'auc':
+            params['scoring'] = make_scorer(metrics.roc_auc_score)
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)

@@ -13,7 +13,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 import matplotlib.pyplot as plt
 from numpy import mean, std
-from . import methods
+from . import functions
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import cross_val_score
@@ -42,7 +42,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # Pre-filtering: Remove genes with median = 0
     print("[DGEA pre-processing] Removing genes with median = 0:")
-    df, removed_genes = methods.remove_genes_with_median_0(df)
+    df, removed_genes = functions.remove_genes_with_median_0(df)
     n_features = len(df.columns)  # update number of features
 
     print(f'>> Number of genes removed: {len(removed_genes)}'
@@ -53,18 +53,10 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     # Welch t test
     print("\n[DGEA statistical test] Welch t-test statistics:")
-    welch_dict = methods.welch_t_test(df_0, df_1, params['alpha'])
+    welch_dict = functions.welch_t_test(df_0, df_1, params['alpha'])
 
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
-
-    # Print p-value histogram: mi mostra qual è la densità di
-    # frequenza dei valori di p-value sotto l'ipotesi nulla
-    plt.hist(welch_dict['all_p_values'])
-    plt.xlabel("p values Welch t-test")
-    plt.savefig(Path(results_dir) / "welch_t_p_values.png")
-    plt.show()
-    plt.close()
 
     # Print t-statistics per selezionare i top che hanno t-statistics
     abs_t_statistics = [abs(x) for x in welch_dict['all_t_values']]
@@ -103,7 +95,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
         df_reduced = pd.DataFrame(train_scaled_features, index=df_reduced.index, columns=df_reduced.columns)
         print(df_reduced)
 
-        sm = SMOTE(sampling_strategy=1.0, random_state=42, n_jobs=-1)
+        sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'], n_jobs=-1)
         df_reduced, y = sm.fit_resample(df_reduced, y)
         print(Counter(y))
         df_reduced["target"] = np.array([str(x) for x in y])
@@ -142,7 +134,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.show()
     plt.close()
 
-    num_selected = 200
+    num_selected = params['num_selected_genes']
     return ranked_genes[:num_selected]
 
 
@@ -172,7 +164,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         fp = open(path_to_c_values, 'r')
         lines = fp.readlines()
         for i, c in enumerate(lines):
-            if methods.is_float(c):
+            if functions.is_float(c):
                 c_values.append(float(c))
             else:
                 print(f'Line {i} is corrupt!')
@@ -196,7 +188,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
         if perform_grid_search:
             pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
             cv = KFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
-            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring=params['scoring'], cv=cv)
+            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, cv=cv)
             grid.fit(df_array, y)  # Refit the estimator using the best found parameters on the whole dataset
             C = grid.best_params_['svm__C']
             c_values.append(C)
@@ -273,7 +265,7 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
         param_grid = dict(svm__C=C_range)
 
-    # calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
+    # calcolo lo score considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
     # fino ad arrivare a considerare tutti i top ranked genes
     for num_selected in tqdm(range(1, params['top_ranked'] + 1), file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
@@ -282,13 +274,12 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         # define search
         pipe_grid = Pipeline([('svm', SVC(kernel=params['kernel']))])
         cv_inner = KFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-        search = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, scoring=params['scoring'], cv=cv_inner)
+        search = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, cv=cv_inner)
         # configure the cross-validation procedure
         cv_outer = KFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
         # execute the nested cross-validation
         scores = cross_val_score(search, df_selected_array, y, scoring=params['scoring'], cv=cv_outer)
         # report performance
-        # print(scores)
         mean_score = mean(scores)
         scores_list.append(mean_score)
         print("\n" + params['scoring_name'] + " score " + str(mean_score))

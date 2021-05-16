@@ -252,7 +252,7 @@ def pca_nn_classifier(args, params, data_path, n_features_images):
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path)
 
 
-def nn_classifier(args, params, data_path, n_features_images):
+def nn_classifier(args, params, data_path, n_features_images, use_generator=False):
     """
        Description: Train and test MLP classifier using data generators from csv files, then show results.
        :param args: arguments.
@@ -262,10 +262,26 @@ def nn_classifier(args, params, data_path, n_features_images):
     """
     batchsize = params['nn']['batchsize']
     scaler = StandardScaler()
+    X_train = []
+    X_val = []
+    X_test = []
 
-    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values.ravel().astype(int)
-    y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values.ravel().astype(int)
-    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values.ravel().astype(int)
+    if use_generator:
+
+        y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values.ravel().astype(int)
+        y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values.ravel().astype(int)
+        y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values.ravel().astype(int)
+
+        # fit scaler on train data
+        for chunk in tqdm(
+                pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
+            if n_features_images:
+                scaler.partial_fit(chunk.iloc[:, :n_features_images])
+            else:
+                scaler.partial_fit(chunk)
+
+    else:
+        X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path, n_features_images)
 
     train_len = len(y_train)
     val_len = len(y_val)
@@ -284,13 +300,6 @@ def nn_classifier(args, params, data_path, n_features_images):
             n_features = len(line)
     print(f'>> n. features = {n_features}')
 
-    # fit scaler on train data
-    for chunk in tqdm(pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
-        if n_features_images:
-            scaler.partial_fit(chunk.iloc[:, :n_features_images])
-        else:
-            scaler.partial_fit(chunk)
-
     # get balancing method
     balancer = None
     class_weight = None
@@ -299,30 +308,6 @@ def nn_classifier(args, params, data_path, n_features_images):
     elif args.balancing == 'weights':
         class_weight = common.compute_class_weights(y_train)
 
-    print(f">> Creating train data generator with scaler and {args.balancing} balancer...")
-    train_generator = data_generator.csv_data_generator(data_path,
-                                                        batchsize=batchsize,
-                                                        scaler=scaler,
-                                                        n_features_images=n_features_images,
-                                                        balancer=balancer,
-                                                        dataset_name='train',
-                                                        mode='train')
-    print(f">> Creating validation data generator with scaler...")
-    val_generator = data_generator.csv_data_generator(data_path,
-                                                      batchsize=batchsize,
-                                                      scaler=scaler,
-                                                      n_features_images=n_features_images,
-                                                      balancer=None,
-                                                      dataset_name='val',
-                                                      mode='eval')
-    print(f">> Creating test data generator with scaler...")
-    test_generator = data_generator.csv_data_generator(data_path,
-                                                       batchsize=batchsize,
-                                                       scaler=scaler,
-                                                       n_features_images=n_features_images,
-                                                       balancer=None,
-                                                       dataset_name='test',
-                                                       mode='eval')
     mlp_settings = {
         'n_input_features': n_features,
         'EPOCHS': params['nn']['epochs'],
@@ -339,14 +324,47 @@ def nn_classifier(args, params, data_path, n_features_images):
         'units_2': params['nn']['units_2'],
     }
 
-    y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=train_generator, y_train=y_train,
-                                                                   X_val=val_generator, y_val=y_val,
-                                                                   X_test=test_generator, y_test=y_test,
-                                                                   mlp_settings=mlp_settings,
-                                                                   n_features_images=n_features_images,
-                                                                   balancer=balancer, scaler=scaler,
-                                                                   data_path=data_path,
-                                                                   use_generators=True)
+    if use_generator:
+        print(f">> Creating train data generator with scaler and {args.balancing} balancer...")
+        train_generator = data_generator.csv_data_generator(data_path,
+                                                            batchsize=batchsize,
+                                                            scaler=scaler,
+                                                            n_features_images=n_features_images,
+                                                            balancer=balancer,
+                                                            dataset_name='train',
+                                                            mode='train')
+        print(f">> Creating validation data generator with scaler...")
+        val_generator = data_generator.csv_data_generator(data_path,
+                                                          batchsize=batchsize,
+                                                          scaler=scaler,
+                                                          n_features_images=n_features_images,
+                                                          balancer=None,
+                                                          dataset_name='val',
+                                                          mode='eval')
+        print(f">> Creating test data generator with scaler...")
+        test_generator = data_generator.csv_data_generator(data_path,
+                                                           batchsize=batchsize,
+                                                           scaler=scaler,
+                                                           n_features_images=n_features_images,
+                                                           balancer=None,
+                                                           dataset_name='test',
+                                                           mode='eval')
+
+        y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=train_generator, y_train=y_train,
+                                                                       X_val=val_generator, y_val=y_val,
+                                                                       X_test=test_generator, y_test=y_test,
+                                                                       mlp_settings=mlp_settings,
+                                                                       n_features_images=n_features_images,
+                                                                       balancer=balancer, scaler=scaler,
+                                                                       data_path=data_path,
+                                                                       use_generators=True)
+    else:
+
+        y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=X_train, y_train=y_train,
+                                                                       X_val=X_val, y_val=y_val,
+                                                                       X_test=X_test, y_test=y_test,
+                                                                       mlp_settings=mlp_settings,
+                                                                       n_features_images=n_features_images)
 
     generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path)
 

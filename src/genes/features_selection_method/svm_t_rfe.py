@@ -56,14 +56,6 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     print(">> Number of selected genes with no correction (features) %d" % len(welch_dict['genes']))
     print(">> Number of selected genes with B (features) %d" % len(welch_dict['genes_b']))
 
-    # Print p-value histogram: mi mostra qual è la densità di
-    # frequenza dei valori di p-value sotto l'ipotesi nulla
-    plt.hist(welch_dict['all_p_values'])
-    plt.xlabel("p values Welch t-test")
-    plt.savefig(Path(results_dir) / "welch_t_p_values.png")
-    plt.show()
-    plt.close()
-
     # Print t-statistics per selezionare i top che hanno t-statistics
     abs_t_statistics = [abs(x) for x in welch_dict['all_t_values']]
     sorted_t_statistics = sorted(abs_t_statistics)
@@ -127,7 +119,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     plt.show()
     plt.close()
 
-    num_selected = 200
+    num_selected = params['num_selected_genes']
     return ranked_genes[:num_selected]
 
 

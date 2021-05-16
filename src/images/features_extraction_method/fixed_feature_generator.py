@@ -10,7 +10,7 @@ import config.images.config as cfg
 from .. import utils
 
 
-def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir):
+def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir):
     """
          Description: Using ResNet50 (pretrained on imagenet) as backbone, in order to extract features from images
 
@@ -30,7 +30,7 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir)
          :param numpy_features_dir: Path
              directory to save results, as one numpy file per slide
 
-         :param selected_tiles_dir: Path
+         :param selected_coords_dir: Path
              directory containing selected tile coords, as one numpy file per slide
      """
 
@@ -47,15 +47,15 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_tiles_dir)
                 if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
-                    save_numpy_features(slide_info, numpy_features_dir, selected_tiles_dir)
+                    save_numpy_features(slide_info, numpy_features_dir, selected_coords_dir)
         else:
             with tf.device('/cpu:0'):
-                multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_tiles_dir)
+                multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_coords_dir)
     else:
         print(">> Extracted features already available on disk")
 
 
-def save_numpy_features(slide_info, path_to_save, selected_tiles_dir):
+def save_numpy_features(slide_info, path_to_save, selected_coords_dir):
 
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")

@@ -92,6 +92,11 @@ def plot_cm(labels, predictions, save_path):
 
 
 def set_roc_prc_settings(title):
+    """
+       Description: generate plot settings and axis for ROC and Precision-Recall curves.
+       :param title: title.
+       :returns: axis.
+    """
     plt.figure()
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
@@ -139,6 +144,12 @@ def plot_prc_nn(name, labels, predictions, ax, **kwargs):
 
 
 def plot_explained_variance(explained_variance_ratio, path_to_save, n_components):
+    """
+       Description: Plot individual and cumulative explained variance.
+       :param explained_variance_ratio: explained variance ratio.
+       :param path_to_save: path to save.
+       :param n_components: number of principal components.
+    """
     print(">> Plotting individual and cumulative explained variance...")
     plt.figure()
     plt.plot(np.cumsum(explained_variance_ratio), label='Cumulative explained variance', linewidth=2, marker='.')

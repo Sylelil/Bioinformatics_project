@@ -119,6 +119,7 @@ def __print_classification_report(experiment_info, report, per_class_report, fil
 def generate_classification_report(save_path, y_test, y_pred_test, test_scores, experiment_info, test_data_info_path=None, patch_classification=True):
     """
        Description: Generate classification report.
+       :param test_data_info_path: test data info path.
        :param save_path: path to save report.
        :param y_test: ground truth test labels.
        :param y_pred_test: predicted test labels.
@@ -182,8 +183,8 @@ def generate_classification_plots(save_path, classifier, X_test, y_test, X_train
 def generate_classification_plots_nn(save_path, y_test, y_pred_test, pred_proba_test, y_train, y_pred_train, pred_proba_train):
     """
        Description: Generate classification plots for NN: confusion matrix, ROC curve, Precision-Recall curve.
-       :param pred_proba_train: probability of the sample for each class of train data
-       :param pred_proba_test: probability of the sample for each class of test data
+       :param pred_proba_train: probability of the sample for each class of train data.
+       :param pred_proba_test: probability of the sample for each class of test data.
        :param save_path: path to save plots.
        :param y_test: ground truth test labels.
        :param y_pred_test: predicted test labels.
@@ -217,16 +218,28 @@ def generate_classification_plots_nn(save_path, y_test, y_pred_test, pred_proba_
     plt.show()
 
 
-def get_experiment_title(dirname, clf_type):
+def __get_experiment_title(dirname, clf_type):
+    """
+       Description: Get experiment title from name of folder.
+       :param dirname: name of folder.
+       :param clf_type: type of classifier
+       :returns: title.
+    """
     fields = dirname.split('_')
     title = ''
     if clf_type == 'nn':
         clf_fields = fields[2].split('+')
         title = f"MLP (n. hidden layers: 1, n. units: {clf_fields[3]}, lr:{clf_fields[1]}, epochs:{clf_fields[2]})"
         if clf_fields[0] == 'pcann':
-            title += "\ntrained on reduced image features + gene features"
+            if fields[1] == 'None':
+                title += "\ntrained on reduced image features + gene features"
+            else:
+                title += "\ntrained on reduced image features"
         else:
-            title += " trained on all features"
+            if fields[1] == 'None':
+                title += "\ntrained on all image features + gene features"
+            else:
+                title += "\ntrained on reduced image features"
     else:
         if fields[2] == 'sgdclassifier':
             title = 'SGDClassifier'
@@ -236,6 +249,10 @@ def get_experiment_title(dirname, clf_type):
 
 
 def generate_final_classification_plots(results_path):
+    """
+       Description: Generate final classification plot, collecting results from folder. .
+       :param results_path: folder containing experiment results.
+    """
     # get data
     experiments = []
     for res_dir in tqdm(os.listdir(results_path)):
@@ -246,10 +263,10 @@ def generate_final_classification_plots(results_path):
             experiment['dir'] = path_res_dir
             if 'nn' in res_dir:
                 experiment['type'] = 'nn'
-                experiment['title'] = get_experiment_title(os.path.basename(res_dir), 'nn')
+                experiment['title'] = __get_experiment_title(os.path.basename(res_dir), 'nn')
             else:
                 experiment['type'] = 'shallow'
-                experiment['title'] = get_experiment_title(os.path.basename(res_dir), 'shallow')
+                experiment['title'] = __get_experiment_title(os.path.basename(res_dir), 'shallow')
             experiments.append(experiment)
 
     # roc curves

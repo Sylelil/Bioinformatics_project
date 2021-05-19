@@ -17,14 +17,6 @@ def args_parse():
                         help='Configuration file path',
                         required=True,
                         type=str)
-    parser.add_argument('--gene_copy_ratio',
-                        help='Gene copy ratio',
-                        required=False,
-                        type=int)
-    parser.add_argument('--n_principal_components',
-                        help='Number of Principal Components for PCA',
-                        required=False,
-                        type=int)
     parser.add_argument('--plot_explained_variance',
                         help='Either to plot explained variance to choose best number of Principal Components or not',
                         required=False,
@@ -41,6 +33,13 @@ def main():
     # Parse arguments from command line
     args = args_parse()
 
+    # Read configuration file
+    params = utils.read_config_file(args.cfg)
+
+    if not os.path.exists(args.cfg):
+        print(f"{args.cfg} not found")
+        exit(-1)
+
     tile_features_train_dir = paths.extracted_features_train
     tile_features_test_dir = paths.extracted_features_test
     tile_features_val_dir = paths.extracted_features_val
@@ -48,13 +47,16 @@ def main():
     gene_features_test_dir = paths.svm_t_rfe_selected_features_test
     gene_features_val_dir = paths.svm_t_rfe_selected_features_val
 
-    if args.n_principal_components is not None:
+    num_principal_components = params['general']['n_components']
+    gene_copy_ratio = params['general']['gene_copy_ratio']
+
+    if num_principal_components is not None:
 
         path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca{args.n_principal_components}'
         if not os.path.exists(path_to_save_pca):
             os.makedirs(path_to_save_pca)
 
-        n_components = args.n_principal_components if args.n_principal_components > 0 else None
+        n_components = num_principal_components if num_principal_components > 0 else None
 
         # concatenate data with PCA:
         scaler, ipca, scaler_concatenated = concatenate_features.concatenate_pca(
@@ -82,31 +84,31 @@ def main():
             plots.plot_explained_variance(ipca.explained_variance_ratio_, path_to_save_pca, n_components)
             np.savetxt(Path(path_to_save_pca) / 'pca_components.csv', ipca.components_, delimiter=',', fmt='%s')
 
-    if args.gene_copy_ratio is not None:
+    if gene_copy_ratio is not None:
 
-        path_to_save_copied_genes = paths.concatenated_results_dir / f'copy_ratio_{args.gene_copy_ratio}'
+        path_to_save_copied_genes = paths.concatenated_results_dir / f'copyratio{gene_copy_ratio}'
         if not os.path.exists(path_to_save_copied_genes):
             os.makedirs(path_to_save_copied_genes)
 
-        if args.gene_copy_ratio <= 0:
-            print(f'error: invalid argument <gene_copy_ratio>: {args.gene_copy_ratio}')
+        if gene_copy_ratio <= 0:
+            print(f'error: invalid configuration <gene_copy_ratio>: {gene_copy_ratio}')
 
         # concatenate data with repeating genes to match tiles dimensionality (no scaling):
         concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_train_dir,
                                                     lookup_dir_genes=gene_features_train_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='train',
-                                                    gene_copy_ratio=args.gene_copy_ratio)
+                                                    gene_copy_ratio=gene_copy_ratio)
         concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_val_dir,
                                                     lookup_dir_genes=gene_features_val_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='val',
-                                                    gene_copy_ratio=args.gene_copy_ratio)
+                                                    gene_copy_ratio=gene_copy_ratio)
         concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_test_dir,
                                                     lookup_dir_genes=gene_features_test_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='test',
-                                                    gene_copy_ratio=args.gene_copy_ratio)
+                                                    gene_copy_ratio=gene_copy_ratio)
 
 
 if __name__ == '__main__':

@@ -99,12 +99,11 @@ def read_config_file(config_file_path, section):
     config = configparser.ConfigParser()
     config.read(config_file_path)
 
-    if section == 'welch_t':
-        params['alpha'] = config.getfloat('welch_t_test', 'alpha')
+    params['random_state'] = config.getint('general', 'random_state')
+    params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
+    params['smote'] = config.getboolean('general', 'smote')
 
-    elif section == 'svm_t_rfe':
-        params['random_state'] = config.getint('general', 'random_state')
-        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
+    if section == 'svm_t_rfe':
         params['alpha'] = config.getfloat('svm_t_rfe', 'alpha')
         params['theta'] = config.getfloat('svm_t_rfe', 'theta')
         params['cv_grid_search_rank'] = config.getint('svm_t_rfe', 'cv_grid_search_rank')
@@ -113,11 +112,14 @@ def read_config_file(config_file_path, section):
         params['top_ranked'] = config.getint('svm_t_rfe', 'top_ranked')
         params['t_stat_threshold'] = config.getfloat('svm_t_rfe', 't_stat_threshold')
         params['scoring_name'] = config['svm_t_rfe']['scoring']
+        params['num_selected_genes'] = config.getint('svm_t_rfe', 'num_selected_genes')
 
         if config['svm_t_rfe']['scoring'] == 'accuracy':
             params['scoring'] = make_scorer(metrics.accuracy_score)
-        elif config['svm_t_rfe']['scoring'] == 'recall':
-            params['scoring'] = make_scorer(metrics.recall_score)
+        elif config['svm_t_rfe']['scoring'] == 'matthew_coeff':
+            params['scoring'] = make_scorer(metrics.matthews_corrcoef)
+        elif config['svm_t_rfe']['scoring'] == 'auc':
+            params['scoring'] = make_scorer(metrics.roc_auc_score)
         else:
             sys.stderr.write("Invalid value for <scoring> in config file")
             exit(1)
@@ -128,8 +130,6 @@ def read_config_file(config_file_path, section):
             sys.stderr.write("Invalid value for <kernel> in config file")
             exit(1)
     elif section == 'svm':
-        params['random_state'] = config.getint('general', 'random_state')
-        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('svm', 'cv_grid_search_acc')
         params['scoring_name'] = config['svm']['scoring']
 
@@ -147,8 +147,6 @@ def read_config_file(config_file_path, section):
             exit(1)
 
     elif section == 'perceptron':
-        params['random_state'] = config.getint('general', 'random_state')
-        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('perceptron', 'cv_grid_search_acc')
         params['scoring_name'] = config['perceptron']['scoring']
 
@@ -161,8 +159,6 @@ def read_config_file(config_file_path, section):
             exit(1)
 
     elif section == 'sgd_classifier':
-        params['random_state'] = config.getint('general', 'random_state')
-        params['sampling_strategy'] = config.getfloat('general', 'sampling_strategy')
         params['cv_grid_search_acc'] = config.getint('sgd_classifier', 'cv_grid_search_acc')
         params['scoring_name'] = config['sgd_classifier']['scoring']
 

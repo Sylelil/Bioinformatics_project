@@ -24,6 +24,11 @@ def main():
                         required=True,
                         type=str)
 
+    parser.add_argument('--save_rand_tiles',
+                        help='Save random tiles',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
 
     if not os.path.exists(paths.images_dir):
@@ -33,11 +38,6 @@ def main():
     if not os.path.exists(paths.split_data_dir):
         sys.stderr.write(f"File \"{paths.split_data_dir}\" not found")
         exit(1)
-        
-    normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
-    tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
-    low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
-    low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
 
     normal_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_normal'
     tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
@@ -90,10 +90,20 @@ def main():
     print("\nTumor images preprocessing:")
     preprocessing.preprocessing_images(tumor_slides_info, paths.selected_coords_dir,
                                        os.path.join(paths.images_results, "tumor_filter_info.txt"),
-                                       os.path.join(paths.images_results, "normal_tiles_info.txt"),
+                                       os.path.join(paths.images_results, "tumor_tiles_info.txt"),
                                        low_res_tumor_images_dir, tumor_masked_images_dir)
 
     slides_info = normal_slides_info + tumor_slides_info
+
+    if args.save_rand_tiles:
+        print("Saving random tiles on disk...")
+        rand_tiles_dir = paths.images_results / 'selected_tiles' / 'rand_tiles'
+        if not os.path.exists(rand_tiles_dir):
+            os.makedirs(rand_tiles_dir)
+
+        for slide in slides_info:
+            preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
+
     if args.method == 'fine_tuning':
         print("\nSaving selected tiles on disk:")
         preprocessing.extract_tiles_on_disk(slides_info)
@@ -110,7 +120,6 @@ def main():
 
     train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)
 
-    print(train_slides_info)
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
     train_slides_info_1 = [slide for slide in train_slides_info if slide['label'] == 1]
@@ -134,20 +143,18 @@ def main():
     print("\nImages feature extraction:")
     if args.method == 'fine_tuning':
         print(">> Fine tuning:")
-
-        print(train_slides_info[0])
         fine_tuning(train_slides_info, test_slides_info, y_train, y_test)
 
     elif args.method == 'fixed_feature_generator':
         print(">> Fixed feature generator:")
 
-        print(">> Extracting features from training images:")
+        print("\n>> Extracting features from training images:")
         fixed_feature_generator(train_slides_info, paths.extracted_features_train, paths.selected_coords_dir)
 
-        print(">> Extracting features from val images:")
+        print("\n>> Extracting features from val images:")
         fixed_feature_generator(val_slides_info, paths.extracted_features_val, paths.selected_coords_dir)
 
-        print(">> Extracting features from test images:")
+        print("\n>> Extracting features from test images:")
         fixed_feature_generator(test_slides_info, paths.extracted_features_test, paths.selected_coords_dir)
 
     else:

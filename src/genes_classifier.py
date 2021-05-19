@@ -1,18 +1,21 @@
 import argparse
 import os
 import sys
+from collections import Counter
 from pathlib import Path
+
+import imblearn
+import sklearn
 from imblearn.over_sampling import SMOTE
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import Perceptron, SGDClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import  GridSearchCV, StratifiedKFold
-from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from config import paths
 from genes import utils
-from common.plots import plot_tsne_pca
+from common.plots import plot_tsne_pca, plot_pca
 from common.plots import plot_2D_svm_decision_boundary
 from common.classification_report_utils import generate_classification_plots
 from common.classification_report_utils import generate_classification_report
@@ -68,6 +71,15 @@ def main():
     X_val, y_val, t_val = utils.load_selected_genes(paths.svm_t_rfe_selected_features_val)
     X_test, y_test, t_test = utils.load_selected_genes(paths.svm_t_rfe_selected_features_test)
 
+    print("Len X_train" + str(len(X_train)))
+    print("Len X_val" + str(len(X_val)))
+    print("Len X_test" + str(len(X_test)))
+    print(Counter(y_val).keys())
+    print(Counter(y_val).values())
+
+    print(Counter(y_test).keys())
+    print(Counter(y_test).values())
+
     # train + val
     X_train = np.concatenate((X_train, X_val), axis=0)
     y_train = y_train + y_val
@@ -89,14 +101,19 @@ def main():
         param_grid = dict(svm__C=C_range)
 
         print("\nFit SVM with first 2 ranked features:")
-        scaler = StandardScaler()
-        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-        svm = SVC(kernel=params['kernel'])
-        imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+        if params['smote']:
+            scaler = StandardScaler()
+            smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+            svm = SVC(kernel=params['kernel'])
+            pipeline = imblearn.pipeline.Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
+        else:
+            scaler = StandardScaler()
+            svm = SVC(kernel=params['kernel'])
+            pipeline = sklearn.pipeline.Pipeline([('scaler', scaler), ('svm', svm)])
 
         # define search
         cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-        clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
+        clf = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
         clf.fit(X_train[:, :2], y_train)
 
         pred = clf.predict(X_test[:, :2])
@@ -135,13 +152,17 @@ def main():
         exit(1)
 
     print("\nFit SVM with all features:")
-    scaler = StandardScaler()
-    smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-    imba_pipeline = Pipeline([('scaler', scaler), ('smt', smt), (classifier_str, classifier)])
+    if params['smote']:
+        scaler = StandardScaler()
+        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+        pipeline = imblearn.pipeline.Pipeline([('scaler', scaler), ('smt', smt), (classifier_str, classifier)])
+    else:
+        scaler = StandardScaler()
+        pipeline = sklearn.pipeline.Pipeline([('scaler', scaler), (classifier_str, classifier)])
 
     # define search
     cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-    clf = GridSearchCV(estimator=imba_pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
+    clf = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
     results = clf.fit(X_train, y_train)
 
     # best configuration

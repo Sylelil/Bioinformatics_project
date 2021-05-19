@@ -33,8 +33,6 @@ def get_images_split_data(lookup_dir, val_data=True):
     X_val, y_val = slide_info.read_slides_info_from_folder(val_filepath)
     X_test, y_test = slide_info.read_slides_info_from_folder(test_filepath)
 
-    print(X_train)
-
     if val_data:
         return X_train, X_val, X_test, y_train, y_val, y_test
     else:

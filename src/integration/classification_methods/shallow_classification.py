@@ -115,7 +115,9 @@ def shallow_classifier(args, params, data_path, n_features_images):
     experiment_info['Class balancing method'] = str(args.balancing)
     experiment_info['Best hyperparameter'] = f"{'C' if args.classification_method == 'linearsvc' else 'alpha'}={best_hyperparam}"
     experiment_info['Best validation score'] = f"{metric.__name__}={best_score}"
-    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info)
+    test_data_info_path = data_path / 'info_test.csv'
+    classification_report_utils.generate_classification_report(results_path, y_test, y_pred_test, test_scores, experiment_info,
+                                                               test_data_info_path=test_data_info_path)
 
     # generate plots:
     classification_report_utils.generate_classification_plots(results_path, best_classifier, X_test, y_test, X_train, y_train)

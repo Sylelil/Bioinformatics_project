@@ -1,10 +1,12 @@
 import os
 import sys
+from collections import Counter
 from pathlib import Path
-
+import pandas as pd
 import imblearn
 import sklearn
 from numpy.linalg import norm
+from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 import numpy as np
 from sklearn.svm import SVC
@@ -89,13 +91,26 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     if params['smote']:
         scaler = StandardScaler()
-        smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-        pipeline = imblearn.pipeline.Pipeline([('scaler', scaler), ('smt', smt)])
+        train_scaled_features = scaler.fit_transform(df_reduced.values)
+        df_reduced = pd.DataFrame(train_scaled_features, index=df_reduced.index, columns=df_reduced.columns)
+        print(df_reduced)
+
+        sm = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'], n_jobs=-1)
+        df_reduced, y = sm.fit_resample(df_reduced, y)
+        print(Counter(y))
+        df_reduced["target"] = np.array([str(x) for x in y])
+        print(list(df_reduced["target"]))
+        df_reduced.index = list(df_reduced["target"])
+        del df_reduced["target"]
+        print(df_reduced)
+
     else:
         scaler = StandardScaler()
-        pipeline = sklearn.pipeline.Pipeline([('scaler', scaler)])
+        train_scaled_features = scaler.fit_transform(df_reduced.values)
+        df_reduced = pd.DataFrame(train_scaled_features, index=df_reduced.index, columns=df_reduced.columns)
+        print(df_reduced)
 
-    ranked_genes = ranking_genes(df_reduced, y, selected_t_statistics, params, Path(config_dir) / c_values_file, pipeline)
+    ranked_genes = ranking_genes(df_reduced, y, selected_t_statistics, params, Path(config_dir) / c_values_file)
 
     file_genes = open(Path(results_dir) / "ranked_genes.txt", "w")
     for gene_name in ranked_genes:
@@ -104,7 +119,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
 
     top_ranked_genes = ranked_genes[:params['top_ranked']]
     df_top_ranked_genes = df_reduced[top_ranked_genes]
-    accuracy = accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params, pipeline)
+    accuracy = accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params)
 
     x = np.arange(1, len(accuracy) + 1)
     ax = plt.axes()
@@ -123,7 +138,7 @@ def genes_selection_svm_t_rfe(df, y, params, results_dir, config_dir):
     return ranked_genes[:num_selected]
 
 
-def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values, pipeline):
+def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
     """
         Description: Feature ranking with recursive feature elimination.
 
@@ -160,10 +175,6 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values, pipeli
     if len(c_values) == 0:
         perform_grid_search = True
 
-    if perform_grid_search:
-        svm = SVC(kernel=params['kernel'])
-        pipeline.steps.append(('svm', svm))
-
     df_array = df.to_numpy()
     genes_name = [gene for gene in df.columns]  # create list of gene names
     ranked_genes = []
@@ -175,8 +186,9 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values, pipeli
     while df_array.shape[1] > 0:
         # ricerca del miglior C
         if perform_grid_search:
-            cv = StratifiedKFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
-            grid = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv)
+            pipe_grid = Pipeline([('svm', SVC(kernel='linear'))])
+            cv = KFold(n_splits=params['cv_grid_search_rank'], shuffle=True, random_state=params['random_state'])
+            grid = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, cv=cv)
             grid.fit(df_array, y)  # Refit the estimator using the best found parameters on the whole dataset
             C = grid.best_params_['svm__C']
             c_values.append(C)
@@ -185,10 +197,8 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values, pipeli
         else:
             C = c_values[i]
             svm = SVC(kernel=params['kernel'], C=C)
-            pipeline.steps.append(('svm', svm))
-            pipeline.fit(df_array, y)
-            weights = pipeline['svm'].coef_[0]
-            pipeline.steps.pop()
+            svm.fit(df_array, y)
+            weights = svm.coef_[0]
 
         ranking_scores = []
         weights_norm = norm(weights)
@@ -226,7 +236,7 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values, pipeli
     return ranked_genes
 
 
-def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params, pipeline):
+def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, params):
     """
         Description: Determine the optimal number of highest-ranked features for classification accuracy
 
@@ -255,24 +265,21 @@ def accuracies_on_top_ranked_genes(df_top_ranked_genes, y, top_ranked_genes, par
         C_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
         param_grid = dict(svm__C=C_range)
 
-    svm = SVC(kernel=params['kernel'])
-    pipeline.steps.append(('svm', svm))
-
-    # calcolo l'accuratezza considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
+    # calcolo lo score considerando prima solo il primo top ranked gene, poi solo i primi due, etc..
     # fino ad arrivare a considerare tutti i top ranked genes
     for num_selected in tqdm(range(1, params['top_ranked'] + 1), file=sys.stdout):
         selected_features = top_ranked_genes[:num_selected]
         df_selected_array = df_top_ranked_genes[selected_features].to_numpy()
 
         # define search
-        cv_inner = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-        search = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv_inner)
+        pipe_grid = Pipeline([('svm', SVC(kernel=params['kernel']))])
+        cv_inner = KFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
+        search = GridSearchCV(estimator=pipe_grid, param_grid=param_grid, cv=cv_inner)
         # configure the cross-validation procedure
-        cv_outer = StratifiedKFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
+        cv_outer = KFold(n_splits=params['cv_outer'], shuffle=True, random_state=params['random_state'])
         # execute the nested cross-validation
         scores = cross_val_score(search, df_selected_array, y, scoring=params['scoring'], cv=cv_outer)
         # report performance
-        # print(scores)
         mean_score = mean(scores)
         scores_list.append(mean_score)
         print("\n" + params['scoring_name'] + " score " + str(mean_score))

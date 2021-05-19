@@ -34,6 +34,11 @@ def args_parse():
                         required=False,
                         action='store_true')
 
+    parser.add_argument('--use_generator',
+                        help='Use generator to read data',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
     return args
 
@@ -48,28 +53,45 @@ def main():
     # Read configuration file
     params = utils.read_config_file(args.cfg)
 
-    if not args.plot_final_results:
-        data_path = paths.integration_classification_data_dir
+    num_principal_components = params['general']['n_components']
+    gene_copy_ratio = params['general']['gene_copy_ratio']
+
+    if not os.path.exists(args.cfg):
+        print(f"{args.cfg} not found")
+        exit(-1)
+
+    if args.classification_method == 'linearsvc' or args.classification_method == 'sgdclassifier':
+        data_path = Path(paths.concatenated_results_dir) / f"pca{num_principal_components}"
 
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
-            exit()
+            exit(-1)
+        shallow_classification.shallow_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
 
-        if args.classification_method == 'linearsvc' or args.classification_method == 'sgdclassifier':
-            shallow_classification.shallow_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+    elif args.classification_method == 'pcann':
+        data_path = Path(paths.concatenated_results_dir) / f"pca{num_principal_components}"
 
-        elif args.classification_method == 'pcann':
-            nn_classification.pca_nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+        if not os.path.exists(data_path):
+            print("%s not existing." % data_path)
+            exit(-1)
+        nn_classification.pca_nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
 
-        elif args.classification_method == 'nn':
-            nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+    elif args.classification_method == 'nn':
+        data_path = Path(paths.concatenated_results_dir) / f'copyratio{gene_copy_ratio}'
 
-    else:
+        if not os.path.exists(data_path):
+            print("%s not existing." % data_path)
+            exit(-1)
+
+        nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'], use_generator=args.use_generator)
+
+    elif args.plot_final_results:
         results_path = paths.integration_classification_results_dir
         if not os.path.exists(results_path):
             print("%s not existing." % results_path)
             exit()
         classification_report_utils.generate_final_classification_plots(results_path)
+
 
 if __name__ == '__main__':
     main()

@@ -77,7 +77,7 @@ def copy_gene_features(df_gene_features, gene_copy_ratio):
     return df_genes_copied
 
 
-def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, gene_copy_ratio):
+def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, gene_copy_ratio, scaler=None):
     """
        Description: Concatenate gene features (possibly copied according to specified ratio) with tile features.
        :param lookup_dir_tiles: lookup directory with tile features
@@ -85,6 +85,8 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
        :param path_to_save: directory where concatenated data will be saved
        :param dataset_name: dataset name
        :param gene_copy_ratio: copy ratio for gene features
+       :param scaler: scaler for concatenated features.
+       :returns: scaler for concatenated features.
     """
     print()
     print('----------------------------------------------------------------------------------')
@@ -117,7 +119,36 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
     else:
         df_genes_copied = copy_gene_features(df_gene_features, gene_copy_ratio)
 
-    print(f'>> Concatenating {dataset_name} slide data with gene data...')
+    if dataset_name == 'train':
+        scaler = StandardScaler()
+        print('>> Concatenating train data and fitting standard scaler...')
+        for np_file in tqdm(os.listdir(lookup_dir_tiles)):
+            file_path = os.path.join(lookup_dir_tiles, np_file)
+            filename = os.path.splitext(np_file)[0]
+
+            # get list of tile features of a single slide from file
+            slide_data = np.load(file_path)
+            # shape of slide_data:
+            #   [[coordx_1,coordy_1, feat_t_1_1, feat_t_2_1, feat_t_3_1, ...]   # tile 1
+            #    [coordx_2,coordy_2, feat_t_1_2, feat_t_2_2, feat_t_3_2, ...]   # tile 2
+            #    [coordx_3,coordy_3, feat_t_1_3, feat_t_2_3, feat_t_3_3, ...]   # tile 3
+            #    [...]]                                                         # tile ...
+            slide_features = slide_data[:, 2:]
+
+            # concatenation: append gene data with that filename to each row of slides dataframe
+            gene_data = df_genes_copied.loc[filename, :].values.tolist()
+            gene_data_list = [gene_data] * slide_features.shape[0]
+
+            concatenated_data = np.append(slide_features, gene_data_list, axis=1)
+            # shape of concatenated_data:
+            #   [[feat_t_1_1, feat_t_2_1, ... , feat_g_1, feat_g_2, ..., label]   # tile 1
+            #    [feat_t_1_2, feat_t_2_2, ... , feat_g_1, feat_g_2, ..., label]   # tile 2
+            #    [feat_t_1_3, feat_t_2_3, ... , feat_g_1, feat_g_2, ..., label]   # tile 3
+            #    [...]]                                                           # tile ...
+            concatenated_data_no_label = concatenated_data[:, :-1]
+            scaler.partial_fit(concatenated_data_no_label)
+
+    print(f'>> Concatenating {dataset_name} data and transforming it with standard scaler...')
     with open(filepath_data, mode='w') as f_data, \
             open(filepath_data_info, mode='w') as f_info, \
             open(filepath_labels, mode='w') as f_labels:
@@ -151,7 +182,7 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
             #    [...]]                                                           # tile ...
             concatenated_data_no_label = concatenated_data[:, :-1]
             labels_list = concatenated_data[:, -1:]
-            # TODO FIT SCALER ON CONCATENATED FEATURES
+            scaled_concatenated_data_no_label = scaler.transform(concatenated_data_no_label)
 
             # data info
             label_column = [filename[-1]] * slide_info.shape[0]
@@ -168,10 +199,8 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
 
             # save on file
             np.savetxt(f_info, data_info_2, delimiter=',', fmt='%s')
-            np.savetxt(f_data, concatenated_data_no_label, delimiter=',', fmt='%s')
+            np.savetxt(f_data, scaled_concatenated_data_no_label, delimiter=',', fmt='%s')
             np.savetxt(f_labels, labels_list, delimiter=',', fmt='%s')
-
-    # TODO APPLY SCALER ON CONCATENATED FEATURES
 
     print()
     print(f'Total number of samples processed: {num_files}')
@@ -182,6 +211,8 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
     print(f'Data information saved in {filepath_data_info}')
     print()
     print('>> Done.')
+
+    return scaler
 
 
 def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_name, n_components=None, scaler=None, ipca=None, scaler_concatenated=None):
@@ -195,6 +226,7 @@ def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_na
        :param scaler: scaler object
        :param scaler_concatenated: scaler object for concatenated data
        :param ipca: incremental PCA object
+       :returns: scaler for image features, incremental pca for image features, scaler for concatenated features.
     """
     print()
     print('--------------------------------------------')
@@ -222,7 +254,6 @@ def concatenate_pca(lookup_dir_tiles, lookup_dir_genes, path_to_save, dataset_na
         df_gene_features = df_gene_features.drop(index=duplicates)
 
     if dataset_name == 'train':
-
         scaler = StandardScaler()
         ipca = IncrementalPCA(n_components=n_components)
 

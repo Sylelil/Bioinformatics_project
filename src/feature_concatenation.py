@@ -94,7 +94,7 @@ def main():
             print(f'error: invalid configuration <gene_copy_ratio>: {gene_copy_ratio}')
 
         # concatenate data with repeating genes to match tiles dimensionality (no scaling):
-        concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_train_dir,
+        scaler = concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_train_dir,
                                                     lookup_dir_genes=gene_features_train_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='train',
@@ -103,12 +103,14 @@ def main():
                                                     lookup_dir_genes=gene_features_val_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='val',
-                                                    gene_copy_ratio=gene_copy_ratio)
+                                                    gene_copy_ratio=gene_copy_ratio,
+                                                    scaler=scaler)
         concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_test_dir,
                                                     lookup_dir_genes=gene_features_test_dir,
                                                     path_to_save=path_to_save_copied_genes,
                                                     dataset_name='test',
-                                                    gene_copy_ratio=gene_copy_ratio)
+                                                    gene_copy_ratio=gene_copy_ratio,
+                                                    scaler=scaler)
 
 
 if __name__ == '__main__':

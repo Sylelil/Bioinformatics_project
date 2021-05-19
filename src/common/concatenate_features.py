@@ -151,6 +151,7 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
             #    [...]]                                                           # tile ...
             concatenated_data_no_label = concatenated_data[:, :-1]
             labels_list = concatenated_data[:, -1:]
+            # TODO FIT SCALER ON CONCATENATED FEATURES
 
             # data info
             label_column = [filename[-1]] * slide_info.shape[0]
@@ -169,6 +170,8 @@ def concatenate_copy_genes(lookup_dir_tiles, lookup_dir_genes, path_to_save, dat
             np.savetxt(f_info, data_info_2, delimiter=',', fmt='%s')
             np.savetxt(f_data, concatenated_data_no_label, delimiter=',', fmt='%s')
             np.savetxt(f_labels, labels_list, delimiter=',', fmt='%s')
+
+    # TODO APPLY SCALER ON CONCATENATED FEATURES
 
     print()
     print(f'Total number of samples processed: {num_files}')

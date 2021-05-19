@@ -217,18 +217,18 @@ def pca_nn_classifier(args, params, data_path, n_features_images):
 
     mlp_settings = {
         'n_input_features': n_features,
-        'EPOCHS': params['pca_nn']['epochs'],
-        'BATCH_SIZE': params['pca_nn']['batchsize'],
+        'EPOCHS': params['pcann']['epochs'],
+        'BATCH_SIZE': params['pcann']['batchsize'],
         'early_stopping': tf.keras.callbacks.EarlyStopping(
             monitor='val_recall',
             verbose=1,
             patience=10,
             mode='max',
             restore_best_weights=True),
-        'learning_rate': params['pca_nn']['lr'],
+        'learning_rate': params['pcann']['lr'],
         'class_weight': class_weight,
-        'units_1': params['pca_nn']['units_1'],
-        'units_2': params['pca_nn']['units_2'],
+        'units_1': params['pcann']['units_1'],
+        'units_2': params['pcann']['units_2'],
     }
 
     y_pred_test, y_pred_train, test_scores, history = mpl_classify(X_train=X_train, y_train=y_train,
@@ -342,6 +342,7 @@ def nn_classifier(args, params, data_path, n_features_images):
 def generate_classification_results(args, params, y_test, y_pred_test, y_train, y_pred_train, test_scores, history, data_path):
     """
        Description: Generate classification report and plots.
+       :param params: parameters.
        :param args: arguments.
        :param y_test: ground truth test labels.
        :param y_pred_test: predicted test labels.
@@ -352,9 +353,10 @@ def generate_classification_results(args, params, y_test, y_pred_test, y_train, 
        :param data_path: data path.
     """
     # path to save results:
-    experiment_descr = f"DATA_{os.path.split(data_path)[1]}_CLF_{args.classification_method}_{params[args.classification_method]['lr']}_{params[args.classification_method]['epochs']}_{params[args.classification_method]['units_1']}_BAL_{args.balancing}"
-    if params['general']['n_features_images']:
-        experiment_descr += f"_FEATIMG_{params['general']['n_features_images']}"
+    experiment_descr = f"{os.path.split(data_path)[1]}"
+    experiment_descr += f"_{params['general']['n_features_images']}"
+    experiment_descr += f"_{args.classification_method}+{params[args.classification_method]['lr']}+{params[args.classification_method]['epochs']}+{params[args.classification_method]['units_1']}"
+    experiment_descr += f"_{args.balancing}"
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
     if not os.path.exists(results_path):
         os.makedirs(results_path)

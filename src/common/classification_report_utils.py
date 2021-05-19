@@ -1,6 +1,10 @@
+import json
+import os
+import pickle
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from src.common import plots
 import pandas as pd
@@ -83,7 +87,7 @@ def __classification_report(y_test, y_pred_test, test_scores, patch_classificati
     # compute patch score and patient score:
     if patch_classification:
         report['patch_score'] = __compute_patch_score(y_test, y_pred_test)
-        report['patient_avg_score'], patent_stddev_score = __compute_patient_score(y_pred_test)
+        report['patient_avg_score'], report['patent_stddev_score'] = __compute_patient_score(y_pred_test)
 
     # compute further per-class scores:
     per_class_report = metrics.classification_report(y_test, y_pred_test)
@@ -149,35 +153,28 @@ def generate_classification_plots(save_path, classifier, X_test, y_test, X_train
     """
     print(f'>> Generating classification plots and saving them in {save_path}...')
 
+    #save data and classifier with pickle for final plots
+    with open(Path(save_path) / 'X_test', 'wb') as xt_f, open(Path(save_path) / 'y_test', 'wb') as yt_f, open(
+            Path(save_path) / 'classifier', 'wb') as clf_f:
+        pickle.dump(X_test, xt_f)
+        pickle.dump(y_test, yt_f)
+        pickle.dump(classifier, clf_f)
+
     # plot confusion matrix
     plt.figure()
     metrics.plot_confusion_matrix(classifier, X_test, y_test)
     plt.savefig(Path(save_path) / 'confusion_matrix')
 
     # plot roc
-    plt.figure()
-    ax = plt.gca()
+    ax = plots.set_roc_prc_settings(title='ROC curve')
     metrics.plot_roc_curve(classifier, X_train, y_train, name='Train', ax=ax)
     metrics.plot_roc_curve(classifier, X_test, y_test, name='Test', ax=ax)
-    plt.xlim([-0.1, 1.1])
-    plt.ylim([-0.1, 1.1])
-    plt.grid(True)
-    ax.set_aspect('equal')
-    plt.legend(loc='lower right')
-    plt.title('ROC curve')
     plt.savefig(Path(save_path) / 'roc')
 
     # plot precision-recall curve
-    plt.figure()
-    ax = plt.gca()
+    ax = plots.set_roc_prc_settings(title='Precision-Recall curve')
     metrics.plot_precision_recall_curve(classifier, X_train, y_train, name='Train', ax=ax)
     metrics.plot_precision_recall_curve(classifier, X_test, y_test, name='Test', ax=ax)
-    plt.xlim([-0.1, 1.1])
-    plt.ylim([-0.1, 1.1])
-    plt.grid(True)
-    ax.set_aspect('equal')
-    plt.legend(loc='lower right')
-    plt.title('Precision-Recall curve')
     plt.savefig(Path(save_path) / 'prc')
 
     plt.show()
@@ -196,21 +193,102 @@ def generate_classification_plots_nn(save_path, y_test, y_pred_test, pred_proba_
     """
     print(f'>> Generating classification plots and saving them in {save_path}...')
 
+    # save data with pickle for final plots
+    with open(Path(save_path) / 'pred_proba_test', 'wb') as ppt_f, open(Path(save_path) / 'y_test', 'wb') as yt_f, open(Path(save_path) / 'y_pred_test', 'wb') as ypt_f:
+        pickle.dump(pred_proba_test, ppt_f)
+        pickle.dump(y_test, yt_f)
+        pickle.dump(y_pred_test, ypt_f)
+
     # plot confusion matrix
-    plt.figure()
-    plots.plot_cm(y_test, y_pred_test)
+    plots.plot_cm(y_test, y_pred_test, save_path)
     plt.savefig(Path(save_path) / 'confusion_matrix')
 
     # plot roc
-    plt.figure()
-    plots.plot_roc("Train", y_train, pred_proba_train)
-    plots.plot_roc("Test", y_test, pred_proba_test)
+    ax = plots.set_roc_prc_settings(title='ROC curve')
+    plots.plot_roc_nn("Train", y_train, pred_proba_train, ax)
+    plots.plot_roc_nn("Test", y_test, pred_proba_test, ax)
     plt.savefig(Path(save_path) / 'roc')
 
     # plot precision-recall curve
-    plt.figure()
-    plots.plot_prc("Train", y_train, pred_proba_train)
-    plots.plot_prc("Test", y_test, pred_proba_test)
+    ax = plots.set_roc_prc_settings(title='Precision-Recall curve')
+    plots.plot_prc_nn("Train", y_train, pred_proba_train, ax)
+    plots.plot_prc_nn("Test", y_test, pred_proba_test, ax)
     plt.savefig(Path(save_path) / 'prc')
 
     plt.show()
+
+
+def get_experiment_title(dirname, clf_type):
+    fields = dirname.split('_')
+    title = ''
+    if clf_type == 'nn':
+        clf_fields = fields[2].split('+')
+        title = f"MLP (n. hidden layers: 1, n. units: {clf_fields[3]}, lr:{clf_fields[1]}, epochs:{clf_fields[2]})"
+        if clf_fields[0] == 'pcann':
+            title += "\ntrained on reduced image features + gene features"
+        else:
+            title += " trained on all features"
+    else:
+        if fields[2] == 'sgdclassifier':
+            title = 'SGDClassifier'
+        elif fields[2] == 'linearsvc':
+            title = 'LinearSVC'
+    return title
+
+
+def generate_final_classification_plots(results_path):
+    # get data
+    experiments = []
+    for res_dir in tqdm(os.listdir(results_path)):
+        path_res_dir = Path(results_path) / res_dir
+        if os.path.isdir(path_res_dir):
+            experiment = {}
+            experiment['name'] = res_dir
+            experiment['dir'] = path_res_dir
+            if 'nn' in res_dir:
+                experiment['type'] = 'nn'
+                experiment['title'] = get_experiment_title(os.path.basename(res_dir), 'nn')
+            else:
+                experiment['type'] = 'shallow'
+                experiment['title'] = get_experiment_title(os.path.basename(res_dir), 'shallow')
+            experiments.append(experiment)
+
+    # roc curves
+    ax_roc = plots.set_roc_prc_settings(title='ROC curve')
+    for experiment in experiments:
+        if experiment['type'] == 'nn':
+            with open(Path(experiment['dir']) / 'pred_proba_test', 'rb') as ppt_f, open(Path(experiment['dir']) / 'y_test', 'rb') as yt_f:
+                pred_proba_test = pickle.load(ppt_f)
+                y_test = pickle.load(yt_f)
+                plots.plot_roc_nn(experiment['title'], y_test, pred_proba_test, ax_roc)
+        else:
+            with open(Path(experiment['dir']) / 'X_test', 'rb') as xt_f, open(
+                    Path(experiment['dir']) / 'y_test', 'rb') as yt_f, open(
+                    Path(experiment['dir']) / 'classifier', 'rb') as clf_f:
+                X_test = pickle.load(xt_f)
+                y_test = pickle.load(yt_f)
+                classifier = pickle.load(clf_f)
+                metrics.plot_roc_curve(classifier, X_test, y_test, name=experiment['title'], ax=ax_roc)
+    plt.savefig(Path(results_path) / 'final_roc')
+
+    # precision-recall curves
+    ax_prc = plots.set_roc_prc_settings(title='Precision-Recall curve')
+    for experiment in experiments:
+        if experiment['type'] == 'nn':
+            with open(Path(experiment['dir']) / 'pred_proba_test', 'rb') as ppt_f, open(
+                    Path(experiment['dir']) / 'y_test', 'rb') as yt_f:
+                pred_proba_test = pickle.load(ppt_f)
+                y_test = pickle.load(yt_f)
+                plots.plot_prc_nn(experiment['title'], y_test, pred_proba_test, ax_prc)
+        else:
+            with open(Path(experiment['dir']) / 'X_test', 'rb') as xt_f, open(
+                    Path(experiment['dir']) / 'y_test', 'rb') as yt_f, open(
+                    Path(experiment['dir']) / 'classifier', 'rb') as clf_f:
+                X_test = pickle.load(xt_f)
+                y_test = pickle.load(yt_f)
+                classifier = pickle.load(clf_f)
+                metrics.plot_precision_recall_curve(classifier, X_test, y_test, name=experiment['title'], ax=ax_prc)
+    plt.savefig(Path(results_path) / 'final_prc')
+
+    plt.show()
+

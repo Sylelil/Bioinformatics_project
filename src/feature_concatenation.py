@@ -50,7 +50,7 @@ def main():
 
     if args.n_principal_components is not None:
 
-        path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca_{args.n_principal_components}'
+        path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca{args.n_principal_components}'
         if not os.path.exists(path_to_save_pca):
             os.makedirs(path_to_save_pca)
 

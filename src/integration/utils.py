@@ -69,12 +69,12 @@ def read_config_file(config_file_path):
     params['nn']['lr'] = config.getfloat('nn', 'lr')
 
     # pca_nn
-    params['pca_nn'] = {}
-    params['pca_nn']['epochs'] = config.getint('pca_nn', 'epochs')
-    params['pca_nn']['batchsize'] = config.getint('pca_nn', 'batchsize')
-    params['pca_nn']['units_1'] = config.getint('pca_nn', 'units_1')
-    params['pca_nn']['units_2'] = config.getint('pca_nn', 'units_2')
-    params['pca_nn']['lr'] = config.getfloat('pca_nn', 'lr')
+    params['pcann'] = {}
+    params['pcann']['epochs'] = config.getint('pcann', 'epochs')
+    params['pcann']['batchsize'] = config.getint('pcann', 'batchsize')
+    params['pcann']['units_1'] = config.getint('pcann', 'units_1')
+    params['pcann']['units_2'] = config.getint('pcann', 'units_2')
+    params['pcann']['lr'] = config.getfloat('pcann', 'lr')
 
     # linearsvc
     params['linearsvc'] = {}

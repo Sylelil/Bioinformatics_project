@@ -73,12 +73,14 @@ def plot_train_val_results(history, save_path):
     plt.figure()
 
 
-def plot_cm(labels, predictions):
+def plot_cm(labels, predictions, save_path):
     """
        Description: Plot Confusion Matrix.
+       :param save_path: path to save.
        :param labels: ground truth labels.
        :param predictions: predicted labels.
     """
+    plt.figure()
     cm = metrics.confusion_matrix(labels, predictions)
     plt.figure(figsize=(5, 5))
     sns.heatmap(cm, annot=True, fmt="d", cmap="viridis")
@@ -87,9 +89,22 @@ def plot_cm(labels, predictions):
     plt.xlabel('Predicted label')
 
 
-def plot_roc(name, labels, predictions, **kwargs):
+def set_roc_prc_settings(title):
+    plt.figure()
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
+    plt.grid(True)
+    ax = plt.gca()
+    ax.set_aspect('equal')
+    plt.legend(loc='lower right')
+    plt.title(title)
+    return ax
+
+
+def plot_roc_nn(name, labels, predictions, ax, **kwargs):
     """
        Description: Plot ROC curve.
+       :param ax: axis
        :param name: title.
        :param labels: ground truth labels.
        :param predictions: predicted labels.
@@ -98,21 +113,16 @@ def plot_roc(name, labels, predictions, **kwargs):
     fp, tp, _ = metrics.roc_curve(labels, predictions)
     auc = metrics.roc_auc_score(labels, predictions)
 
+    plt.axis = ax
     plt.plot(fp, tp, label=f'{name}, AUC={auc}', linewidth=2, **kwargs)
     plt.xlabel('False positive rate (Positive label: 1)')
     plt.ylabel('True positive rate (Positive label: 1)')
-    plt.xlim([-0.1, 1.1])
-    plt.ylim([-0.1, 1.1])
-    plt.grid(True)
-    ax = plt.gca()
-    ax.set_aspect('equal')
-    plt.title('ROC curve')
-    plt.legend(loc='lower right')
 
 
-def plot_prc(name, labels, predictions, **kwargs):
+def plot_prc_nn(name, labels, predictions, ax, **kwargs):
     """
        Description: Plot Precision-Recall curve.
+       :param ax: axis
        :param name: title.
        :param labels: ground truth labels.
        :param predictions: predicted scores.
@@ -120,17 +130,10 @@ def plot_prc(name, labels, predictions, **kwargs):
     """
     precision, recall, _ = metrics.precision_recall_curve(labels, predictions)
     ap = metrics.average_precision_score(labels, predictions)
-
+    plt.axis = ax
     plt.plot(recall, precision, label=f'{name}, AP={ap}', linewidth=2, **kwargs)
     plt.xlabel('Recall (Positive label: 1)')
     plt.ylabel('Precision (Positive label: 1)')
-    plt.xlim([-0.1, 1.1])
-    plt.ylim([-0.1, 1.1])
-    plt.grid(True)
-    ax = plt.gca()
-    ax.set_aspect('equal')
-    plt.title('Precision-Recall curve')
-    plt.legend(loc='lower right')
 
 
 def plot_explained_variance(explained_variance_ratio, path_to_save, n_components):

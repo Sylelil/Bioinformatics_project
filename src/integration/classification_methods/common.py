@@ -20,10 +20,8 @@ def get_balancing_method(method, params):
        :param params: Parameters from configuration file.
        :returns: Class balancing method.
     """
-    if method == 'random_upsampling':
+    if method == 'randomupsampling':
         return RandomOverSampler(random_state=params['general']['random_state'])
-    elif method == 'smoteenn':
-        return SMOTEENN(random_state=params['general']['random_state'])
     elif method == 'smote':
         return SMOTE(random_state=params['general']['random_state'])
     return None

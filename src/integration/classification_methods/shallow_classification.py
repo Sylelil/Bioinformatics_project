@@ -30,8 +30,7 @@ def get_classifier(hyperparam, method_name, balancing, random_state, max_iter=10
         classifier = SGDClassifier(alpha=hyperparam,
                                    max_iter=max_iter,  # np.ceil(10**6 / n_samples)
                                    class_weight=('balanced' if balancing == 'weights' else None),
-                                   random_state=random_state,
-                                   average=True) # Averaged SGD works best with a larger number of features and a higher eta0
+                                   random_state=random_state)
     return classifier
 
 
@@ -100,9 +99,10 @@ def shallow_classifier(args, params, data_path, n_features_images):
         test_scores[metr.__name__] = metr(y_test, y_pred_test)
 
     # path to save results:
-    experiment_descr = f"DATA_{os.path.split(data_path)[1]}_CLF_{args.classification_method}_BAL_{args.balancing}"
-    if n_features_images:
-        experiment_descr += f'_FEATIMG_{n_features_images}'
+    experiment_descr = f"{os.path.split(data_path)[1]}"
+    experiment_descr += f"_{params['general']['n_features_images']}"
+    experiment_descr += f"_{args.classification_method}"
+    experiment_descr += f"_{args.balancing}"
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
     if not os.path.exists(results_path):
         os.makedirs(results_path)

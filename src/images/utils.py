@@ -593,18 +593,18 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Values in reference implementation for use with eigendecomposition approach, natural log,
     # and `light_intensity=240`.
-    # stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
-    # max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
+    #stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
+    #max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
 
     # SVD w/ log10, and `light_intensity=255`.
     stain_ref = (np.array([0.54598845, 0.322116, 0.72385198, 0.76419107, 0.42182333, 0.55879629])
-                 .reshape(3, 2))
-    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2, 1)
+                 .reshape(3,2))
+    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2,1)
 
     # Convert RGB to OD.
     # Note: The original paper used log10, and the reference implementation used the natural log.
-    # OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
-    OD = -np.log10(x / light_intensity + 1e-8)
+    #OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
+    OD = -np.log10(x/light_intensity + 1e-8)
 
     # Remove data with OD intensity less than beta.
     # I.e. remove transparent pixels.
@@ -612,21 +612,16 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # taking an average over all channels for a given pixel.
     OD_thresh = OD[np.all(OD >= beta, 1), :]  # shape (K, C)
 
-    # TODO
-    # Ci sono casi in cui np.all ritorna un np.array vuoto, e questo fa spaccare il programma
-    # applichiamo questa soluzione temporanea
-    if len(OD_thresh) == 0:
-        return sample
     # Calculate eigenvectors.
     # Note: We can either use eigenvector decomposition, or SVD.
-    # eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
+    #eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
     U, s, V = np.linalg.svd(OD_thresh, full_matrices=False)
 
     # Extract two largest eigenvectors.
     # Note: We swap the sign of the eigvecs here to be consistent
     # with other implementations.  Both +/- eigvecs are valid, with
     # the same eigenvalue, so this is okay.
-    # top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
+    #top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
     top_eigvecs = V[0:2, :].T * -1  # shape (C, 2)
 
     # Project thresholded optical density values onto plane spanned by
@@ -635,26 +630,25 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Calculate angle of each point wrt the first plane direction.
     # Note: the parameters are `np.arctan2(y, x)`
-
     angles = np.arctan2(proj[:, 1], proj[:, 0])  # shape (K,)
 
     # Find robust extremes (a and 100-a percentiles) of the angle.
     min_angle = np.percentile(angles, alpha)
-    max_angle = np.percentile(angles, 100 - alpha)
+    max_angle = np.percentile(angles, 100-alpha)
 
     # Convert min/max vectors (extremes) back to optimal stains in OD space.
     # This computes a set of axes for each angle onto which we can project
     # the top eigenvectors.  This assumes that the projected values have
     # been normalized to unit length.
     extreme_angles = np.array(
-        [[np.cos(min_angle), np.cos(max_angle)],
-         [np.sin(min_angle), np.sin(max_angle)]]
+      [[np.cos(min_angle), np.cos(max_angle)],
+       [np.sin(min_angle), np.sin(max_angle)]]
     )  # shape (2,2)
     stains = np.dot(top_eigvecs, extreme_angles)  # shape (C, 2)
 
     # Merge vectors with hematoxylin first, and eosin second, as a heuristic.
     if stains[0, 0] < stains[0, 1]:
-        stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
+      stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
 
     # Calculate saturations of each stain.
     # Note: Here, we solve
@@ -679,20 +673,9 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # not return the correct values due to the initital values being outside of [0,255].
     # To fix this, we round to the nearest integer, and then clip to [0,255], which is the
     # same behavior as Matlab.
-    # x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
-    x_norm = 10 ** (-OD_norm) * light_intensity - 1e-8  # log10 approach
+    #x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
+    x_norm = 10**(-OD_norm) * light_intensity - 1e-8  # log10 approach
     x_norm = np.clip(np.round(x_norm), 0, 255).astype(np.uint8)
     x_norm = x_norm.astype(np.uint8)
-    x_norm = x_norm.T.reshape(h, w, c)
+    x_norm = x_norm.T.reshape(h,w,c)
     return x_norm
-
-
-def load_images_features(path):
-
-    for patient_file in tqdm(os.listdir(path), desc=">> Reading images features...", file=sys.stdout):
-        patient_features = np.load(os.path.join(path, patient_file))
-        print(patient_features[0])
-
-        print(patient_features[1])
-
-    return

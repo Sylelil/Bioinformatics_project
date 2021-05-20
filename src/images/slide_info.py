@@ -4,7 +4,6 @@ from tqdm import tqdm
 import os
 from config import paths
 from . import utils
-import config.images.config as cfg
 
 
 def read_slides_info_from_folder(lookup_dir):

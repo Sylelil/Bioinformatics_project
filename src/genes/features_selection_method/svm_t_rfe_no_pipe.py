@@ -3,8 +3,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 import pandas as pd
-import imblearn
-import sklearn
 from numpy.linalg import norm
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm

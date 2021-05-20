@@ -7,10 +7,10 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 from config import paths
-from src.common.classification_metrics import METRICS_keras
-from src.integration import data_generator, utils
-from src.common import plots, classification_report_utils
-from src.integration.classification_methods import common
+from common.classification_metrics import METRICS_keras
+from integration import data_generator, utils
+from common import plots, classification_report_utils
+from integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt

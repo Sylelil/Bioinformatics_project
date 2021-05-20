@@ -3,12 +3,12 @@ from pathlib import Path
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
 from config import paths
-from src.common import classification_report_utils
-from src.common.plots import plot_2D_svm_decision_boundary, plot_2D_svm_decision_boundary_integration
-from src.integration import utils
-from src.integration.classification_methods import common
+from common import classification_report_utils
+from common.plots import plot_2D_svm_decision_boundary, plot_2D_svm_decision_boundary_integration
+from integration import utils
+from integration.classification_methods import common
 from sklearn import metrics
-from src.common.classification_metrics import METRICS_skl
+from common.classification_metrics import METRICS_skl
 
 
 def get_classifier(hyperparam, method_name, balancing, random_state, max_iter=1000):

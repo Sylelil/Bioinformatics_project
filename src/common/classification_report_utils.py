@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from src.common import plots
+from . import plots
 import pandas as pd
 from pathlib import Path
 from sklearn import metrics

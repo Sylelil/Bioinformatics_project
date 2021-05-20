@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from src.genes import utils
-from src.images import slide_info
+from genes import utils
+from images import slide_info
 import numpy as np
 
 
@@ -157,7 +157,7 @@ def split_into_folders(lookup_dir, filenames_train, filenames_val, filenames_tes
                         if filename not in skipped_filenames:
                             skipped_filenames.append(filename)
                         continue
-                    shutil.copyfile(file_path, dest_path)
+                    os.link(file_path, dest_path)
         else:
             filename = os.path.splitext(file)[0]
             if filename in filenames_train:
@@ -173,7 +173,7 @@ def split_into_folders(lookup_dir, filenames_train, filenames_val, filenames_tes
                 if filename not in skipped_filenames:
                     skipped_filenames.append(filename)
                 continue
-            shutil.copyfile(file_path, dest_path)
+            os.link(file_path, dest_path)
 
     print(f'{len(skipped_filenames)} skipped filename (not in splits): {skipped_filenames}')
     print(f'{n_train} train files copied.')

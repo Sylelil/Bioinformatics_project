@@ -1,6 +1,4 @@
 import os
-import sys
-
 import openslide
 from openslide import OpenSlideError
 import datetime
@@ -10,7 +8,6 @@ import PIL
 from PIL import Image, ImageDraw, ImageFont
 import skimage.morphology as sk_morphology
 import skimage.filters as sk_filters
-from tqdm import tqdm
 
 
 class Time:
@@ -533,7 +530,6 @@ def get_x_zoom_level(highest_zoom_level, slide_magnification, desired_magnificat
     Zoom level corresponding to a x magnification, or as close as
     possible.
   """
-    # TODO: check if desired_magnification is proper value
     try:
         # `mag / desired_magnification` gives the downsampling factor between the slide's
         # magnification and the desired x magnification.

@@ -8,7 +8,7 @@ from config import paths
 from images import preprocessing, slide_info
 from images.features_extraction_method.fine_tuning import fine_tuning
 from images.features_extraction_method.fixed_feature_generator import fixed_feature_generator
-from src.common import split_data
+from common import split_data
 
 
 def main():

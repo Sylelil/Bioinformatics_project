@@ -2,9 +2,9 @@ import argparse
 import os
 from pathlib import Path
 from config import paths
-from src.common import classification_report_utils
-from src.integration import utils
-from src.integration.classification_methods import nn_classification, shallow_classification
+from common import classification_report_utils
+from integration import utils
+from integration.classification_methods import nn_classification, shallow_classification
 import matplotlib.pyplot as plt
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 

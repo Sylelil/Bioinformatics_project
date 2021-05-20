@@ -1,6 +1,6 @@
 from pathlib import Path
 
-BASE_DIR = Path('.')
+BASE_DIR = Path('')
 
 # assets folder
 images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI

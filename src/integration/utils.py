@@ -10,7 +10,7 @@ from sklearn.decomposition import IncrementalPCA
 import matplotlib.pyplot as plt
 
 from config import paths
-from src.common import plots
+from common import plots
 
 
 def get_concatenated_data(data_path, n_features_images=None):

@@ -1,11 +1,6 @@
-import math
 import os
-from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-
 from config import paths
 from common.classification_metrics import METRICS_keras
 from integration import data_generator, utils
@@ -105,7 +100,7 @@ def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, ou
 
 
 def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
-                 n_features_images, balancer=None, scaler=None, data_path=None, use_generators=False):
+                 n_features_images, balancer=None, data_path=None, use_generators=False):
     """
        Description: Train and test MLP classifier.
        :param n_features_images: number of features of images to be considered.
@@ -146,7 +141,6 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
     if use_generators:
         X_train = data_generator.csv_data_generator(data_path,
                                                     batchsize=mlp_settings['BATCH_SIZE'],
-                                                    scaler=scaler,
                                                     n_features_images=n_features_images,
                                                     balancer=balancer,
                                                     dataset_name='train',
@@ -171,7 +165,6 @@ def mpl_classify(X_train, y_train, X_val, y_val, X_test, y_test, mlp_settings,
     if use_generators:
         X_test = data_generator.csv_data_generator(data_path,
                                                    batchsize=mlp_settings['BATCH_SIZE'],
-                                                   scaler=scaler,
                                                    n_features_images=n_features_images,
                                                    balancer=None,
                                                    dataset_name='test',
@@ -261,7 +254,6 @@ def nn_classifier(args, params, data_path, n_features_images, use_generator=Fals
        :param n_features_images: number of features of images to be considered
     """
     batchsize = params['nn']['batchsize']
-    scaler = StandardScaler()
     X_train = []
     X_val = []
     X_test = []
@@ -271,14 +263,6 @@ def nn_classifier(args, params, data_path, n_features_images, use_generator=Fals
         y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values.ravel().astype(int)
         y_val = pd.read_csv(Path(data_path) / 'y_val.csv', delimiter=',', header=None).values.ravel().astype(int)
         y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values.ravel().astype(int)
-
-        # fit scaler on train data
-        for chunk in tqdm(
-                pd.read_csv(Path(data_path) / 'x_train.csv', chunksize=batchsize, iterator=True, dtype='float64')):
-            if n_features_images:
-                scaler.partial_fit(chunk.iloc[:, :n_features_images])
-            else:
-                scaler.partial_fit(chunk)
 
     else:
         X_train, y_train, X_val, y_val, X_test, y_test = utils.get_concatenated_data(data_path, n_features_images)
@@ -325,26 +309,23 @@ def nn_classifier(args, params, data_path, n_features_images, use_generator=Fals
     }
 
     if use_generator:
-        print(f">> Creating train data generator with scaler and {args.balancing} balancer...")
+        print(f">> Creating train data generator with {args.balancing} balancer...")
         train_generator = data_generator.csv_data_generator(data_path,
                                                             batchsize=batchsize,
-                                                            scaler=scaler,
                                                             n_features_images=n_features_images,
                                                             balancer=balancer,
                                                             dataset_name='train',
                                                             mode='train')
-        print(f">> Creating validation data generator with scaler...")
+        print(f">> Creating validation data generator...")
         val_generator = data_generator.csv_data_generator(data_path,
                                                           batchsize=batchsize,
-                                                          scaler=scaler,
                                                           n_features_images=n_features_images,
                                                           balancer=None,
                                                           dataset_name='val',
                                                           mode='eval')
-        print(f">> Creating test data generator with scaler...")
+        print(f">> Creating test data generator...")
         test_generator = data_generator.csv_data_generator(data_path,
                                                            batchsize=batchsize,
-                                                           scaler=scaler,
                                                            n_features_images=n_features_images,
                                                            balancer=None,
                                                            dataset_name='test',
@@ -355,7 +336,7 @@ def nn_classifier(args, params, data_path, n_features_images, use_generator=Fals
                                                                        X_test=test_generator, y_test=y_test,
                                                                        mlp_settings=mlp_settings,
                                                                        n_features_images=n_features_images,
-                                                                       balancer=balancer, scaler=scaler,
+                                                                       balancer=balancer,
                                                                        data_path=data_path,
                                                                        use_generators=True)
     else:

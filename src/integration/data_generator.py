@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 
-def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer=None, dataset_name="train", mode='train'):
+def csv_data_generator(inputPath, batchsize, n_features_images, balancer=None, dataset_name="train", mode='train'):
     """
        Description: Data generator from csv file.
        :param n_features_images: number of features of images to be considered.
@@ -51,9 +51,6 @@ def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer
                 # update our corresponding batches lists
                 X.append(data)
                 y.append(label)
-
-            # apply scaler to data
-            X = scaler.transform(X)
 
             # if the class balancing object is not None, apply it
             if balancer is not None:

@@ -17,10 +17,6 @@ def args_parse():
                         help='Configuration file path',
                         required=True,
                         type=str)
-    parser.add_argument('--plot_explained_variance',
-                        help='Either to plot explained variance to choose best number of Principal Components or not',
-                        required=False,
-                        action='store_true')
 
     args = parser.parse_args()
     return args
@@ -34,11 +30,10 @@ def main():
     args = args_parse()
 
     # Read configuration file
-    params = utils.read_config_file(args.cfg)
-
     if not os.path.exists(args.cfg):
         print(f"{args.cfg} not found")
         exit(-1)
+    params = utils.read_config_file(args.cfg)
 
     tile_features_train_dir = paths.extracted_features_train
     tile_features_test_dir = paths.extracted_features_test
@@ -47,70 +42,98 @@ def main():
     gene_features_test_dir = paths.svm_t_rfe_selected_features_test
     gene_features_val_dir = paths.svm_t_rfe_selected_features_val
 
-    num_principal_components = params['general']['n_components']
-    gene_copy_ratio = params['general']['gene_copy_ratio']
+    num_principal_components = params['general']['num_principal_components']
+    use_features_images_only = params['general']['use_features_images_only']
 
-    if num_principal_components is not None:
+    if use_features_images_only:
 
-        path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca{args.n_principal_components}'
-        if not os.path.exists(path_to_save_pca):
-            os.makedirs(path_to_save_pca)
+        if num_principal_components is not None:
+            path_to_save = Path(paths.concatenated_results_dir) / 'images' / f'pca{num_principal_components}'
+            if not os.path.exists(path_to_save):
+                os.makedirs(path_to_save)
+            n_components = num_principal_components if num_principal_components > 0 else None
 
-        n_components = num_principal_components if num_principal_components > 0 else None
+            scaler, ipca = concatenate_features.save_features_images_only(
+                lookup_dir_tiles_train=tile_features_train_dir,
+                lookup_dir_tiles_val=tile_features_val_dir,
+                path_to_save=path_to_save,
+                dataset_name='train',
+                n_components=n_components,
+                with_ipca=True)
+            concatenate_features.save_features_images_only(lookup_dir_tiles_test=tile_features_test_dir,
+                                                           path_to_save=path_to_save,
+                                                           dataset_name='test',
+                                                           n_components=n_components,
+                                                           scaler=scaler,
+                                                           ipca=ipca,
+                                                           with_ipca=True)
+            plots.plot_explained_variance(ipca.explained_variance_ratio_, path_to_save, n_components)
+            np.savetxt(Path(path_to_save) / 'pca_components.csv', ipca.components_, delimiter=',', fmt='%s')
 
-        # concatenate data with PCA:
-        scaler, ipca, scaler_concatenated = concatenate_features.concatenate_pca(
-            lookup_dir_tiles=tile_features_train_dir,
-            lookup_dir_genes=gene_features_train_dir,
-            path_to_save=path_to_save_pca,
-            dataset_name='train',
-            n_components=n_components)
-        concatenate_features.concatenate_pca(lookup_dir_tiles=tile_features_val_dir,
-                                             lookup_dir_genes=gene_features_val_dir,
-                                             path_to_save=path_to_save_pca,
-                                             dataset_name='val',
-                                             scaler=scaler,
-                                             ipca=ipca,
-                                             scaler_concatenated=scaler_concatenated)
-        concatenate_features.concatenate_pca(lookup_dir_tiles=tile_features_test_dir,
-                                             lookup_dir_genes=gene_features_test_dir,
-                                             path_to_save=path_to_save_pca,
+        else:
+            path_to_save = Path(paths.concatenated_results_dir) / 'images' / 'all'
+            if not os.path.exists(path_to_save):
+                os.makedirs(path_to_save)
+
+            scaler, _ = concatenate_features.save_features_images_only(lookup_dir_tiles_train=tile_features_train_dir,
+                                                                       lookup_dir_tiles_val=tile_features_val_dir,
+                                                                       path_to_save=path_to_save,
+                                                                       dataset_name='train',
+                                                                       with_ipca=False)
+            concatenate_features.save_features_images_only(lookup_dir_tiles_test=tile_features_test_dir,
+                                                           path_to_save=path_to_save,
+                                                           dataset_name='test',
+                                                           scaler=scaler,
+                                                           with_ipca=False)
+
+    else:
+        if num_principal_components is not None:
+            path_to_save = Path(
+                paths.concatenated_results_dir) / 'concatenated' / f'pca{num_principal_components}'
+            if not os.path.exists(path_to_save):
+                os.makedirs(path_to_save)
+            n_components = num_principal_components if num_principal_components > 0 else None
+
+            # concatenate data with PCA:
+            scaler, ipca = concatenate_features.concatenate(
+                lookup_dir_tiles_train=tile_features_train_dir,
+                lookup_dir_tiles_val=tile_features_val_dir,
+                lookup_dir_genes_train=gene_features_train_dir,
+                lookup_dir_genes_val=gene_features_val_dir,
+                path_to_save=path_to_save,
+                dataset_name='train',
+                n_components=n_components,
+                with_ipca=True)
+            concatenate_features.concatenate(lookup_dir_tiles_test=tile_features_test_dir,
+                                             lookup_dir_genes_test=gene_features_test_dir,
+                                             path_to_save=path_to_save,
                                              dataset_name='test',
                                              scaler=scaler,
                                              ipca=ipca,
-                                             scaler_concatenated=scaler_concatenated)
+                                             with_ipca=True)
 
-        if args.plot_explained_variance:
-            plots.plot_explained_variance(ipca.explained_variance_ratio_, path_to_save_pca, n_components)
-            np.savetxt(Path(path_to_save_pca) / 'pca_components.csv', ipca.components_, delimiter=',', fmt='%s')
+            plots.plot_explained_variance(ipca.explained_variance_ratio_, path_to_save, n_components)
+            np.savetxt(Path(path_to_save) / 'pca_components.csv', ipca.components_, delimiter=',', fmt='%s')
 
-    if gene_copy_ratio is not None:
+        else:
+            path_to_save = paths.concatenated_results_dir / 'concatenated' / 'all'
+            if not os.path.exists(path_to_save):
+                os.makedirs(path_to_save)
 
-        path_to_save_copied_genes = paths.concatenated_results_dir / f'copyratio{gene_copy_ratio}'
-        if not os.path.exists(path_to_save_copied_genes):
-            os.makedirs(path_to_save_copied_genes)
-
-        if gene_copy_ratio <= 0:
-            print(f'error: invalid configuration <gene_copy_ratio>: {gene_copy_ratio}')
-
-        # concatenate data with repeating genes to match tiles dimensionality (no scaling):
-        scaler = concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_train_dir,
-                                                    lookup_dir_genes=gene_features_train_dir,
-                                                    path_to_save=path_to_save_copied_genes,
-                                                    dataset_name='train',
-                                                    gene_copy_ratio=gene_copy_ratio)
-        concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_val_dir,
-                                                    lookup_dir_genes=gene_features_val_dir,
-                                                    path_to_save=path_to_save_copied_genes,
-                                                    dataset_name='val',
-                                                    gene_copy_ratio=gene_copy_ratio,
-                                                    scaler=scaler)
-        concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_test_dir,
-                                                    lookup_dir_genes=gene_features_test_dir,
-                                                    path_to_save=path_to_save_copied_genes,
-                                                    dataset_name='test',
-                                                    gene_copy_ratio=gene_copy_ratio,
-                                                    scaler=scaler)
+            # concatenate data with repeating genes to match tiles dimensionality (no scaling):
+            scaler, _ = concatenate_features.concatenate(lookup_dir_tiles_train=tile_features_train_dir,
+                                                         lookup_dir_tiles_val=tile_features_val_dir,
+                                                         lookup_dir_genes_train=gene_features_train_dir,
+                                                         lookup_dir_genes_val=gene_features_val_dir,
+                                                         path_to_save=path_to_save,
+                                                         dataset_name='train',
+                                                         with_ipca=False)
+            concatenate_features.concatenate(lookup_dir_tiles_test=tile_features_test_dir,
+                                             lookup_dir_genes_test=gene_features_test_dir,
+                                             path_to_save=path_to_save,
+                                             dataset_name='test',
+                                             scaler=scaler,
+                                             with_ipca=False)
 
 
 if __name__ == '__main__':

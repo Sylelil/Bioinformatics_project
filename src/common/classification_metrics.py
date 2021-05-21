@@ -12,6 +12,7 @@ METRICS_skl = [
     metrics.roc_auc_score,
 ]
 
+top_metric_skl = metrics.recall_score
 
 ''' Metrics for nn classification: '''
 METRICS_keras = [
@@ -25,4 +26,6 @@ METRICS_keras = [
     keras.metrics.AUC(name='auc'),
     keras.metrics.AUC(name='prc', curve='PR'),  # precision-recall curve
 ]
+
+top_metric_keras = 'recall'
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 
-def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer=None, dataset_name="train", mode='train'):
+def csv_data_generator(inputPath, batchsize, dataset_name="train", mode='train'):
     """
        Description: Data generator from csv file.
        :param n_features_images: number of features of images to be considered.
@@ -46,8 +46,6 @@ def csv_data_generator(inputPath, batchsize, scaler, n_features_images, balancer
                 # extract label and data
                 line = line.strip().split(",")
                 data = np.array([np.float64(x) for x in line])
-                if n_features_images:
-                    data = data[:n_features_images]
                 # update our corresponding batches lists
                 X.append(data)
                 y.append(label)

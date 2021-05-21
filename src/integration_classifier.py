@@ -24,16 +24,10 @@ def args_parse():
                         choices=['linearsvc', 'sgdclassifier', 'nn', 'pcann'],
                         required=False,
                         type=str)
-    parser.add_argument('--balancing',
-                        help='Class balancing method',
-                        choices=['randomupsampling', 'smote', 'weights'],
-                        required=False,
-                        type=str)
     parser.add_argument('--plot_final_results',
                         help='Either to plot final results or not',
                         required=False,
                         action='store_true')
-
     parser.add_argument('--use_generator',
                         help='Use generator to read data',
                         required=False,
@@ -51,39 +45,43 @@ def main():
     args = args_parse()
 
     # Read configuration file
-    params = utils.read_config_file(args.cfg)
-
-    num_principal_components = params['general']['n_components']
-    gene_copy_ratio = params['general']['gene_copy_ratio']
-
     if not os.path.exists(args.cfg):
         print(f"{args.cfg} not found")
         exit(-1)
+    params = utils.read_config_file(args.cfg)
+
+    num_principal_components = params['general']['num_principal_components']
+    use_features_images_only = params['general']['use_features_images_only']
+
+    if use_features_images_only:
+        data_folder = Path(paths.concatenated_results_dir) / 'images'
+    else:
+        data_folder = Path(paths.concatenated_results_dir) / 'concatenated'
 
     if args.classification_method == 'linearsvc' or args.classification_method == 'sgdclassifier':
-        data_path = Path(paths.concatenated_results_dir) / f"pca{num_principal_components}"
+        data_path = Path(data_folder) / f"pca{num_principal_components}"
 
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-        shallow_classification.shallow_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+        shallow_classification.shallow_classifier(args, params, data_path)
 
     elif args.classification_method == 'pcann':
-        data_path = Path(paths.concatenated_results_dir) / f"pca{num_principal_components}"
+        data_path = Path(data_folder) / f"pca{num_principal_components}"
 
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-        nn_classification.pca_nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'])
+        nn_classification.nn_classifier(args, params['pcann'], data_path)
 
     elif args.classification_method == 'nn':
-        data_path = Path(paths.concatenated_results_dir) / f'copyratio{gene_copy_ratio}'
+        data_path = Path(data_folder) / f'all'
 
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
 
-        nn_classification.nn_classifier(args, params, data_path, n_features_images=params['general']['n_features_images'], use_generator=args.use_generator)
+        nn_classification.nn_classifier(args, params['nn'], data_path)
 
     elif args.plot_final_results:
         results_path = paths.integration_classification_results_dir

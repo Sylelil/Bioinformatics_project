@@ -13,7 +13,7 @@ from config import paths
 from src.common import plots
 
 
-def get_concatenated_data(data_path, n_features_images=None):
+def get_concatenated_data_old(data_path):
     """
        Description: Apply StandardScaler and IncrementalPCA to data.
        :param data_path: path of data.
@@ -27,13 +27,23 @@ def get_concatenated_data(data_path, n_features_images=None):
     X_test = pd.read_csv(Path(data_path) / 'x_test.csv', delimiter=',', header=None).values
     y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
 
-    if n_features_images:
-        n = n_features_images
-        X_train = X_train[:, 0:n]
-        X_val = X_val[:, 0:n]
-        X_test = X_test[:, 0:n]
-
     return X_train, y_train.ravel().astype(int), X_val, y_val.ravel().astype(int), X_test, y_test.ravel().astype(int)
+
+
+def get_data(data_path):
+    """
+       Description: Get data for classification.
+       :param data_path: path of data.
+       :returns: X_train, y_train, X_test, y_test: data and labels
+    """
+    print('>> Reading train files...')
+    X_train = pd.read_csv(Path(data_path) / 'x_train.csv', delimiter=',', header=None).values
+    y_train = pd.read_csv(Path(data_path) / 'y_train.csv', delimiter=',', header=None).values
+    print('>> Reading test files...')
+    X_test = pd.read_csv(Path(data_path) / 'x_test.csv', delimiter=',', header=None).values
+    y_test = pd.read_csv(Path(data_path) / 'y_test.csv', delimiter=',', header=None).values
+
+    return X_train, y_train.ravel().astype(int), X_test, y_test.ravel().astype(int)
 
 
 def read_config_file(config_file_path):
@@ -49,14 +59,18 @@ def read_config_file(config_file_path):
     # general
     params['general'] = {}
     params['general']['random_state'] = config.getint('general', 'random_state')
-    params['general']['use_pca_scaled_features'] = config.getboolean('general', 'use_pca_scaled_features')
-    params['general']['n_components'] = config.getint('general', 'num_principal_components')
-    params['general']['gene_copy_ratio'] = config.getint('general', 'gene_copy_ratio')
-    n_features_images = config['general']['n_features_images']
-    if n_features_images == 'None' or n_features_images == '':
-        params['general']['n_features_images'] = None
+    params['general']['use_features_images_only'] = config.getboolean('general', 'use_features_images_only')
+    n_comp = config.get('general', 'num_principal_components')
+    if n_comp.isdecimal():
+        params['general']['num_principal_components'] = int(n_comp)
     else:
-        params['general']['n_features_images'] = config.getint('general', 'n_features_images')
+        params['general']['num_principal_components'] = None
+
+
+    # cv
+    params['cv'] = {}
+    params['cv']['n_outer_splits'] = config.getint('cv', 'n_outer_splits')
+    params['cv']['n_inner_splits'] = config.getint('cv', 'n_inner_splits')
 
     # nn
     params['nn'] = {}

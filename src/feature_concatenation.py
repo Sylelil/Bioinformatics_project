@@ -52,7 +52,7 @@ def main():
 
     if num_principal_components is not None:
 
-        path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca{args.n_principal_components}'
+        path_to_save_pca = Path(paths.concatenated_results_dir) / f'pca{num_principal_components}'
         if not os.path.exists(path_to_save_pca):
             os.makedirs(path_to_save_pca)
 
@@ -95,10 +95,10 @@ def main():
 
         # concatenate data with repeating genes to match tiles dimensionality (no scaling):
         scaler = concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_train_dir,
-                                                    lookup_dir_genes=gene_features_train_dir,
-                                                    path_to_save=path_to_save_copied_genes,
-                                                    dataset_name='train',
-                                                    gene_copy_ratio=gene_copy_ratio)
+                                                             lookup_dir_genes=gene_features_train_dir,
+                                                             path_to_save=path_to_save_copied_genes,
+                                                             dataset_name='train',
+                                                             gene_copy_ratio=gene_copy_ratio)
         concatenate_features.concatenate_copy_genes(lookup_dir_tiles=tile_features_val_dir,
                                                     lookup_dir_genes=gene_features_val_dir,
                                                     path_to_save=path_to_save_copied_genes,

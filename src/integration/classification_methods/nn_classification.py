@@ -1,140 +1,110 @@
-import math
 import os
-
 from sklearn.model_selection import KFold
 from tqdm import tqdm
-import pandas as pd
 from pathlib import Path
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-
 from config import paths
 from src.common.classification_metrics import METRICS_keras, top_metric_keras
-from src.integration import data_generator, utils
+from src.integration import utils
 from src.common import plots, classification_report_utils
 from src.integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
-import matplotlib.pyplot as plt
-import tensorflow.keras.backend as K
 from sklearn import metrics
-from keras.wrappers.scikit_learn import KerasClassifier
-
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
-def make_model(n_input_features, lr, units_1, units_2, metrics=METRICS_keras, output_bias=None):
+def __make_model(n_input_features, lr, units_1, units_2, metrics_list=METRICS_keras):
     """
        Description: Create MLP model.
        :param n_input_features: number of input features.
        :param lr: learning rate.
        :param units_1: number of units in first dense layer.
        :param units_2: number of units in second dense layer.
-       :param metrics: metrics list.
-       :param output_bias: output bias (default: None).
+       :param metrics_list: metrics list.
        :returns: MLP model.
     """
-    if output_bias is not None:
-        output_bias = tf.keras.initializers.Constant(output_bias)
     model = keras.Sequential([
         keras.layers.InputLayer(input_shape=(n_input_features,)),
         keras.layers.Dense(units_1, activation='relu', ),
         keras.layers.Dropout(0.5),
         # keras.layers.Dense(units_2, activation='relu'),
         # keras.layers.Dropout(0.5),
-        keras.layers.Dense(1, activation='sigmoid', bias_initializer=output_bias),
+        keras.layers.Dense(1, activation='sigmoid'),
     ])
 
     model.compile(optimizer=keras.optimizers.Adam(learning_rate=lr),
                   loss=keras.losses.BinaryCrossentropy(),
-                  # loss=custom_loss,
-                  metrics=metrics,
-                  # run_eagerly=True
-                  )
+                  metrics=metrics_list)
     return model
 
 
-def mlp_classify(X_train, y_train, X_test, y_test, mlp_settings, use_generators=False):
-    model = make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
-                       units_2=mlp_settings['units_2'])
+def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
+    """
+       Description: Classify with MLP.
+       :param X_train: train data.
+       :param y_train: train labels.
+       :param X_test: test data.
+       :param y_test: test labels.
+       :param mlp_settings: mlp settings dictionary.
+       :returns: y_pred_train, y_pred_test, train_scores, test_scores, history: classification results
+    """
+    model = __make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
+                         units_2=mlp_settings['units_2'])
     model.summary()
-    print("num train steps: " + str(len(y_train) // mlp_settings['BATCH_SIZE']))
-    print("num val steps: " + str(len(y_test) // mlp_settings['BATCH_SIZE'] + 1))
     history = model.fit(x=X_train,
-                        y=(None if use_generators else y_train),
-                        steps_per_epoch=(len(y_train) // mlp_settings['BATCH_SIZE'] if use_generators else None),
+                        y=y_train,
+                        steps_per_epoch=None,
                         batch_size=mlp_settings['BATCH_SIZE'],
                         epochs=mlp_settings['EPOCHS'],
                         callbacks=mlp_settings['early_stopping'],
-                        validation_data=(X_test, (None if use_generators else y_test)),
-                        validation_steps=(
-                            (len(y_test) // mlp_settings['BATCH_SIZE'] + 1) if use_generators else None),
+                        validation_data=(X_test, y_test),
+                        validation_steps=None,
                         class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
-    print("Predict on train..")
-    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'],
-                                 steps=(
-                                     (len(y_train) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
-                                 )
+    print("Predicting on train..")
+    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'], steps=None)
     y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
-    print("Predict on test..")
-    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'],
-                                steps=((len(y_test) // mlp_settings['BATCH_SIZE']) + 1 if use_generators else None)
-                                )
+    print("Predicting on test..")
+    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'], steps=None)
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
 
     print('Evaluating model on test...')
-    test_scores_list = model.evaluate(X_test, (None if use_generators else y_test),
+    test_scores_list = model.evaluate(X_test, y_test,
                                       batch_size=mlp_settings['BATCH_SIZE'],
                                       verbose=1,
-                                      steps=(
-                                          (len(y_test) // mlp_settings[
-                                              'BATCH_SIZE']) + 1 if use_generators else None)
-                                      )
+                                      steps=None)
     test_scores = dict(zip(model.metrics_names, test_scores_list))
     test_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_test, y_pred_test_labels)
     print('Evaluating model on train...')
-    train_scores_list = model.evaluate(X_train, (None if use_generators else y_train),
+    train_scores_list = model.evaluate(X_train, y_train,
                                        batch_size=mlp_settings['BATCH_SIZE'],
                                        verbose=1,
-                                       steps=(
-                                           (len(y_train) // mlp_settings[
-                                               'BATCH_SIZE']) + 1 if use_generators else None)
-                                       )
+                                       steps=None)
     train_scores = dict(zip(model.metrics_names, train_scores_list))
     train_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_train, y_pred_train_labels)
 
     return y_pred_train, y_pred_test, train_scores, test_scores, history
 
 
-def mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
+def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
     """
-       Description: Train and test MLP classifier.
+       Description: Use cross validation to assess performance of MLP, then get final results on test.
        :param X_train: train data.
        :param y_train: train labels.
        :param X_test: test data.
        :param y_test: test labels.
-       :param mlp_settings: dictionary with MLP settings.
-       :param data_path: path to data.
-       :param use_generators: either or not to get data as generators (default: False).
-       :returns: y_pred_test, y_pred_train, test_scores, history: validation and test results
+       :param mlp_settings: mlp settings dictionary.
+       :param params: parameters.
+       :returns: results: classification results
     """
     metric_name = top_metric_keras
 
-    print(">> Creating MultiLayer Perceptron model...")
-    # model = KerasClassifier(build_fn=make_model(mlp_settings['n_input_features'],
-    #                                             mlp_settings['learning_rate'],
-    #                                             units_1=mlp_settings['units_1'],
-    #                                             units_2=mlp_settings['units_2']),
-    #                         epochs=mlp_settings['EPOCHS'],
-    #                         batch_size=mlp_settings['BATCH_SIZE'],
-    #                         verbose=1)
-
-    # cross validation for unbiased error estimation
     test_results = []
     train_results = []
 
+    # cross validation for unbiased error estimation
+    print(">> Cross validation for unbiased error estimation...")
     cv = KFold(n_splits=params['cv']['n_inner_splits'], shuffle=True,
                random_state=params['general']['random_state'])
 
@@ -143,9 +113,9 @@ def mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
         X_train_cv, X_test_cv = X_train[train_ix, :], X_train[test_ix, :]
         y_train_cv, y_test_cv = y_train[train_ix], y_train[test_ix]
 
-        y_pred_train_cv, y_pred_test_cv, train_scores_cv, test_scores_cv, _ = mlp_classify(X_train_cv, y_train_cv,
-                                                                                           X_test_cv, y_test_cv,
-                                                                                           mlp_settings, params)
+        y_pred_train_cv, y_pred_test_cv, train_scores_cv, test_scores_cv, _ = __mlp_classify(X_train_cv, y_train_cv,
+                                                                                             X_test_cv, y_test_cv,
+                                                                                             mlp_settings)
 
         test_results.append(test_scores_cv[metric_name])
         train_results.append(train_scores_cv[metric_name])
@@ -173,9 +143,9 @@ def mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
 
     # refit on train data to evaluate on test data
     print('>> Fitting on train dataset to evaluate on test dataset...')
-    y_pred_train, y_pred_test, train_scores, test_scores, history = mlp_classify(X_train, y_train,
-                                                                                 X_test, y_test,
-                                                                                 mlp_settings, params)
+    y_pred_train, y_pred_test, train_scores, test_scores, history = __mlp_classify(X_train, y_train,
+                                                                                   X_test, y_test,
+                                                                                   mlp_settings)
 
     results = {
         'metric_name': metric_name,
@@ -193,11 +163,10 @@ def mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
 
 def nn_classifier(args, params, data_path):
     """
-       Description: Train and test MLP classifier preceded by IncrementalPCA and class balancing, then show results.
+       Description: Train and test MLP classifier.
        :param args: arguments.
        :param params: configuration parameters.
        :param data_path: data path.
-       :param n_features_images: number of features of images to be considered
     """
     X_train, y_train, X_test, y_test = utils.get_data(data_path)
 
@@ -232,24 +201,21 @@ def nn_classifier(args, params, data_path):
         'units_2': params['units_2'],
     }
 
-    results = mlp_cross_validate(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                 mlp_settings=mlp_settings, params=params)
+    results = __mlp_cross_validate(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                   mlp_settings=mlp_settings, params=params)
 
-    generate_classification_results(args, params, y_test, y_train, data_path, results)
+    __generate_classification_results(args, params, y_test, y_train, data_path, results)
 
 
-def generate_classification_results(args, params, y_test, y_train, data_path, results):
+def __generate_classification_results(args, params, y_test, y_train, data_path, results):
     """
        Description: Generate classification report and plots.
        :param params: parameters.
        :param args: arguments.
        :param y_test: ground truth test labels.
-       :param y_pred_test: predicted test labels.
        :param y_train: ground truth train labels.
-       :param y_pred_train: predicted train labels.
-       :param test_scores: dictionary with scores of test classification.
-       :param history: model history.
        :param data_path: data path.
+       :param results: results dictionary.
     """
     # path to save results:
     experiment_descr = f"{os.path.split(data_path)[1]}"

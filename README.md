@@ -26,15 +26,8 @@ python src/tiles_to_numpy.py
 
 
 ## Concatenation of image and gene features
-
-### Concatenation of image and gene features with PCA on images features
 ```
-python src/feature_concatenation.py --cfg ./config/integration/conf.ini --n_principal_components 250 --plot_explained_variance
-```
-
-### Concatenation of image and gene features with gene copy ratio
-```
-python src/feature_concatenation.py --cfg ./config/integration/conf.ini --gene_copy_ratio 10
+python src/feature_concatenation.py --cfg ./config/integration/conf.ini
 ```
 
 
@@ -54,27 +47,5 @@ python src/integration_classifier.py --cfg ./config/integration/conf.ini --class
 ```
 ### Multi-Layered Perceptron with data transformed with PCA
 ```
-python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method pca_nn
+python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method pcann
 ```
-
-
-##Classification with class balancing
-
-### SMOTE
-```
-python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method <...> --balancing smote
-```
-### Random Upsampling
-```
-python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method <...> --balancing random_upsampling
-```
-### SMOTEENN
-```
-python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method <...> --balancing smoteenn
-```
-### Class Weights
-```
-python src/integration_classifier.py --cfg ./config/integration/conf.ini --classification_method <...> --balancing weights
-```
-
-

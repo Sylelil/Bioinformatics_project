@@ -5,8 +5,6 @@ from config import paths
 from src.common import classification_report_utils
 from src.integration import utils
 from src.integration.classification_methods import nn_classification, shallow_classification
-import matplotlib.pyplot as plt
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
 def args_parse():
@@ -28,10 +26,6 @@ def args_parse():
                         help='Either to plot final results or not',
                         required=False,
                         action='store_true')
-    parser.add_argument('--use_generator',
-                        help='Use generator to read data',
-                        required=False,
-                        action='store_true')
 
     args = parser.parse_args()
     return args
@@ -39,7 +33,7 @@ def args_parse():
 
 def main():
     """
-       Description: Train and test classifier on concatenated features, with possible preprocessing techniques and class balancing.
+       Description: Train and test classifiers on concatenated features.
     """
     # Parse arguments from command line
     args = args_parse()
@@ -60,7 +54,6 @@ def main():
 
     if args.classification_method == 'linearsvc' or args.classification_method == 'sgdclassifier':
         data_path = Path(data_folder) / f"pca{num_principal_components}"
-
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
@@ -68,7 +61,6 @@ def main():
 
     elif args.classification_method == 'pcann':
         data_path = Path(data_folder) / f"pca{num_principal_components}"
-
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
@@ -76,11 +68,9 @@ def main():
 
     elif args.classification_method == 'nn':
         data_path = Path(data_folder) / f'all'
-
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-
         nn_classification.nn_classifier(args, params['nn'], data_path)
 
     elif args.plot_final_results:

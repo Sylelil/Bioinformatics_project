@@ -1,4 +1,3 @@
-import base64
 import os
 import numpy as np
 import multiprocessing
@@ -12,8 +11,6 @@ from skimage import img_as_bool
 from skimage.filters import median, gaussian
 from skimage.morphology import disk
 import config.images.config as cfg
-import hashlib
-import base64
 
 
 def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, images_dir,
@@ -135,6 +132,11 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(rgb_pens, "Pen filters")
 
     # from RGB to grayscale
+    # The three color channels are replaced by a single grayscale channel.
+    # The grayscale pixel value is computed by combining the red, green,
+    # and blue values in set percentages.
+    # The grayscale image is a two-dimensional NumPy array because
+    # the 3 color channels have been combined into a single grayscale channel.
     grayscale = utils.filter_rgb_to_grayscale(rgb)
     string += utils.np_info(grayscale, "Gray", utils.Time().elapsed())
     string += '\n'
@@ -142,13 +144,20 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(grayscale, "Grayscale")
 
     # otsu's adaptive thresholding
-    # complement -> in order to have background values close to 0
+    # complement -> invert the values in order to have background values close to 0
+    # In WSI, the slide backgrounds are illuminated by white light,
+    # which means that a uint8 pixel in the background of a grayscale
+    # image is usually close to or equal to 255.
+    # Often is useful to have background values close to or equal to 0.
+    # For example, this is useful in thresholding, where we ask
+    # if a pixel value is above a particular threshold value
     complement = utils.filter_complement(grayscale)
     string += utils.np_info(complement, "Complement", utils.Time().elapsed())
     string += '\n'
     if display:
         utils.display_img(complement, "Complement")
 
+    # thresholding is used to create a binary image from a grayscale image
     otsu_mask = utils.filter_otsu_threshold(complement)
     string += utils.np_info(otsu_mask, "Otsu Threshold", utils.Time().elapsed())
     string += '\n'
@@ -184,8 +193,9 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
         utils.display_img(no_small_holes_otsu_mask, "Compl. Otsu mask(holes)")
 
     no_small_holes_otsu_mask = img_as_bool(no_small_holes_otsu_mask, force_copy=False)
-    segmented_image = utils.mask_rgb(rgb_pens,
-                                     no_small_holes_otsu_mask)  # pixel wise and between the original image and the complementary of the otsu mask
+    # The final segmented image is obtained by a pixel-wise and between the original
+    # image (minus pens) and the complementary of the otsu mask
+    segmented_image = utils.mask_rgb(rgb_pens, no_small_holes_otsu_mask)
 
     string += utils.np_info(segmented_image, "Mask RGB", utils.Time().elapsed())
     string += '\n'
@@ -301,16 +311,15 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
         grid_coord = dzg_level_x_tile_coords
 
     coords = []
-    threshold = 0.90  # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
-    # in order to be selected. It should range between 0 and 1.
     (cols, rows) = grid_coord
 
     for row in range(rows):
         for col in range(cols):
             mask_tile = dzg_mask.get_tile(dzg_mask.level_count - 1, (col, row))
             rgb_mask_tile = np.asarray(mask_tile)
-
-            pred = utils.select_tile(rgb_mask_tile, threshold)
+            # Threshold parameter indicating the proportion of the tile area that should be foreground (tissue content)
+            # in order to be selected. It should range between 0 and 1.
+            pred = utils.select_tile(rgb_mask_tile, cfg.THRESHOLD)
 
             tile = dzg.get_tile(dzg_level_x, (col, row))
 
@@ -337,40 +346,6 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
 
     print(">> Tiles coords saved to \"%s\"" % os.path.join(selected_tiles_dir, slide_info['slide_name'] + '.npy'))
     return info
-
-
-def hash_base64(_str):
-    return base64.b64encode(hashlib.md5(_str.encode()).digest()).decode().rstrip("=")
-
-
-def extract_tiles_on_disk(slides_info):
-    num_tiles = 0
-    for current_slide in slides_info:
-        slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, current_slide['slide_name'] + '.npy'))
-        num_tiles += len(slide_tiles_coords)
-
-    if len(os.listdir(paths.selected_tiles_dir)) < num_tiles:
-        for current_slide in slides_info:
-            slide_name = current_slide['slide_name']
-            print('Saving tiles of slide ', slide_name)
-            slide = utils.open_wsi(current_slide['slide_path'])
-            zoom = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
-
-            dzg_level_x = utils.get_x_zoom_level(
-                current_slide['highest_zoom_level'],
-                current_slide['slide_magnification'],
-                10)
-
-            slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, slide_name + '.npy'))
-
-            for index, coord in enumerate(slide_tiles_coords):
-                tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
-                np_tile = utils.normalize_staining(tile)
-                save_path = paths.selected_tiles_dir / (
-                        hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
-                np.save(save_path, np_tile)
-    else:
-        print(">> Selected tiles already saved on disk")
 
 
 def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16):

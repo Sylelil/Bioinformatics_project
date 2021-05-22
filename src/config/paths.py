@@ -22,7 +22,6 @@ extracted_features_train = BASE_DIR / images_results / 'fixed_feature_generator'
 extracted_features_test = BASE_DIR / images_results / 'fixed_feature_generator' / 'extracted_features' / 'test'
 extracted_features_val = BASE_DIR / images_results / 'fixed_feature_generator' / 'extracted_features' / 'val'
 selected_coords_dir = BASE_DIR / images_results / 'selected_tiles' / 'coords'
-selected_tiles_dir = BASE_DIR / images_results / 'selected_tiles' / 'tiles'
 
 # results/concatenated_results
 concatenated_results_dir = BASE_DIR / 'results' / 'concatenated_results'

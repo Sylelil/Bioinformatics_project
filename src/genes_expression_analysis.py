@@ -22,13 +22,6 @@ def main():
                         required=True,
                         type=str)
 
-    parser.add_argument('--method',
-                        help='Feature selection method',
-                        choices=['svm_t_rfe'],
-                        required=True,
-                        default='svm_t_rfe',
-                        type=str)
-
     args = parser.parse_args()
 
     if not os.path.exists(paths.genes_dir):
@@ -62,7 +55,7 @@ def main():
         os.makedirs(paths.svm_t_rfe_selected_features_val)
 
     # Read configuration file
-    params = utils.read_config_file(args.cfg, args.method)
+    params = utils.read_config_file(args.cfg, "svm_t_rfe")
 
     print("\nReading split gene expression data:")
     genes_splits_path = Path(paths.split_data_dir) / 'genes'
@@ -115,34 +108,29 @@ def main():
 
     print("\nDifferentially gene expression analysis [DGEA]")
 
-    if args.method == 'svm_t_rfe':
-        # feature selection
-        selected_genes = genes_selection_svm_t_rfe(X_train_val_log, y_train_val, params, paths.svm_t_rfe_results_dir,
+    # feature selection
+    selected_genes = genes_selection_svm_t_rfe(X_train_val_log, y_train_val, params, paths.svm_t_rfe_results_dir,
                                                    genes_config_dir)
-        # save selected genes on file
-        fp = open(paths.svm_t_rfe_results_dir / "selected_genes.txt", "w")
-        for gene in selected_genes:
-            fp.write("%s\n" % gene)
-        fp.close()
+    # save selected genes on file
+    fp = open(paths.svm_t_rfe_results_dir / "selected_genes.txt", "w")
+    for gene in selected_genes:
+        fp.write("%s\n" % gene)
+    fp.close()
 
-        plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir / "features_box_plots.png")
+    plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir / "features_box_plots.png")
 
-        plots.plot_features_box_plots(X_train_val[["ENSG00000168748.12", "ENSG00000182271.11", "ENSG00000197273.3"]],
-                                      y_train_val, paths.svm_t_rfe_results_dir / "colorectal_features_box_plots.png")
+    plots.plot_features_box_plots(X_train_val[["ENSG00000168748.12", "ENSG00000182271.11", "ENSG00000197273.3"]],
+                                  y_train_val, paths.svm_t_rfe_results_dir / "colorectal_features_box_plots.png")
 
-        # saving selected features
-        print("\nSaving selected training gene features on disk...")
-        utils.save_selected_genes(X_train_log[selected_genes], paths.svm_t_rfe_selected_features_train)
+    # saving selected features
+    print("\nSaving selected training gene features on disk...")
+    utils.save_selected_genes(X_train_log[selected_genes], paths.svm_t_rfe_selected_features_train)
 
-        print("\nSaving selected validation gene features on disk...")
-        utils.save_selected_genes(X_val_log[selected_genes], paths.svm_t_rfe_selected_features_val)
+    print("\nSaving selected validation gene features on disk...")
+    utils.save_selected_genes(X_val_log[selected_genes], paths.svm_t_rfe_selected_features_val)
 
-        print("\nSaving selected test gene features on disk...")
-        utils.save_selected_genes(X_test_log[selected_genes], paths.svm_t_rfe_selected_features_test)
-
-    else:
-        sys.stderr.write("Invalid value for <feature selection method>")
-        exit(1)
+    print("\nSaving selected test gene features on disk...")
+    utils.save_selected_genes(X_test_log[selected_genes], paths.svm_t_rfe_selected_features_test)
 
 
 if __name__ == "__main__":

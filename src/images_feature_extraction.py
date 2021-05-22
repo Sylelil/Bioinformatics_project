@@ -11,6 +11,9 @@ from common import split_data
 
 
 def main():
+    """
+        Description: Main performing steps in order to extract features from WSI patches
+    """
     if not cfg.USE_GPU:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -42,9 +45,6 @@ def main():
 
     if not os.path.exists(paths.selected_coords_dir):
         os.makedirs(paths.selected_coords_dir)
-
-    if not os.path.exists(paths.selected_tiles_dir):
-        os.makedirs(paths.selected_tiles_dir)
 
     if not os.path.exists(normal_masked_images_dir):
         os.makedirs(normal_masked_images_dir)

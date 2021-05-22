@@ -445,7 +445,7 @@ def plot_features_box_plots(df, y, path_to_save):
     plt.suptitle('')
     plt.xlabel('')
     plt.tight_layout()
-    plt.savefig(Path(path_to_save) / "features_box_plots.png")
+    plt.savefig(path_to_save)
     plt.show()
     plt.close()
 

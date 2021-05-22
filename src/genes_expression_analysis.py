@@ -6,7 +6,7 @@ from pathlib import Path
 from config import paths
 from config.paths import BASE_DIR
 from genes import utils
-from genes.features_selection_method.svm_t_rfe_no_pipe import genes_selection_svm_t_rfe
+from genes.features_selection_method.svm_t_rfe import genes_selection_svm_t_rfe
 from common import split_data, plots
 
 
@@ -125,7 +125,10 @@ def main():
             fp.write("%s\n" % gene)
         fp.close()
 
-        plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir)
+        plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir / "features_box_plots.png")
+
+        plots.plot_features_box_plots(X_train_val[["ENSG00000168748.12", "ENSG00000182271.11", "ENSG00000197273.3"]],
+                                      y_train_val, paths.svm_t_rfe_results_dir / "colorectal_features_box_plots.png")
 
         # saving selected features
         print("\nSaving selected training gene features on disk...")

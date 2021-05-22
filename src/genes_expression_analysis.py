@@ -3,14 +3,11 @@ import math
 import os
 import sys
 from pathlib import Path
-
-
 from config import paths
 from config.paths import BASE_DIR
 from genes import utils
 from genes.features_selection_method.svm_t_rfe_no_pipe import genes_selection_svm_t_rfe
 from common import split_data, plots
-
 
 
 def main():
@@ -47,7 +44,7 @@ def main():
         exit(2)
 
     # config folder
-    genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
+    genes_config_dir = BASE_DIR / 'src' / 'config' / 'genes'  # Directory di configurazione per i geni
 
     if not os.path.exists(paths.svm_t_rfe_results_dir):
         os.makedirs(paths.svm_t_rfe_results_dir)

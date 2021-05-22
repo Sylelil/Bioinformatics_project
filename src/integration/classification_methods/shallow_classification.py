@@ -8,10 +8,10 @@ from sklearn.svm import LinearSVC
 from tqdm import tqdm
 import numpy as np
 from config import paths
-from src.common import classification_report_utils
-from src.integration import utils
+from common import classification_report_utils
+from integration import utils
 from sklearn import metrics
-from src.common.classification_metrics import METRICS_skl, top_metric_skl
+from common.classification_metrics import METRICS_skl, top_metric_skl
 from imblearn.pipeline import Pipeline
 
 

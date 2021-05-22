@@ -3,14 +3,11 @@ import math
 import os
 import sys
 from pathlib import Path
-from numpy import mean, std, median
-
 from config import paths
 from config.paths import BASE_DIR
 from genes import utils
-from genes.features_selection_method.svm_t_rfe_no_pipe import genes_selection_svm_t_rfe
-from src.common import split_data, plots
-import matplotlib.pyplot as plt
+from genes.features_selection_method.svm_t_rfe import genes_selection_svm_t_rfe
+from common import split_data, plots
 
 
 def main():

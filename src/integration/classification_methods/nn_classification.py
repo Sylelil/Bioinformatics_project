@@ -7,10 +7,10 @@ from tqdm import tqdm
 from pathlib import Path
 import numpy as np
 from config import paths
-from src.common.classification_metrics import METRICS_keras, top_metric_keras
-from src.integration import utils
-from src.common import plots, classification_report_utils
-from src.integration.classification_methods import common
+from common.classification_metrics import METRICS_keras, top_metric_keras
+from integration import utils
+from common import plots, classification_report_utils
+from integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 from sklearn import metrics
@@ -54,16 +54,11 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
     # model = __make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
     #                      units_2=mlp_settings['units_2'])
     # model.summary()
-    keras_estimator = KerasClassifier(build_fn=__make_model(mlp_settings['n_input_features'],
-                                                            mlp_settings['learning_rate'],
-                                                            units_1=mlp_settings['units_1'],
-                                                            units_2=mlp_settings['units_2']),
-                                      verbose=1,
-                                      batch_size=mlp_settings['BATCH_SIZE'],
-                                      epochs=mlp_settings['EPOCHS'],
-                                      callbacks=mlp_settings['early_stopping'],
-                                      class_weight=mlp_settings['class_weight'],
-                                      )
+    keras_estimator = KerasClassifier(build_fn=lambda: __make_model(mlp_settings['n_input_features'],
+                                                                    mlp_settings['learning_rate'],
+                                                                    units_1=mlp_settings['units_1'],
+                                                                    units_2=mlp_settings['units_2']
+                                                                    ))
     model = Pipeline([('standardscaler', StandardScaler()), ('mlp', keras_estimator)])
 
     # history = model.fit(x=X_train,
@@ -77,13 +72,19 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
     #                     class_weight=mlp_settings['class_weight'],
     #                     verbose=1)
 
-    history = model.fit(X_train, y_train)
+    history = model.fit(X_train, y_train,
+                        mlp__verbose=1,
+                        mlp__batch_size=mlp_settings['BATCH_SIZE'],
+                        mlp__epochs=mlp_settings['EPOCHS'],
+                        mlp__callbacks=mlp_settings['early_stopping'],
+                        mlp__class_weight=mlp_settings['class_weight'],
+                        mlp__validation_data=(X_test, y_test))
 
     print("Predicting on train..")
-    y_pred_train = model.predict(X_train, mlp__batch_size=mlp_settings['BATCH_SIZE'], mlp__steps=None)
+    y_pred_train = model.predict(X_train)
     y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
     print("Predicting on test..")
-    y_pred_test = model.predict(X_test, mlp__batch_size=mlp_settings['BATCH_SIZE'], mlp__steps=None)
+    y_pred_test = model.predict(X_test)
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
 
     print('Evaluating model on test...')
@@ -136,8 +137,8 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
 
     # cross validation for unbiased error estimation
     print(">> Cross validation for unbiased error estimation...")
-    cv = KFold(n_splits=params['cv']['n_inner_splits'], shuffle=True,
-               random_state=params['general']['random_state'])
+    cv = KFold(n_splits=params['n_inner_splits'], shuffle=True,
+               random_state=params['random_state'])
 
     for train_ix, test_ix in tqdm(cv.split(X_train, y_train)):
         # split data in k folds

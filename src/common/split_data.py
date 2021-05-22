@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from src.genes import utils
-from src.images import slide_info
+from genes import utils
+from images import slide_info
 import numpy as np
 
 

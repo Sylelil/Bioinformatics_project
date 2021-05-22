@@ -1,6 +1,5 @@
 import os
 import sys
-
 import openslide
 from openslide import OpenSlideError
 import datetime

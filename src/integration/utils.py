@@ -1,16 +1,6 @@
 import configparser
-import os
-
-from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import IncrementalPCA
-import matplotlib.pyplot as plt
-
-from config import paths
-from src.common import plots
 
 
 def get_concatenated_data_old(data_path):
@@ -79,6 +69,8 @@ def read_config_file(config_file_path):
     params['nn']['units_1'] = config.getint('nn', 'units_1')
     params['nn']['units_2'] = config.getint('nn', 'units_2')
     params['nn']['lr'] = config.getfloat('nn', 'lr')
+    params['nn']['n_inner_splits'] = config.getint('nn', 'n_inner_splits')
+    params['nn']['random_state'] = config.getint('nn', 'random_state')
 
     # pca_nn
     params['pcann'] = {}
@@ -87,6 +79,8 @@ def read_config_file(config_file_path):
     params['pcann']['units_1'] = config.getint('pcann', 'units_1')
     params['pcann']['units_2'] = config.getint('pcann', 'units_2')
     params['pcann']['lr'] = config.getfloat('pcann', 'lr')
+    params['pcann']['random_state'] = config.getint('pcann', 'random_state')
+    params['pcann']['n_inner_splits'] = config.getint('pcann', 'n_inner_splits')
 
     # linearsvc
     params['linearsvc'] = {}

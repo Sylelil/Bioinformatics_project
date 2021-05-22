@@ -13,7 +13,7 @@ import tensorflow.keras.layers as layers
 import tensorflow_addons as tfa
 
 from config import paths
-from src.images import utils
+from images import utils
 import config.images.config as cfg
 import random
 

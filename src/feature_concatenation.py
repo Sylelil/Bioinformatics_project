@@ -2,8 +2,8 @@ import argparse
 import os
 from pathlib import Path
 from config import paths
-from src.common import concatenate_features, plots
-from src.integration import utils
+from common import concatenate_features, plots
+from integration import utils
 import numpy as np
 
 

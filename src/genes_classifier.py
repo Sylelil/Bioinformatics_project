@@ -100,27 +100,25 @@ def main():
         param_grid = dict(svm__C=C_range)
 
         print("\nFit SVM with first 2 ranked features:")
-        if params['smote']:
-            scaler = StandardScaler()
-            smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
-            svm = SVC(kernel=params['kernel'])
-            pipeline = imblearn.pipeline.Pipeline([('scaler', scaler), ('smt', smt), ('svm', svm)])
-        else:
-            scaler = StandardScaler()
-            svm = SVC(kernel=params['kernel'])
-            pipeline = sklearn.pipeline.Pipeline([('scaler', scaler), ('svm', svm)])
-
         # define search
-        cv = StratifiedKFold(n_splits=params['cv_grid_search_acc'], shuffle=True, random_state=params['random_state'])
-        clf = GridSearchCV(estimator=pipeline, param_grid=param_grid, scoring=params['scoring'], cv=cv, refit=True)
-        clf.fit(X_train[:, :2], y_train)
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        clf = SVC(kernel=params['kernel'])
+        if params['smote']:
+            smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
+            X_train_sm, y_train_sm = smt.fit_resample(X_train_scaled, y_train)
+            clf.fit(X_train_sm[:, :2], y_train_sm)
 
-        pred = clf.predict(X_test[:, :2])
+        else:
+            clf.fit(X_train_scaled[:, :2], y_train)
+
+        pred = clf.predict(X_test_scaled[:, :2])
         print(">> Test accuracy= %f" % accuracy_score(y_test, pred))
 
         # Show decision boundary for svm trained on the first 2 features
-        scaler = StandardScaler()
-        plot_2D_svm_decision_boundary(Path(results_path) / '2D_svm_decision_boundary.png', clf, scaler.fit_transform(X_train[:, :2]), y_train, scaler.transform(X_test[:, :2]), y_test)
+
+        plot_2D_svm_decision_boundary(Path(results_path) / '2D_svm_decision_boundary.png', clf, X_train_scaled[:, :2], y_train, X_test_scaled[:, :2], y_test)
 
         # Fit svm model on all features
         # define model

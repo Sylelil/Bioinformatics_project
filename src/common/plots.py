@@ -357,17 +357,17 @@ def plot_2D_svm_decision_boundary(path_to_save, clf, X_train, y_train, X_test, y
     """
 
     h = .02  # step size in the mesh
-    x_min, x_max = X_train[:, 0].min() - .5, X_train[:, 0].max() + .5
-    y_min, y_max = X_train[:, 1].min() - .5, X_train[:, 1].max() + .5
+    x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
+    y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                          np.arange(y_min, y_max, h))
 
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
 
-    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
-    plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+    plt.contourf(xx, yy, Z, cmap=cm, alpha=0.3)
 
     # Plot the training points
     plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')

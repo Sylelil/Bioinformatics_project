@@ -49,9 +49,6 @@ def csv_data_generator(inputPath, batchsize, dataset_name="train", mode='train')
                 X.append(data)
                 y.append(label)
 
-            # apply scaler to data
-            X = scaler.transform(X)
-
             # if the class balancing object is not None, apply it
             if balancer is not None:
                 X, y = balancer.fit_resample(X, y)

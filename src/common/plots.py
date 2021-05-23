@@ -244,27 +244,27 @@ def plot_tsne_pca(path_to_save, X, y):
         :param y: array-like, shape = [n_samples]
             labels (0/1)
     """
-    pca_50 = PCA(n_components=50, random_state=42)
-    pca_result_50 = pca_50.fit_transform(X)
-    print('>> Cumulative explained variation for 50 principal components: {}'.format(
-        np.sum(pca_50.explained_variance_ratio_)))
+    pca = PCA(n_components=20, random_state=42)
+    pca_result = pca.fit_transform(X)
+    print('>> Cumulative explained variation for 20 principal components: {}'.format(
+        np.sum(pca.explained_variance_ratio_)))
 
     tsne = TSNE(n_components=2, random_state=42)
-    tsne_pca_results = tsne.fit_transform(pca_result_50)
+    tsne_pca_results = tsne.fit_transform(pca_result)
 
     df_tsne_pca = pd.DataFrame(
-        dict(tsne_pca50_one=tsne_pca_results[:, 0], tsne_pca50_two=tsne_pca_results[:, 1], y=y))
+        dict(tsne_pca_one=tsne_pca_results[:, 0], tsne_pca_two=tsne_pca_results[:, 1], y=y))
     plt.figure(figsize=(16, 7))
     sns.scatterplot(
-        x="tsne_pca50_one", y="tsne_pca50_two",
+        x="tsne_pca_one", y="tsne_pca_two",
         hue="y",
         palette=sns.color_palette("hls", 2),
         data=df_tsne_pca,
         legend="full",
         alpha=0.9,
     )
-    plt.xlabel('tsne_pca50_one')
-    plt.ylabel('tsne_pca50_two')
+    plt.xlabel('tsne_pca_one')
+    plt.ylabel('tsne_pca_two')
     plt.savefig(path_to_save)
     plt.show()
 
@@ -381,53 +381,6 @@ def plot_2D_svm_decision_boundary(path_to_save, clf, X_train, y_train, X_test, y
     plt.show()
 
 
-def plot_2D_svm_decision_boundary_integration(path_to_save, clf, X_train, y_train, X_test, y_test):
-    """
-        Description: show 2D decision boundary for SVM fit on first 2 features
-
-        :param path_to_save: path to save figure
-
-        :param clf: SVM classifier
-
-        :param X_train: 2D-numpy array, shape = [n_samples, 2],
-               where n_samples is the number of training samples and 2 is the number of SCALED features.
-
-        :param y_train: array-like, shape = [n_samples]
-                training labels (0/1)
-
-        :param X_test: 2D-numpy array, shape = [n_samples, 2],
-               where n_samples is the number of test samples and 2 is the number of SCALED features.
-
-        :param y_test: array-like, shape = [n_samples]
-                test labels (0/1)
-    """
-
-    h = .02  # step size in the mesh
-    x_min, x_max = min(X_train[:, 0].min(), X_test[:, 0].min()) - .5, max(X_train[:, 0].max(), X_test[:, 0].max()) + .5
-    y_min, y_max = min(X_train[:, 1].min(), X_test[:, 1].min()) - .5, max(X_train[:, 1].max(), X_test[:, 1].max()) + .5
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-
-    cm = plt.cm.RdBu
-    cm_bright = ListedColormap(['#FF0000', '#FFFF00'])
-    cm_bright2 = ListedColormap(['#00A000', '#0000FF'])
-
-    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-    plt.contourf(xx, yy, Z, cmap=cm, alpha=.8)
-
-    # Plot the training points
-    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright2, edgecolors='k')
-    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright, edgecolors='k')
-    # Plot the testing points
-    plt.xlim(xx.min(), xx.max())
-    plt.ylim(yy.min(), yy.max())
-    plt.xticks(())
-    plt.yticks(())
-    plt.savefig(path_to_save)
-    plt.show()
-
-
 def plot_features_box_plots(df, y, path_to_save):
 
     df.insert(0, 'labels', y)
@@ -445,7 +398,7 @@ def plot_features_box_plots(df, y, path_to_save):
     plt.suptitle('')
     plt.xlabel('')
     plt.tight_layout()
-    plt.savefig(Path(path_to_save) / "features_box_plots.png")
+    plt.savefig(path_to_save)
     plt.show()
     plt.close()
 

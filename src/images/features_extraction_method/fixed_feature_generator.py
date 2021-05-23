@@ -76,7 +76,9 @@ def save_numpy_features(slide_info, path_to_save, selected_coords_dir):
     slide_tiles_coords = np.load(os.path.join(selected_coords_dir, slide_info['slide_name'] + '.npy'))
     for coord in slide_tiles_coords:
         tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
-        np_tile = utils.normalize_staining(tile)
+        # match stain colors of a given tile with a given
+        # template, in order to normalize the dataset
+        np_tile = utils.normalize_staining(tile)  # to address color variability
         tiles.append(np_tile)
 
     print(">> tiles loaded")

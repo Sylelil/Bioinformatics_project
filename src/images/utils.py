@@ -1,20 +1,18 @@
 import os
-import sys
 import openslide
 from openslide import OpenSlideError
 import datetime
 import math
 import numpy as np
 import PIL
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import skimage.morphology as sk_morphology
 import skimage.filters as sk_filters
-from tqdm import tqdm
 
 
 class Time:
     """
-    Class for displaying elapsed time.
+        Description: Class for displaying elapsed time
     """
 
     def __init__(self):
@@ -33,7 +31,8 @@ class Time:
 def open_wsi(file_path):
     """
        Description: open Whole Slide Image
-       :param file_path: path to wsi
+       :param file_path: Path
+            path to wsi
        :return: OpenSlide object
     """
     try:
@@ -47,6 +46,7 @@ def open_wsi(file_path):
 
 def get_wsi_magnification(slide):
     """
+        Description: retrieve WSI magnification
         :param slide: OpenSlide object
         :return: wsi magnification
     """
@@ -55,6 +55,7 @@ def get_wsi_magnification(slide):
 
 def get_wsi_highest_zoom_level(generator):
     """
+        Description: retrieve highest zoom level for slide, given DeepZoomGenerator wrapper
         :param generator: DeepZoomGenerator that wraps an OpenSlide object
         :return: highest wsi level
       """
@@ -72,14 +73,10 @@ def extract_file_name_from_string_path(file_path):
 
 def pil_to_np_rgb(pil_img):
     """
-    Convert a PIL Image to a NumPy array.
-    Note that RGB PIL (w, h) -> NumPy (h, w, 3).
-    Args:
-      pil_img: The PIL Image.
-    Returns:
-      The PIL image converted to a NumPy array.
-      :param pil_img:
-      :param display_info:
+        Description: Convert a PIL Image to a NumPy array.
+                     Note that RGB PIL (w, h) -> NumPy (h, w, 3).
+        :param pil_img: The PIL Image.
+        :return: The PIL image converted to a NumPy array.
     """
     t = Time()
     rgb = np.asarray(pil_img)
@@ -89,9 +86,9 @@ def pil_to_np_rgb(pil_img):
 def from_wsi_to_scaled_pillow_image(file_path, scale_factor):
     """
        Description : Convert a WSI training slide to a scaled-down PIL image.
-       :param scale_factor:
-       :param file_path:
-       :return: Tuple consisting of scaled-down PIL image, original width, original height, new width, and new height
+       :param scale_factor: scale factor
+       :param file_path: path to WSI
+       :return: Tuple consisting of scaled-down PIL image, new width, and new height
     """
     # print("Opening Slide: %s" % file_path)
     slide = open_wsi(file_path)
@@ -100,8 +97,11 @@ def from_wsi_to_scaled_pillow_image(file_path, scale_factor):
     new_w = math.floor(large_w / scale_factor)
     new_h = math.floor(large_h / scale_factor)
 
+    # Return the best level for displaying the given downsample
     level = slide.get_best_level_for_downsample(scale_factor)
 
+    # Return an RGBA Image containing the contents of the specified region
+    # location (tuple) – (x, y) tuple giving the top left pixel in the level 0 reference frame
     whole_slide_image = slide.read_region((0, 0), level, slide.level_dimensions[level])
     whole_slide_image = whole_slide_image.convert("RGB")
 
@@ -111,11 +111,10 @@ def from_wsi_to_scaled_pillow_image(file_path, scale_factor):
 
 def np_info(np_arr, name=None, elapsed=None):
     """
-    Display information (shape, type, max, min, etc) about a NumPy array.
-    Args:
-      np_arr: The NumPy array.
-      name: The (optional) name of the array.
-      elapsed: The (optional) time elapsed to perform a filtering operation.
+        Description: Display information (shape, type, max, min, etc) about a NumPy array.
+        :param np_arr: The NumPy array.
+        :param name: The (optional) name of the array.
+        :param elapsed: The (optional) time elapsed to perform a filtering operation.
     """
 
     if name is None:
@@ -134,14 +133,13 @@ def np_info(np_arr, name=None, elapsed=None):
 
 def filter_rgb_to_grayscale(np_img, output_type="uint8"):
     """
-  Convert an RGB NumPy array to a grayscale NumPy array.
-  Shape (h, w, c) to (h, w).
-  Args:
-    np_img: RGB Image as a NumPy array.
-    output_type: Type of array to return (float or uint8)
-  Returns:
-    Grayscale image as NumPy array with shape (h, w).
-  """
+      Description: Convert an RGB NumPy array to a grayscale NumPy array.
+                   Shape (h, w, c) to (h, w).
+      :param np_img: RGB Image as a NumPy array.
+      :param output_type: Type of array to return (float or uint8)
+      :return: Grayscale image as NumPy array with shape (h, w).
+    """
+
     # Another common RGB ratio possibility: [0.299, 0.587, 0.114]
     grayscale = np.dot(np_img[..., :3], [0.2125, 0.7154, 0.0721])
     if output_type != "float":
@@ -151,13 +149,11 @@ def filter_rgb_to_grayscale(np_img, output_type="uint8"):
 
 def filter_otsu_threshold(np_img, output_type="uint8"):
     """
-  Compute Otsu threshold on image as a NumPy array and return binary image based on pixels above threshold.
-  Args:
-    np_img: Image as a NumPy array.
-    output_type: Type of array to return (bool, float, or uint8).
-  Returns:
-    NumPy array (bool, float, or uint8) where True, 1.0, and 255 represent a pixel above Otsu threshold.
-  """
+      Description: Compute Otsu threshold on image as a NumPy array and return binary image based on pixels above threshold.
+      :param np_img: Image as a NumPy array.
+      :param output_type: Type of array to return (bool, float, or uint8).
+      :return: NumPy array (bool, float, or uint8) where True, 1.0, and 255 represent a pixel above Otsu threshold.
+    """
     otsu_thresh_value = sk_filters.threshold_otsu(np_img)
     otsu = (np_img > otsu_thresh_value)
 
@@ -173,26 +169,23 @@ def filter_otsu_threshold(np_img, output_type="uint8"):
 
 def mask_rgb(rgb, mask):
     """
-  Apply a binary (T/F, 1/0) mask to a 3-channel RGB image and output the result.
-  Args:
-    rgb: RGB image as a NumPy array.
-    mask: An image mask to determine which pixels in the original image should be displayed.
-  Returns:
-    NumPy array representing an RGB image with mask applied.
-  """
+       Description: Apply a binary (T/F, 1/0) mask to a 3-channel RGB image and output the result.
+       :param rgb: RGB image as a NumPy array.
+       :param mask: An image mask to determine which pixels in the original image should be displayed.
+       :return: NumPy array representing an RGB image with mask applied.
+    """
     result = rgb * np.dstack([mask, mask, mask])
     return result
 
 
 def filter_complement(np_img, output_type="uint8"):
     """
-  Obtain the complement of an image as a NumPy array.
-  Args:
-    np_img: Image as a NumPy array.
-    type: Type of array to return (float or uint8).
-  Returns:
-    Complement image as Numpy array.
-  """
+      Description: Obtain the complement of an image as a NumPy array.
+      :param np_img: Image as a NumPy array.
+      :param type: Type of array to return (float or uint8).
+      :return: Complement image as Numpy array.
+    """
+
     if output_type == "float":
         complement = 1.0 - np_img
     else:
@@ -202,12 +195,10 @@ def filter_complement(np_img, output_type="uint8"):
 
 def filter_red_pen(rgb, output_type="bool"):
     """
-    Create a mask to filter out red pen marks from a slide.
-    Args:
-      rgb: RGB image as a NumPy array.
-      output_type: Type of array to return (bool, float, or uint8).
-    Returns:
-      NumPy array representing the mask.
+        Description: Create a mask to filter out red pen marks from a slide.
+        :param rgb: RGB image as a NumPy array.
+        :param output_type: Type of array to return (bool, float, or uint8).
+        :return: NumPy array representing the mask.
     """
 
     result = filter_red(rgb, red_lower_thresh=150, green_upper_thresh=80, blue_upper_thresh=90) & \
@@ -236,17 +227,16 @@ def filter_red_pen(rgb, output_type="bool"):
 
 def filter_red(rgb, red_lower_thresh, green_upper_thresh, blue_upper_thresh, output_type="bool"):
     """
-    Create a mask to filter out reddish colors, where the mask is based on a pixel being above a
-    red channel threshold value, below a green channel threshold value, and below a blue channel threshold value.
-    Args:
-      rgb: RGB image as a NumPy array.
-      red_lower_thresh: Red channel lower threshold value.
-      green_upper_thresh: Green channel upper threshold value.
-      blue_upper_thresh: Blue channel upper threshold value.
-      output_type: Type of array to return (bool, float, or uint8).
-      display_np_info: If True, display NumPy array info and filter time.
-    Returns:
-      NumPy array representing the mask.
+        Description: Create a mask to filter out reddish colors, where the mask is based on a pixel being above a
+        red channel threshold value, below a green channel threshold value, and below a blue channel threshold value.
+
+        :param rgb: RGB image as a NumPy array.
+        :param red_lower_thresh: Red channel lower threshold value.
+        :param green_upper_thresh: Green channel upper threshold value.
+        :param blue_upper_thresh: Blue channel upper threshold value.
+        :param output_type: Type of array to return (bool, float, or uint8).
+        :param display_np_info: If True, display NumPy array info and filter time.
+        :return: NumPy array representing the mask.
     """
 
     r = rgb[:, :, 0] > red_lower_thresh
@@ -460,11 +450,9 @@ def filter_remove_small_holes(np_img, max_size=3000, output_type="uint8"):
 
 def np_to_pil(np_img):
     """
-    Convert a NumPy array to a PIL Image.
-    Args:
-      np_img: The image represented as a NumPy array.
-    Returns:
-       The NumPy array converted to a PIL Image.
+    Description: Convert a NumPy array to a PIL Image.
+    :param np_img: The image represented as a NumPy array.
+    :return: the NumPy array converted to a PIL Image.
     """
     if np_img.dtype == "bool":
         np_img = np_img.astype("uint8") * 255
@@ -475,12 +463,10 @@ def np_to_pil(np_img):
 
 def mask_percent(np_img):
     """
-  Determine the percentage of a NumPy array that is masked (how many of the values are 0 values).
-  Args:
-    np_img: Image as a NumPy array.
-  Returns:
-    The percentage of the NumPy array that is masked.
-  """
+      Description: Determine the percentage of a NumPy array that is masked (how many of the values are 0 values).
+      :param np_img: Image as a NumPy array.
+      :return: The percentage of the NumPy array that is masked.
+    """
     if (len(np_img.shape) == 3) and (np_img.shape[2] == 3):
         np_sum = np_img[:, :, 0] + np_img[:, :, 1] + np_img[:, :, 2]
         mask_percentage = 100 - np.count_nonzero(np_sum) / np_sum.size * 100
@@ -489,19 +475,17 @@ def mask_percent(np_img):
     return mask_percentage
 
 
-def display_img(np_img, text=None, size=48, color=(255, 0, 0),
+def display_img(np_img, text=None, color=(255, 0, 0),
                 background=(255, 255, 255), border=(0, 0, 0), bg=False):
     """
-    Convert a NumPy array to a PIL image, add text to the image, and display the image.
-    Args:
-      np_img: Image as a NumPy array.
-      text: The text to add to the image.
-      font_path: The path to the font to use.
-      size: The font size
-      color: The font color
-      background: The background color
-      border: The border color
-      bg: If True, add rectangle background behind text
+        Description: Convert a NumPy array to a PIL image, add text to the image, and display the image.
+
+        :param np_img: Image as a NumPy array.
+        :param text: The text to add to the image.
+        :param color: The font color
+        :param background: The background color
+        :param border: The border color
+        :param bg: If True, add rectangle background behind text
     """
     result = np_to_pil(np_img)
     # if gray, convert to RGB for display
@@ -509,36 +493,34 @@ def display_img(np_img, text=None, size=48, color=(255, 0, 0),
         result = result.convert('RGB')
     draw = ImageDraw.Draw(result)
     if text is not None:
-        # arial si spacca male al di fuori di Windows
-        # font = ImageFont.truetype("arial.ttf", size)
 
         if bg:
-            (x, y) = draw.textsize(text) #, font)
+            (x, y) = draw.textsize(text)
             draw.rectangle([(0, 0), (x + 5, y + 4)], fill=background, outline=border)
-        draw.text((2, 0), text, color) #, font=font)
+        draw.text((2, 0), text, color)
     result.show()
 
 
 # Determine x Magnification Zoom Level
 def get_x_zoom_level(highest_zoom_level, slide_magnification, desired_magnification):
     """
-  Return the zoom level that corresponds to a x magnification.
-  The generator can extract tiles from multiple zoom levels,
-  downsampling by a factor of 2 per level from highest to lowest
-  resolution.
-  Args:
-
-  Returns:
-    Zoom level corresponding to a x magnification, or as close as
-    possible.
-  """
-    # TODO: check if desired_magnification is proper value
+      Description: Return the zoom level that corresponds to a x magnification.
+                   The generator can extract tiles from multiple zoom levels,
+                   downsampling by a factor of 2 per level from highest to lowest resolution.
+      :param highest_zoom_level: int
+            highest Deep zoom slide level
+      :param slide_magnification: int
+            slide magnification
+      :param desired_magnification: int
+            x magnification
+      :return: int
+            Zoom level corresponding to a x magnification, or as close as possible.
+    """
     try:
-        # `mag / desired_magnification` gives the downsampling factor between the slide's
+        # `slide_magnification / desired_magnification` gives the downsampling factor between the slide's
         # magnification and the desired x magnification.
-        # `(mag / desired_magnification) / 2` gives the zoom level offset from the highest
-        # resolution level, based on a 2x downsampling factor in the
-        # generator.
+        # `(slide_magnification / desired_magnification) / 2` gives the zoom level offset from the highest
+        # resolution level, based on a 2x downsampling factor in the generator.
         if slide_magnification < 10:
             # slide magnification unknown
             return highest_zoom_level
@@ -552,6 +534,12 @@ def get_x_zoom_level(highest_zoom_level, slide_magnification, desired_magnificat
 
 
 def select_tile(mask_patch, threshold):
+    """
+        Description: Determines if a mask tile contains a percentage of foreground above a threshold.
+        mask_patch: Numpy array for the current mask tile.
+        thres: Float indicating the minimum foreground content [0, 1] in the patch to select the tile.
+        return: Integer [0/1] indicating if the tile has been selected or not.
+        """
     bg = np.all(mask_patch == np.array([0, 0, 0]), axis=2)
     bg_proportion = np.sum(bg) / bg.size
 
@@ -566,20 +554,16 @@ def select_tile(mask_patch, threshold):
 # Normalize staining
 def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     """
-    Normalize the staining of H&E histology slides.
-    This function normalizes the staining of H&E histology slides.
+    Description: Normalize the staining of H&E histology slides.
+                 This function normalizes the staining of H&E histology slides.
     References:
       - Macenko, Marc, et al. "A method for normalizing histology slides
       for quantitative analysis." Biomedical Imaging: From Nano to Macro,
       2009.  ISBI'09. IEEE International Symposium on. IEEE, 2009.
         - http://wwwx.cs.unc.edu/~mn/sites/default/files/macenko2009.pdf
       - https://github.com/mitkovetta/staining-normalization
-    Args:
-      sample_tuple: A (slide_num, sample) tuple, where slide_num is an
-        integer, and sample is a 3D NumPy array of shape (H,W,C).
-    Returns:
-      A (slide_num, sample) tuple, where the sample is a 3D NumPy array
-      of shape (H,W,C) that has been stain normalized.
+    :param sample: is a 3D NumPy array of shape (H,W,C).
+    :return: a 3D NumPy array of shape (H,W,C) that has been stain normalized.
     """
     # Setup.
     x = np.asarray(sample)
@@ -592,18 +576,18 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Values in reference implementation for use with eigendecomposition approach, natural log,
     # and `light_intensity=240`.
-    # stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
-    # max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
+    #stain_ref = np.array([0.5626, 0.2159, 0.7201, 0.8012, 0.4062, 0.5581]).reshape(3,2)
+    #max_sat_ref = np.array([1.9705, 1.0308]).reshape(2,1)
 
     # SVD w/ log10, and `light_intensity=255`.
     stain_ref = (np.array([0.54598845, 0.322116, 0.72385198, 0.76419107, 0.42182333, 0.55879629])
-                 .reshape(3, 2))
-    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2, 1)
+                 .reshape(3,2))
+    max_sat_ref = np.array([0.82791151, 0.61137274]).reshape(2,1)
 
     # Convert RGB to OD.
     # Note: The original paper used log10, and the reference implementation used the natural log.
-    # OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
-    OD = -np.log10(x / light_intensity + 1e-8)
+    #OD = -np.log((x+1)/light_intensity)  # shape (H*W, C)
+    OD = -np.log10(x/light_intensity + 1e-8)
 
     # Remove data with OD intensity less than beta.
     # I.e. remove transparent pixels.
@@ -611,21 +595,16 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # taking an average over all channels for a given pixel.
     OD_thresh = OD[np.all(OD >= beta, 1), :]  # shape (K, C)
 
-    # TODO
-    # Ci sono casi in cui np.all ritorna un np.array vuoto, e questo fa spaccare il programma
-    # applichiamo questa soluzione temporanea
-    if len(OD_thresh) == 0:
-        return sample
     # Calculate eigenvectors.
     # Note: We can either use eigenvector decomposition, or SVD.
-    # eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
+    #eigvals, eigvecs = np.linalg.eig(np.cov(OD_thresh.T))  # np.cov results in inf/nans
     U, s, V = np.linalg.svd(OD_thresh, full_matrices=False)
 
     # Extract two largest eigenvectors.
     # Note: We swap the sign of the eigvecs here to be consistent
     # with other implementations.  Both +/- eigvecs are valid, with
     # the same eigenvalue, so this is okay.
-    # top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
+    #top_eigvecs = eigvecs[:, np.argsort(eigvals)[-2:]] * -1
     top_eigvecs = V[0:2, :].T * -1  # shape (C, 2)
 
     # Project thresholded optical density values onto plane spanned by
@@ -634,26 +613,25 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
 
     # Calculate angle of each point wrt the first plane direction.
     # Note: the parameters are `np.arctan2(y, x)`
-
     angles = np.arctan2(proj[:, 1], proj[:, 0])  # shape (K,)
 
     # Find robust extremes (a and 100-a percentiles) of the angle.
     min_angle = np.percentile(angles, alpha)
-    max_angle = np.percentile(angles, 100 - alpha)
+    max_angle = np.percentile(angles, 100-alpha)
 
     # Convert min/max vectors (extremes) back to optimal stains in OD space.
     # This computes a set of axes for each angle onto which we can project
     # the top eigenvectors.  This assumes that the projected values have
     # been normalized to unit length.
     extreme_angles = np.array(
-        [[np.cos(min_angle), np.cos(max_angle)],
-         [np.sin(min_angle), np.sin(max_angle)]]
+      [[np.cos(min_angle), np.cos(max_angle)],
+       [np.sin(min_angle), np.sin(max_angle)]]
     )  # shape (2,2)
     stains = np.dot(top_eigvecs, extreme_angles)  # shape (C, 2)
 
     # Merge vectors with hematoxylin first, and eosin second, as a heuristic.
     if stains[0, 0] < stains[0, 1]:
-        stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
+      stains[:, [0, 1]] = stains[:, [1, 0]]  # swap columns
 
     # Calculate saturations of each stain.
     # Note: Here, we solve
@@ -678,20 +656,9 @@ def normalize_staining(sample, beta=0.15, alpha=1, light_intensity=255):
     # not return the correct values due to the initital values being outside of [0,255].
     # To fix this, we round to the nearest integer, and then clip to [0,255], which is the
     # same behavior as Matlab.
-    # x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
-    x_norm = 10 ** (-OD_norm) * light_intensity - 1e-8  # log10 approach
+    #x_norm = np.exp(OD_norm) * light_intensity  # natural log approach
+    x_norm = 10**(-OD_norm) * light_intensity - 1e-8  # log10 approach
     x_norm = np.clip(np.round(x_norm), 0, 255).astype(np.uint8)
     x_norm = x_norm.astype(np.uint8)
-    x_norm = x_norm.T.reshape(h, w, c)
+    x_norm = x_norm.T.reshape(h,w,c)
     return x_norm
-
-
-def load_images_features(path):
-
-    for patient_file in tqdm(os.listdir(path), desc=">> Reading images features...", file=sys.stdout):
-        patient_features = np.load(os.path.join(path, patient_file))
-        print(patient_features[0])
-
-        print(patient_features[1])
-
-    return

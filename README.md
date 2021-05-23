@@ -10,26 +10,42 @@ Cross over bioimaging and genomics - Feature extraction!
 
 ## Split dataset into training, validation and test sets
 ```
-python src/split_train_test.py --testsizepercent 20 --valsizepercent 20
+python src/split_train_test.py --testsizepercent 0.2 --valsizepercent 0.2
 ```
 
 ## Feature extraction
 
 ### Feature extraction from gene expression data
 ```
-python src/load_genomics.py
+python src/genes_expression_analysis.py --cfg src\config\genes\conf.ini 
 ```
 ### Feature extraction from internal layers of CNN classifier
 ```
-python src/tiles_to_numpy.py
+python src/images_feature_extraction.py 
 ```
-
 
 ## Concatenation of image and gene features
 ```
 python src/feature_concatenation.py --cfg ./config/integration/conf.ini
 ```
 
+## Classification with images only
+
+## Classification with genes only
+### SVC
+```
+python src/genes_classifier.py --cfg src\config\genes\conf.ini --classification_method svm
+```
+
+### Perceptron
+```
+python src/genes_classifier.py --cfg src\config\genes\conf.ini --classification_method perceptron
+```
+
+### SGDClassifier
+```
+python src/genes_classifier.py --cfg src\config\genes\conf.ini --classification_method sgd_classifier
+```
 
 ## Classification of concatenated features
 

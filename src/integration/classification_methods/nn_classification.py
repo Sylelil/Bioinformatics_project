@@ -8,10 +8,10 @@ from config import paths
 from common.classification_metrics import METRICS_keras, top_metric_keras
 from integration import utils
 from common import plots, classification_report_utils
-from integration.classification_methods import common
 import tensorflow as tf
 from tensorflow import keras
 from sklearn import metrics
+from imblearn.over_sampling import SMOTE
 
 
 def __make_model(n_input_features, lr, units_1, units_2, metrics_list=METRICS_keras):
@@ -49,10 +49,12 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
        :param mlp_settings: mlp settings dictionary.
        :returns: y_pred_train, y_pred_test, train_scores, test_scores, history: classification results
     """
+    # make model
     model = __make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
                          units_2=mlp_settings['units_2'])
     model.summary()
 
+    # fit model
     history = model.fit(x=X_train,
                         y=y_train,
                         steps_per_epoch=None,
@@ -61,9 +63,9 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
                         callbacks=mlp_settings['early_stopping'],
                         validation_data=(X_test, y_test),
                         validation_steps=None,
-                        class_weight=mlp_settings['class_weight'],
                         verbose=1)
 
+    # predict on train and test
     print("Predicting on train..")
     y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'], verbose=1)
     y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
@@ -71,6 +73,7 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
     y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'], verbose=1)
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
 
+    # evaluate metrics on train and test
     print('Evaluating model on test...')
     test_scores_list = model.evaluate(X_test, y_test,
                                       batch_size=mlp_settings['BATCH_SIZE'],
@@ -115,10 +118,16 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
         X_train_cv, X_test_cv = X_train[train_ix, :], X_train[test_ix, :]
         y_train_cv, y_test_cv = y_train[train_ix], y_train[test_ix]
 
+        # apply scaler
         scaler = StandardScaler()
         X_train_cv = scaler.fit_transform(X_train_cv)
         X_test_cv = scaler.transform(X_test_cv)
 
+        #apply smote
+        smote = SMOTE(random_state=params['general']['random_state'])
+        X_train_cv = smote.fit_resample(X_train_cv, y_train_cv)
+
+        # classify
         y_pred_train_cv, y_pred_test_cv, train_scores_cv, test_scores_cv, _ = __mlp_classify(X_train_cv, y_train_cv,
                                                                                              X_test_cv, y_test_cv,
                                                                                              mlp_settings)
@@ -148,9 +157,10 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
     print()
 
     # refit on train data to evaluate on test data
-
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
+    smote = SMOTE(random_state=params['general']['random_state'])
+    X_train = smote.fit_resample(X_train, y_train)
     X_test = scaler.transform(X_test)
     print('>> Fitting on train dataset to evaluate on test dataset...')
     y_pred_train, y_pred_test, train_scores, test_scores, history = __mlp_classify(X_train, y_train,
@@ -178,6 +188,7 @@ def nn_classifier(args, params, data_path):
        :param params: configuration parameters.
        :param data_path: data path.
     """
+    # get data
     X_train, y_train, X_test, y_test = utils.get_data(data_path)
 
     train_len = len(y_train)
@@ -192,9 +203,7 @@ def nn_classifier(args, params, data_path):
         n_features = len(line)
     print(f'>> n. features = {n_features}')
 
-    # get class weight to do class balancing
-    class_weight = common.compute_class_weights(y_train)
-
+    # dictionary of model settings:
     mlp_settings = {
         'n_input_features': n_features,
         'EPOCHS': params['epochs'],
@@ -206,14 +215,14 @@ def nn_classifier(args, params, data_path):
             mode='max',
             restore_best_weights=True),
         'learning_rate': params['lr'],
-        'class_weight': class_weight,
         'units_1': params['units_1'],
         'units_2': params['units_2'],
     }
 
+    # do cross validation
     results = __mlp_cross_validate(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
                                    mlp_settings=mlp_settings, params=params)
-
+    # generate report
     __generate_classification_results(args, params, y_test, y_train, data_path, results)
 
 
@@ -263,7 +272,7 @@ def __generate_classification_results(args, params, y_test, y_train, data_path, 
     experiment_info['Learning rate'] = params[args.classification_method]['lr']
     experiment_info['N. epochs'] = params[args.classification_method]['epochs']
     experiment_info['N. units hidden layer'] = params[args.classification_method]['units_1']
-    experiment_info['Class balancing method'] = 'weights'
+    experiment_info['Class balancing method'] = 'SMOTE'
     experiment_info['Error estimation:'] = '---------------------------------------'
     experiment_info['Global validation score'] = f"{metric_name}={str(global_test_score)} ({str(global_test_std)})"
     experiment_info['Global train score'] = f"{metric_name}={str(global_train_score)} ({str(global_train_std)})"

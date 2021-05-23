@@ -1,8 +1,6 @@
 import os
 from sklearn.model_selection import KFold
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from tensorflow.python.keras.wrappers.scikit_learn import KerasClassifier
 from tqdm import tqdm
 from pathlib import Path
 import numpy as np
@@ -51,69 +49,41 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
        :param mlp_settings: mlp settings dictionary.
        :returns: y_pred_train, y_pred_test, train_scores, test_scores, history: classification results
     """
-    # model = __make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
-    #                      units_2=mlp_settings['units_2'])
-    # model.summary()
-    keras_estimator = KerasClassifier(build_fn=lambda: __make_model(mlp_settings['n_input_features'],
-                                                                    mlp_settings['learning_rate'],
-                                                                    units_1=mlp_settings['units_1'],
-                                                                    units_2=mlp_settings['units_2']
-                                                                    ))
-    model = Pipeline([('standardscaler', StandardScaler()), ('mlp', keras_estimator)])
+    model = __make_model(mlp_settings['n_input_features'], mlp_settings['learning_rate'], units_1=mlp_settings['units_1'],
+                         units_2=mlp_settings['units_2'])
+    model.summary()
 
-    # history = model.fit(x=X_train,
-    #                     y=y_train,
-    #                     steps_per_epoch=None,
-    #                     batch_size=mlp_settings['BATCH_SIZE'],
-    #                     epochs=mlp_settings['EPOCHS'],
-    #                     callbacks=mlp_settings['early_stopping'],
-    #                     validation_data=(X_test, y_test),
-    #                     validation_steps=None,
-    #                     class_weight=mlp_settings['class_weight'],
-    #                     verbose=1)
-
-    history = model.fit(X_train, y_train,
-                        mlp__verbose=1,
-                        mlp__batch_size=mlp_settings['BATCH_SIZE'],
-                        mlp__epochs=mlp_settings['EPOCHS'],
-                        mlp__callbacks=mlp_settings['early_stopping'],
-                        mlp__class_weight=mlp_settings['class_weight'],
-                        mlp__validation_data=(X_test, y_test))
+    history = model.fit(x=X_train,
+                        y=y_train,
+                        steps_per_epoch=None,
+                        batch_size=mlp_settings['BATCH_SIZE'],
+                        epochs=mlp_settings['EPOCHS'],
+                        callbacks=mlp_settings['early_stopping'],
+                        validation_data=(X_test, y_test),
+                        validation_steps=None,
+                        class_weight=mlp_settings['class_weight'],
+                        verbose=1)
 
     print("Predicting on train..")
-    y_pred_train = model.predict(X_train)
+    y_pred_train = model.predict(X_train, batch_size=mlp_settings['BATCH_SIZE'], verbose=1)
     y_pred_train_labels = [1 if x > 0.5 else 0 for x in y_pred_train]
     print("Predicting on test..")
-    y_pred_test = model.predict(X_test)
+    y_pred_test = model.predict(X_test, batch_size=mlp_settings['BATCH_SIZE'], verbose=1)
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]
 
     print('Evaluating model on test...')
-    # test_scores_list = model.evaluate(X_test, y_test,
-    #                                   batch_size=mlp_settings['BATCH_SIZE'],
-    #                                   verbose=1,
-    #                                   steps=None)
-    # test_scores = dict(zip(model.metrics_names, test_scores_list))
-    # test_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_test, y_pred_test_labels)
-    # print('Evaluating model on train...')
-    # train_scores_list = model.evaluate(X_train, y_train,
-    #                                    batch_size=mlp_settings['BATCH_SIZE'],
-    #                                    verbose=1,
-    #                                    steps=None)
-    # train_scores = dict(zip(model.metrics_names, train_scores_list))
-    # train_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_train, y_pred_train_labels)
-    mlp_model = model['mlp']
-    test_scores_list = mlp_model.evaluate(X_test, y_test,
-                                          batch_size=mlp_settings['BATCH_SIZE'],
-                                          verbose=1,
-                                          steps=None)
-    test_scores = dict(zip(mlp_model.metrics_names, test_scores_list))
+    test_scores_list = model.evaluate(X_test, y_test,
+                                      batch_size=mlp_settings['BATCH_SIZE'],
+                                      verbose=1,
+                                      steps=None)
+    test_scores = dict(zip(model.metrics_names, test_scores_list))
     test_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_test, y_pred_test_labels)
     print('Evaluating model on train...')
-    train_scores_list = mlp_model.evaluate(X_train, y_train,
-                                           batch_size=mlp_settings['BATCH_SIZE'],
-                                           verbose=1,
-                                           steps=None)
-    train_scores = dict(zip(mlp_model.metrics_names, train_scores_list))
+    train_scores_list = model.evaluate(X_train, y_train,
+                                       batch_size=mlp_settings['BATCH_SIZE'],
+                                       verbose=1,
+                                       steps=None)
+    train_scores = dict(zip(model.metrics_names, train_scores_list))
     train_scores['matthews_corrcoef'] = metrics.matthews_corrcoef(y_train, y_pred_train_labels)
 
     return y_pred_train, y_pred_test, train_scores, test_scores, history
@@ -145,6 +115,10 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
         X_train_cv, X_test_cv = X_train[train_ix, :], X_train[test_ix, :]
         y_train_cv, y_test_cv = y_train[train_ix], y_train[test_ix]
 
+        scaler = StandardScaler()
+        X_train_cv = scaler.fit_transform(X_train_cv)
+        X_test_cv = scaler.transform(X_test_cv)
+
         y_pred_train_cv, y_pred_test_cv, train_scores_cv, test_scores_cv, _ = __mlp_classify(X_train_cv, y_train_cv,
                                                                                              X_test_cv, y_test_cv,
                                                                                              mlp_settings)
@@ -174,6 +148,10 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
     print()
 
     # refit on train data to evaluate on test data
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
     print('>> Fitting on train dataset to evaluate on test dataset...')
     y_pred_train, y_pred_test, train_scores, test_scores, history = __mlp_classify(X_train, y_train,
                                                                                    X_test, y_test,

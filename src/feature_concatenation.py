@@ -42,12 +42,13 @@ def main():
     gene_features_test_dir = paths.svm_t_rfe_selected_features_test
     gene_features_val_dir = paths.svm_t_rfe_selected_features_val
 
-    num_principal_components = params['general']['num_principal_components']
     use_features_images_only = params['general']['use_features_images_only']
+    apply_pca_to_features_images = params['general']['apply_pca_to_features_images']
+    num_principal_components = params['general']['num_principal_components']
 
     if use_features_images_only:
 
-        if num_principal_components is not None:
+        if apply_pca_to_features_images and num_principal_components is not None:
             path_to_save = Path(paths.concatenated_results_dir) / 'images' / f'pca{num_principal_components}'
             if not os.path.exists(path_to_save):
                 os.makedirs(path_to_save)
@@ -87,7 +88,7 @@ def main():
                                                            with_ipca=False)
 
     else:
-        if num_principal_components is not None:
+        if apply_pca_to_features_images and num_principal_components is not None:
             path_to_save = Path(
                 paths.concatenated_results_dir) / 'concatenated' / f'pca{num_principal_components}'
             if not os.path.exists(path_to_save):

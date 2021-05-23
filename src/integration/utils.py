@@ -50,9 +50,13 @@ def read_config_file(config_file_path):
     params['general'] = {}
     params['general']['random_state'] = config.getint('general', 'random_state')
     params['general']['use_features_images_only'] = config.getboolean('general', 'use_features_images_only')
-    n_comp = config.get('general', 'num_principal_components')
-    if n_comp.isdecimal():
-        params['general']['num_principal_components'] = int(n_comp)
+    params['general']['apply_pca_to_features_images'] = config.getboolean('general', 'apply_pca_to_features_images')
+    if params['general']['apply_pca_to_features_images']:
+        n_comp = config.get('general', 'num_principal_components')
+        if n_comp.isdecimal():
+            params['general']['num_principal_components'] = int(n_comp)
+        else:
+            print(f'error: invalid <num_principal_components> in src/config/integration/conf.ini: {n_comp}')
     else:
         params['general']['num_principal_components'] = None
 

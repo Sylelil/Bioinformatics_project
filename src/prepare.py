@@ -10,15 +10,28 @@ import json
 
 
 def get_dict(data):
+    """
+       Description: Get data dictionary from json file.
+       :param data: data from json.
+       :returns: dictionary.
+    """
     _dict = {}
     for item in data:
         _dict[item['file_name']] = item['cases'][0]['case_id']
     return _dict
 
 
-def prepare_files_class(data_class, data_type, dir, json_dir, dest_dir):
-    main_dir = dir
-    data_dir = Path(dir) / data_class
+def prepare_files_class(data_class, data_type, src_dir, json_dir, dest_dir):
+    """
+       Description: Prepare and rename data files.
+       :param data_class: class.
+       :param data_type: type.
+       :param src_dir: source folder.
+       :param json_dir: folder containing json with data information.
+       :param dest_dir: destination folder.
+    """
+    main_dir = src_dir
+    data_dir = Path(src_dir) / data_class
     json_f = Path(json_dir) / f'{data_class}.json'
 
     with open(json_f) as json_file:  # open(main_dir/'..'/'dati1.json') as json_file:
@@ -54,12 +67,24 @@ def prepare_files_class(data_class, data_type, dir, json_dir, dest_dir):
                         os.rename(file_path, Path(dest_dir)/ new_filename)
 
 
-def prepare_files(data_type, dir, json_dir, dest_dir):
-    prepare_files_class('normal', data_type, dir, json_dir, dest_dir)
-    prepare_files_class('tumor', data_type, dir, json_dir, dest_dir)
+def prepare_files(data_type, src_dir, json_dir, dest_dir):
+    """
+       Description: Prepare and rename data files.
+       :param data_type: 
+       :param src_dir: source folder.
+       :param json_dir: folder containing json with data information.
+       :param dest_dir: destination folder.
+    """
+    prepare_files_class('normal', data_type, src_dir, json_dir, dest_dir)
+    prepare_files_class('tumor', data_type, src_dir, json_dir, dest_dir)
 
 
 def get_array(json_file):
+    """
+       Description: get array of information from json file..
+       :param json_file: json with data information.
+       :returns: array.
+    """
     # with open('E:\\bioing\\malati\\dati1.json') as dati1:
     with open(json_file) as dati1:
         data = json.load(dati1)
@@ -68,6 +93,14 @@ def get_array(json_file):
 
 
 def filter_files_class(data_class, dest_images_dir, dest_genes_dir, images_json_path, genes_json_path):
+    """
+       Description: Filter files of selected class removing patients with only images or genes and removing duplicates.
+       :param data_class: class.
+       :param genes_json_path: json with gene expression data information.
+       :param dest_genes_dir: destination folder for gene expression data.
+       :param images_json_path: json with images information.
+       :param dest_images_dir: destination folder for images.
+    """
     genes = get_array(genes_json_path)
     images = get_array(images_json_path)
     intersezione = list(set(genes) & set(images))
@@ -118,11 +151,21 @@ def filter_files_class(data_class, dest_images_dir, dest_genes_dir, images_json_
 
 
 def filter_files(dest_images_dir, images_json_dir, dest_genes_dir, genes_json_dir):
+    """
+       Description: Filter files removing patients with only images or genes and removing duplicates.
+       :param genes_json_dir: folder containing json with gene expression data information.
+       :param dest_genes_dir: destination folder for gene expression data.
+       :param images_json_dir: folder containing json with images information.
+       :param dest_images_dir: destination folder for images.
+    """
     filter_files_class('0', dest_images_dir, dest_genes_dir, Path(images_json_dir) / 'normal.json', Path(genes_json_dir) / 'normal.json')
     filter_files_class('1', dest_images_dir, dest_genes_dir, Path(images_json_dir) / 'tumor.json', Path(genes_json_dir) / 'tumor.json')
 
 
 def main():
+    """
+       Description: Prepare data.
+    """
     original_images_dir = paths.original_images_dir
     original_genes_dir = paths.original_genes_dir
     images_json_dir = paths.images_json_dir

@@ -3,6 +3,7 @@ import numpy as np
 import multiprocessing
 import openslide
 from PIL import Image
+from PIL.ImageDraw import ImageDraw
 from openslide.deepzoom import DeepZoomGenerator
 import matplotlib.pyplot as plt
 from config import paths
@@ -383,3 +384,59 @@ def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16)
     fig.savefig(rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png'))
     plt.close()
     print(f"Rand tiles for slide saved to {rand_tiles_dir_to_save / str(slide_info['slide_name'] + '.png')}")
+
+
+def plot_selected_tiles_heatmap(masked_images_dir, slides_info, selected_coords_dir, results_dir):
+
+    for slide_info in slides_info:
+        image_dims = (slide_info['slide_width'], slide_info['slide_height'])
+        slide = utils.open_wsi(slide_info['slide_path'])
+        dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
+
+        # Find the deep zoom level corresponding to the requested magnification
+        dzg_level_x = utils.get_x_zoom_level(slide_info['highest_zoom_level'], slide_info['slide_magnification'],
+                                             cfg.DESIRED_MAGNIFICATION)
+        # dzg_level_x = dzg.level_count - 1
+        dzg_level_x_dims = dzg.level_dimensions[dzg_level_x]
+        dzg_level_x_tile_coords = dzg.level_tiles[dzg_level_x]
+
+        # Calculate patch size in the mask
+        dzg_downscaling = round(np.divide(image_dims, dzg_level_x_dims)[0])
+        mask_patch_size = int(np.ceil(cfg.TILE_SIZE * (dzg_downscaling / cfg.SCALE_FACTOR)))
+        pil_masked_image = Image.open(os.path.join(masked_images_dir, slide_info['slide_name'] + ".png"))
+        dzg_mask = DeepZoomGenerator(openslide.ImageSlide(pil_masked_image), tile_size=mask_patch_size,
+                                     overlap=cfg.OVERLAP)
+        dzg_mask_dims = dzg_mask.level_dimensions[dzg_mask.level_count - 1]
+        dzg_mask_tile_coords = dzg_mask.level_tiles[dzg_mask.level_count - 1]
+
+        (cols, rows) = dzg_mask_tile_coords
+
+        img = ImageDraw(pil_masked_image)
+
+        slide_tiles_coords = np.load(os.path.join(selected_coords_dir, slide_info['slide_name'] + '.npy'))
+
+        for row in range(rows):
+            for col in range(cols):
+                if is_selected_tile((col, row), slide_tiles_coords):
+                    color = 'green'
+                else:
+                    color = 'red'
+
+                location, _, _ = dzg_mask.get_tile_coordinates(dzg_mask.level_count - 1,  (col, row))
+                #print(location)
+                dimensions = dzg_mask.get_tile_dimensions(dzg_mask.level_count - 1,  (col, row))
+                w, h = dimensions[0], dimensions[1]
+                #print(dimensions)
+                shape = [(location[0], location[1]), (location[0]+w, location[1]+h)]
+                img.rectangle(shape, outline=color)
+
+        pil_masked_image.save(os.path.join(results_dir, slide_info['slide_name'] + ".png"))
+        print("Heatmap image saved to %s" % (os.path.join(results_dir, slide_info['slide_name'] + ".png")))
+
+
+
+def is_selected_tile(coord, slide_tiles_coords):
+    for selected_coord in slide_tiles_coords:
+        if selected_coord[0] == coord[0] and selected_coord[1] == coord[1]:
+            return True
+    return False

@@ -58,13 +58,20 @@ def prepare_files_class(data_class, data_type, src_dir, json_dir, dest_dir):
                     if data_type == 'genes':
                         new_filename = _dict[file] + '_' + type_number + extension_name
                         new_filename = new_filename.replace(".gz", "")
-                        with gzip.open(file_path, 'rb') as f_in:
-                            with open(Path(dest_dir)/ new_filename, 'wb') as f_out:
-                                shutil.copyfileobj(f_in, f_out)
+                        if os.path.exists(Path(dest_dir) / new_filename):
+                            print(f'{Path(dest_dir)/ new_filename} is a duplicate!')
+                        else:
+                            with gzip.open(file_path, 'rb') as f_in:
+                                with open(Path(dest_dir)/ new_filename, 'wb') as f_out:
+                                    shutil.copyfileobj(f_in, f_out)
                         os.remove(file_path)
                     else:
                         new_filename = _dict[file] + '_' + type_number + extension_name
-                        os.rename(file_path, Path(dest_dir)/ new_filename)
+                        if os.path.exists(Path(dest_dir) / new_filename):
+                            print(f'{Path(dest_dir)/ new_filename} is a duplicate!')
+                            os.remove(file_path)
+                        else:
+                            os.rename(file_path, Path(dest_dir)/ new_filename)
 
 
 def prepare_files(data_type, src_dir, json_dir, dest_dir):

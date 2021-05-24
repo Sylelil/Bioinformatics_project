@@ -1,4 +1,6 @@
 import os
+from collections import Counter
+
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
@@ -124,8 +126,8 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
         X_test_cv = scaler.transform(X_test_cv)
 
         #apply smote
-        smote = SMOTE(random_state=params['general']['random_state'])
-        X_train_cv = smote.fit_resample(X_train_cv, y_train_cv)
+        smote = SMOTE(random_state=params['random_state'])
+        X_train_cv, y_train_cv = smote.fit_resample(X_train_cv, y_train_cv)
 
         # classify
         y_pred_train_cv, y_pred_test_cv, train_scores_cv, test_scores_cv, _ = __mlp_classify(X_train_cv, y_train_cv,
@@ -159,8 +161,9 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
     # refit on train data to evaluate on test data
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
-    smote = SMOTE(random_state=params['general']['random_state'])
-    X_train = smote.fit_resample(X_train, y_train)
+    smote = SMOTE(random_state=params['random_state'])
+    X_train, y_train = smote.fit_resample(X_train, y_train)
+    print(Counter(y_train))
     X_test = scaler.transform(X_test)
     print('>> Fitting on train dataset to evaluate on test dataset...')
     y_pred_train, y_pred_test, train_scores, test_scores, history = __mlp_classify(X_train, y_train,
@@ -177,6 +180,7 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
         'global_test_std': global_test_std,
         'global_train_score': global_train_score,
         'global_train_std': global_train_std,
+        'y_train': y_train
     }
     return results
 
@@ -254,6 +258,7 @@ def __generate_classification_results(args, params, y_test, y_train, data_path, 
     global_test_score = results['global_test_score']
     global_train_score = results['global_train_score']
     global_train_std = results['global_train_std']
+    y_train = results['y_train']
 
     # convert predicted probabilities (output of sigmoid) to 0/1 labels:
     y_pred_test_labels = [1 if x > 0.5 else 0 for x in y_pred_test]

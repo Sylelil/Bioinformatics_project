@@ -3,8 +3,12 @@ from pathlib import Path
 BASE_DIR = Path('')
 
 # assets folder
+images_json_dir = BASE_DIR / 'assets' / 'images_manifest'    # Path manifest e json WSI
+genes_json_dir = BASE_DIR / 'assets' / 'genes_manifest'      # Path manifest e json  dati di genomica
 images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI
 genes_dir = BASE_DIR / 'assets' / 'genes_files'      # Path ai dati di genomica
+original_images_dir = BASE_DIR / 'assets' / 'original_images_files'    # Path alle WSI
+original_genes_dir = BASE_DIR / 'assets' / 'original_genes_files'      # Path ai dati di genomica
 split_data_dir = BASE_DIR / 'assets' / 'split_data'  # dati splittati
 filename_splits_dir = BASE_DIR / 'assets' / 'filename_splits'  # filename splittati
 

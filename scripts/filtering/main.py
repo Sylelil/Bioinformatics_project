@@ -3,17 +3,20 @@ import os
 import shutil
 from collections import Counter
 
+
 def get_array_genomics():
     with open('E:\\bioing\\malati\\dati1.json') as dati1:
         data = json.load(dati1)
         result = map(lambda item: item['cases'][0]['case_id'], data)
         return list(result)
 
+
 def get_array_images():
     with open('E:\\bioing\\malati\\immagini.json') as immagini:
         data = json.load(immagini)
         result = map(lambda item: item['cases'][0]['case_id'], data)
         return list(result)
+
 
 def main():
     dati = get_array_genomics()

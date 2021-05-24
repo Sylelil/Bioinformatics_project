@@ -51,34 +51,32 @@ def read_slides_info():
     normal_slides_info = []
     tumor_slides_info = []
 
-    for _dir in tqdm(os.listdir(paths.images_dir), desc=">> Reading slides info...", file=sys.stdout):
-        current_dir = os.path.join(paths.images_dir, _dir)
-        if os.path.isdir(current_dir):
-            for file in os.listdir(current_dir):
-                if file.endswith('.svs'):
-                    slide = utils.open_wsi(os.path.join(current_dir, file))
-                    slide_magnification = utils.get_wsi_magnification(slide)
+    for file in tqdm(os.listdir(paths.images_dir), desc=">> Reading slides info...", file=sys.stdout):
+        current_dir = paths.images_dir
+        if file.endswith('.svs'):
+            slide = utils.open_wsi(os.path.join(current_dir, file))
+            slide_magnification = utils.get_wsi_magnification(slide)
 
-                    zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0, limit_bounds=True)
-                    highest_zoom_level = utils.get_wsi_highest_zoom_level(zoom)
+            zoom = DeepZoomGenerator(slide, tile_size=224, overlap=0, limit_bounds=True)
+            highest_zoom_level = utils.get_wsi_highest_zoom_level(zoom)
 
-                    (width, height) = slide.dimensions  # slide dimensions for level 0 (highest resolution)
+            (width, height) = slide.dimensions  # slide dimensions for level 0 (highest resolution)
 
-                    file_name = utils.extract_file_name_from_string_path(os.path.join(current_dir, file))
-                    slide_info_dict = {
-                        'slide_path': os.path.join(current_dir, file),
-                        'slide_name': file_name,  # slide name without extension
-                        'num_zoom_levels': zoom.level_count,
-                        'highest_zoom_level': highest_zoom_level,
-                        'slide_magnification': slide_magnification,
-                        'slide_width': width,
-                        'slide_height': height,
-                        'label': 0 if file_name.endswith("0") else 1,
-                    }
-                    if slide_info_dict['label'] == 0:
-                        normal_slides_info.append(slide_info_dict)
-                    else:
-                        tumor_slides_info.append(slide_info_dict)
+            file_name = utils.extract_file_name_from_string_path(os.path.join(current_dir, file))
+            slide_info_dict = {
+                'slide_path': os.path.join(current_dir, file),
+                'slide_name': file_name,  # slide name without extension
+                'num_zoom_levels': zoom.level_count,
+                'highest_zoom_level': highest_zoom_level,
+                'slide_magnification': slide_magnification,
+                'slide_width': width,
+                'slide_height': height,
+                'label': 0 if file_name.endswith("0") else 1,
+            }
+            if slide_info_dict['label'] == 0:
+                normal_slides_info.append(slide_info_dict)
+            else:
+                tumor_slides_info.append(slide_info_dict)
 
     return normal_slides_info, tumor_slides_info
 

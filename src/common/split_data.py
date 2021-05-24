@@ -138,42 +138,21 @@ def split_into_folders(lookup_dir, filenames_train, filenames_val, filenames_tes
     n_val = 0
     for file in tqdm(os.listdir(lookup_dir)):
         file_path = os.path.join(lookup_dir, file)
-        if os.path.isdir(file_path):
-            for slide_file in os.listdir(file_path):
-                if slide_file.endswith('.svs'):
-                    filename = os.path.splitext(slide_file)[0]
-                    file_path = os.path.join(file_path, slide_file)
-
-                    if filename in filenames_train:
-                        dest_path = Path(traindir) / str(slide_file)
-                        n_train += 1
-                    elif filename in filenames_test:
-                        dest_path = Path(testdir) / str(slide_file)
-                        n_test += 1
-                    elif filename in filenames_val:
-                        dest_path = Path(valdir) / str(slide_file)
-                        n_val += 1
-                    else:
-                        if filename not in skipped_filenames:
-                            skipped_filenames.append(filename)
-                        continue
-                    os.link(file_path, dest_path)
+        filename = os.path.splitext(file)[0]
+        if filename in filenames_train:
+            dest_path = Path(traindir) / file
+            n_train += 1
+        elif filename in filenames_test:
+            dest_path = Path(testdir) / file
+            n_test += 1
+        elif filename in filenames_val:
+            dest_path = Path(valdir) / file
+            n_val += 1
         else:
-            filename = os.path.splitext(file)[0]
-            if filename in filenames_train:
-                dest_path = Path(traindir) / file
-                n_train += 1
-            elif filename in filenames_test:
-                dest_path = Path(testdir) / file
-                n_test += 1
-            elif filename in filenames_val:
-                dest_path = Path(valdir) / file
-                n_val += 1
-            else:
-                if filename not in skipped_filenames:
-                    skipped_filenames.append(filename)
-                continue
-            os.link(file_path, dest_path)
+            if filename not in skipped_filenames:
+                skipped_filenames.append(filename)
+            continue
+        os.link(file_path, dest_path)
 
     print(f'{len(skipped_filenames)} skipped filename (not in splits): {skipped_filenames}')
     print(f'{n_train} train files copied.')

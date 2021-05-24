@@ -181,7 +181,7 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
     return results
 
 
-def nn_classifier(args, params, data_path):
+def nn_classifier(args, params, params_general, data_path):
     """
        Description: Train and test MLP classifier.
        :param args: arguments.
@@ -223,7 +223,7 @@ def nn_classifier(args, params, data_path):
     results = __mlp_cross_validate(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
                                    mlp_settings=mlp_settings, params=params)
     # generate report
-    __generate_classification_results(args, params, y_test, y_train, data_path, results)
+    __generate_classification_results(args, params_general, y_test, y_train, data_path, results)
 
 
 def __generate_classification_results(args, params, y_test, y_train, data_path, results):

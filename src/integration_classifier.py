@@ -64,14 +64,14 @@ def main():
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-        nn_classification.nn_classifier(args, params['pcann'], data_path)
+        nn_classification.nn_classifier(args, params['pcann'], params, data_path)
 
     elif args.classification_method == 'nn':
         data_path = Path(data_folder) / f'all'
         if not os.path.exists(data_path):
             print("%s not existing." % data_path)
             exit(-1)
-        nn_classification.nn_classifier(args, params['nn'], data_path)
+        nn_classification.nn_classifier(args, params['nn'], params, data_path)
 
     elif args.plot_final_results:
         results_path = paths.integration_classification_results_dir

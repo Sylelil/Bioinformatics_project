@@ -17,7 +17,7 @@ python src/split_train_test.py --testsizepercent 0.2 --valsizepercent 0.2
 
 ### Feature extraction from gene expression data
 ```
-python src/genes_expression_analysis.py --cfg src\config\genes\conf.ini 
+python src/genes_expression_analysis.py --cfg src/config/genes/conf.ini 
 ```
 ### Feature extraction from internal layers of CNN classifier
 ```
@@ -26,7 +26,7 @@ python src/images_feature_extraction.py
 
 ## Concatenation of image and gene features
 ```
-python src/feature_concatenation.py --cfg ./config/integration/conf.ini
+python src/feature_concatenation.py --cfg src/config/integration/conf.ini
 ```
 
 ## Classification with images only

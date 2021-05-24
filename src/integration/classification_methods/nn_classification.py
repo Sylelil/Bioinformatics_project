@@ -240,7 +240,7 @@ def __generate_classification_results(args, params, y_test, y_train, data_path, 
     experiment_descr = f"{os.path.split(data_path)[1]}"
     experiment_descr += f"_{params['general']['use_features_images_only']}"
     experiment_descr += f"_{args.classification_method}+{params[args.classification_method]['lr']}+{params[args.classification_method]['epochs']}+{params[args.classification_method]['units_1']}"
-    experiment_descr += f"_weigths"
+    experiment_descr += f"_smote"
     results_path = Path(paths.integration_classification_results_dir) / experiment_descr
     if not os.path.exists(results_path):
         os.makedirs(results_path)

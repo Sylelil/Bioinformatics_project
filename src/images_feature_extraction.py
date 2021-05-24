@@ -25,6 +25,11 @@ def main():
                         required=False,
                         action='store_true')
 
+    parser.add_argument('--save_heatmaps',
+                        help='Save heatmaps',
+                        required=False,
+                        action='store_true')
+
     args = parser.parse_args()
 
     if not os.path.exists(paths.images_dir):
@@ -39,6 +44,8 @@ def main():
     tumor_masked_images_dir = Path(paths.images_results) / 'masked_images' / 'img_tumor'
     low_res_normal_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_normal'
     low_res_tumor_images_dir = Path(paths.images_results) / 'low_res_images' / 'img_tumor'
+    normal_heatmaps_dir = Path(paths.images_results) / 'heatmaps' / 'img_normal'
+    tumor_heatmaps_dir = Path(paths.images_results) / 'heatmaps' / 'img_tumor'
 
     if not path.exists(paths.images_results):
         os.makedirs(paths.images_results)
@@ -66,6 +73,12 @@ def main():
 
     if not os.path.exists(paths.extracted_features_test):
         os.makedirs(paths.extracted_features_test)
+
+    if not path.exists(normal_heatmaps_dir):
+        os.makedirs(normal_heatmaps_dir)
+
+    if not path.exists(tumor_heatmaps_dir):
+        os.makedirs(tumor_heatmaps_dir)
 
     # Read slides info
     print("Slides info:")
@@ -97,6 +110,14 @@ def main():
         for slide in slides_info:
             preprocessing.plot_random_selected_tiles(slide, rand_tiles_dir, num_tiles=16)
 
+    if args.save_heatmaps:
+        print("Saving heatmaps on disk...")
+        preprocessing.plot_selected_tiles_heatmap(normal_masked_images_dir, normal_slides_info,
+                                                  paths.selected_coords_dir, normal_heatmaps_dir)
+        preprocessing.plot_selected_tiles_heatmap(tumor_masked_images_dir, tumor_slides_info,
+                                                  paths.selected_coords_dir,
+                                                  tumor_heatmaps_dir)
+
     print("\nReading split slides data:")
     images_splits_path = Path(paths.split_data_dir) / 'images'
     print(f'>> Tot data: {len(slides_info)}')
@@ -107,7 +128,8 @@ def main():
         print("%s not existing." % images_splits_path)
         exit()
 
-    train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(images_splits_path, val_data=True)
+    train_slides_info, val_slides_info, test_slides_info, y_train, y_val, y_test = split_data.get_images_split_data(
+        images_splits_path, val_data=True)
 
     # Compute number of samples
     train_slides_info_0 = [slide for slide in train_slides_info if slide['label'] == 0]
@@ -145,5 +167,3 @@ def main():
 if __name__ == '__main__':
     os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
     main()
-
-

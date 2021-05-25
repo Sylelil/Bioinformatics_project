@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import tensorflow as tf
+from keras.callbacks import CSVLogger
 from openslide.deepzoom import DeepZoomGenerator
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.layers import Dropout
@@ -19,14 +20,9 @@ import random
 
 
 def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
-
     timer = utils.Time()
     seed = random.randint(0, 100)
 
-    train_slides_info = train_slides_info[:50]
-    y_train = y_train[:50]
-    test_slides_info = test_slides_info[:10]
-    y_test = y_test[:10]
     random.Random(seed).shuffle(train_slides_info)
     random.Random(seed).shuffle(test_slides_info)
     random.Random(seed).shuffle(y_train)
@@ -52,7 +48,7 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
     x = Dense(512, activation="relu")(x)
     x = Dropout(0.5)(x)
     x = Dense(2, activation="softmax")(x)
-
+,
     model = Model(inputs=base_model.inputs, outputs=x)
 
     for layer in base_model.layers:
@@ -67,23 +63,33 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
 
     metric = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2, name='MatthewsCorrelationCoefficient')
     print("[INFO] compiling model...")
-    opt = SGD(learning_rate=1e-4, momentum=0.9)
-    model.compile(loss="binary_crossentropy", optimizer=opt,
-                  metrics=[metric, 'accuracy'])
+    opt = SGD(learning_rate=1e-6, momentum=0.9)
+
+    if os.path.exists(cfg.FINE_TUNED_MODEL_NAME):
+        print(">> Loading model")
+        model = tf.keras.models.load_model(cfg.FINE_TUNED_MODEL_NAME)
+    else:
+        print(">> Creating model")
+        model.compile(loss="binary_crossentropy", optimizer=opt,
+                    metrics=[metric, 'accuracy'])
 
     print("[INFO] training head...")
+
+    csv_logger = CSVLogger("model_history_log.csv", append=True)
+
     history = model.fit(
         x=train_gen,
         steps_per_epoch=train_len // cfg.BATCH_SIZE,
         validation_data=eval_gen,
         validation_steps=val_len // cfg.BATCH_SIZE,
-        epochs=5,
+        epochs=cfg.NUM_EPOCHS,
+        callbacks=[csv_logger],
         shuffle=True
     )
 
     model.save(cfg.FINE_TUNED_MODEL_NAME)
 
-    plot_training(history, 10)
+    plot_training(history, cfg.NUM_EPOCHS)
 
     print(">> Time to perform fine tuning: %s" % str(timer.elapsed()))
 
@@ -93,95 +99,43 @@ def fine_tuning(train_slides_info, test_slides_info, y_train, y_test):
     #print(classification_report({}, predIdxs))
 
 
-def feed_slides_generator(slides_info, labels_info, batch_size, mode='train'):
-    slide_num = -1
+def feed_slides_generator(slides_info, y, batch_size, mode='train'):
     data = np.array([]).reshape((0, 224, 224, 3))
-    labels = []
-    num_slides_prefetch = cfg.NUM_SLIDES_PREFETCH
-
+    labels = np.array([])
+    files = list(map(lambda slide_info: slide_info["slide_name"].split("_")[0], slides_info))
     while True:
-        tiles = []
-        for i in range(num_slides_prefetch):
-            slide_num += 1
-            print(f"Slide {slides_info[slide_num]['slide_name']} (slide num {slide_num}):")
-            got_normal = False
-            current_slide = slides_info[slide_num]
-            current_label = labels_info[slide_num]
+        for file in os.listdir(paths.selected_tiles_dir):
+            if file.split("_")[1] not in files:
+                continue
+            file_path = os.path.join(paths.selected_tiles_dir, file)
+            npy_img = np.load(file_path)
 
-            slide = utils.open_wsi(current_slide['slide_path'])
-            zoom = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=0)
+            current_label = 1 if file.endswith('0.npy') else 0
+            npy_img = npy_img / 255.0
 
-            # Find the deep zoom level corresponding to the requested magnification
-            dzg_level_x = utils.get_x_zoom_level(current_slide['highest_zoom_level'], current_slide['slide_magnification'],
-                                                 10)
-            selected_tiles_dir = paths.selected_coords_dir
-            print(">> Getting tiles..")
-            slide_tiles_coords = np.load(os.path.join(selected_tiles_dir, current_slide['slide_name'] + '.npy'))
+            data = np.append(data, np.expand_dims(npy_img, axis=0), axis=0)
+            labels = np.append(labels, np.array(current_label), axis=None)
 
-            for coord in slide_tiles_coords:
-                tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
-                # noinspection PyBroadException
-                try:
-                    np_tile = utils.normalize_staining(tile)
-                except IndexError:
-                    print("IndexError, skipping tile")
-                    continue
-                except:
-                    print("Unknown error, skipping tile")
-                    continue
-                tiles.append(np_tile)
-                # TODO: controllo per evitare OOM. Avrebbe senso toglierlo probabilmente in quanto limita il data augmentation
-                if len(tiles) > 1800:
-                    got_normal = True
-                    break
-                if mode == 'train' and current_label == cfg.NORMAL_LABEL:
-                    for _ in range(cfg.MULTIPLIER):
-                        # Facciamo attenzione a non introdurre alterazioni del colore
-                        # (saturazione, contrasto, ecc) perché, essendo sbilanciati, rischierebbero
-                        # di specializzare la rete neurale su queste alterazioni
-                        data_augmentation = tf.keras.Sequential([
-                            layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
-                            layers.experimental.preprocessing.RandomRotation(0.2),
-                            layers.experimental.preprocessing.RandomZoom(0.4),
-                        ])
+            if mode == 'train' and current_label == int(cfg.TUMOR_LABEL):
+                for _ in range(cfg.MULTIPLIER):
+                    # Facciamo attenzione a non introdurre alterazioni del colore
+                    # (saturazione, contrasto, ecc) perché, essendo sbilanciati, rischierebbero
+                    # di specializzare la rete neurale su queste alterazioni
+                    data_augmentation = tf.keras.Sequential([
+                        layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+                        layers.experimental.preprocessing.RandomRotation(0.2),
+                        layers.experimental.preprocessing.RandomZoom(0.4),
+                    ])
 
-                        augmented_tile = data_augmentation(np.expand_dims(np_tile, axis=0))
-                        tiles.append(np.squeeze(augmented_tile.numpy(), axis=0))
-                        if len(tiles) > 2400:
-                            got_normal = True
-                            break
-                    got_normal = True  # per evitare che si faccia DA di due slide normal consecutive
+                    augmented_tile = data_augmentation(np.expand_dims(npy_img, axis=0))
+                    augmented_tile_npy = augmented_tile.numpy()
+                    data = np.append(data, augmented_tile_npy, axis=0)
+                    labels = np.append(labels, np.array(current_label), axis=None)
 
-            data = np.concatenate((data, tiles))
-
-            labels = [*labels, *(1 if float(current_label) == 0 else -1 for s in range(len(tiles)))]
-            print("Extracted ", len(slide_tiles_coords), " tiles")
-            print("Now data is ", len(data), " and labels is ", len(labels))
-            tiles = []
-
-            if got_normal:
-                break
-
-        print("Extracted ", num_slides_prefetch, " slides")
-        print("The data len is ", len(data), " while batch_size is ", batch_size)
-
-        # shuffling
-        idx = np.random.permutation(len(data))
-        data = data[idx]
-        labels = np.array(labels)[idx]
-
-        # batching
-        while len(data) > batch_size:
-            print("Yielding ", len(np.array(data[:batch_size])), len(np.array(labels[:batch_size]).reshape(-1, 1)))
-            yield np.array(data[:batch_size]), np.array(labels[:batch_size]).reshape(-1, 1)
-            data = np.delete(data, np.s_[:batch_size], 0)
-            print("data is now ", len(data))
-            labels = np.delete(labels, np.s_[:batch_size], 0)
-            print("labels is now ", len(labels))
-
-        slide_num += num_slides_prefetch
-        if slide_num > len(slides_info):
-            slide_num = 0
+            if len(data) > batch_size:
+                yield np.array(data[:batch_size]), np.array(labels[:batch_size]).reshape(-1, 1)
+                data = np.delete(data, np.s_[:batch_size], 0)
+                labels = np.delete(labels, np.s_[:batch_size], 0)
 
 
 def get_ds_len(slides_info):

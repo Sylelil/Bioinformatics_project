@@ -10,10 +10,11 @@ USE_GPU = True
 NORMAL_LABEL = '0'
 TUMOR_LABEL = '1'
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
+NUM_EPOCHS = 3
 
 # Data augmentation
-MULTIPLIER = 3
+MULTIPLIER = 8
 
 # Ottimizzazioni
 NUM_SLIDES_PREFETCH = 3

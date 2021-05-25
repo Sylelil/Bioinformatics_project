@@ -43,6 +43,8 @@ def open_wsi(file_path):
         slide = None
     except FileNotFoundError:
         slide = None
+    except:
+        slide = None
     return slide
 
 

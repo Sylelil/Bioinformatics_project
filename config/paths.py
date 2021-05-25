@@ -6,8 +6,8 @@ BASE_DIR = Path('.')
 genes_config_dir = BASE_DIR / 'config' / 'genes'  # Directory di configurazione per i geni
 
 # assets folder
-images_dir = BASE_DIR / 'assets' / 'images_files'    # Path alle WSI
-genes_dir = BASE_DIR / 'assets' / 'genes_files'      # Path ai dati di genomica
+images_dir = BASE_DIR / 'datasets' / 'images'    # Path alle WSI
+genes_dir = BASE_DIR / 'datasets' / 'genes'      # Path ai dati di genomica
 split_data_dir = BASE_DIR / 'assets' / 'split_data'  # dati splittati
 filename_splits_dir = BASE_DIR / 'assets' / 'filename_splits'  # filename splittati
 
@@ -30,6 +30,7 @@ extracted_features_test = BASE_DIR / 'results' / 'images' / 'fixed_feature_gener
 extracted_features_val = BASE_DIR / 'results' / 'images' / 'fixed_feature_generator' / 'extracted_features' / 'val'
 selected_coords_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'coords'
 selected_tiles_dir = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'tiles'
+selected_tiles_dir_with_overlap = BASE_DIR / 'results' / 'images' / 'selected_tiles' / 'tiles_with_overlap'
 normal_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_normal'
 tumor_masked_images_dir = BASE_DIR / 'results' / 'images' / 'masked_images' / 'img_tumor'
 low_res_normal_images_dir = BASE_DIR / 'results' / 'images' / 'low_res_images' / 'img_normal'

@@ -119,8 +119,11 @@ def main():
 
     plots.plot_features_box_plots(X_train_val[selected_genes[:4]], y_train_val, paths.svm_t_rfe_results_dir / "features_box_plots.png")
 
-    plots.plot_features_box_plots(X_train_val[["ENSG00000168748.12", "ENSG00000182271.11", "ENSG00000197273.3"]],
-                                  y_train_val, paths.svm_t_rfe_results_dir / "colorectal_features_box_plots.png")
+    plots.plot_features_box_plots(X_train_val[["ENSG00000168748.12", "ENSG00000197273.3"]],
+                                  y_train_val, paths.svm_t_rfe_results_dir / "train_colorectal_features_box_plots.png")
+
+    plots.plot_features_box_plots(X_test[["ENSG00000168748.12", "ENSG00000197273.3"]],
+                                  y_test, paths.svm_t_rfe_results_dir / "test_colorectal_features_box_plots.png")
 
     # saving selected features
     print("\nSaving selected training gene features on disk...")

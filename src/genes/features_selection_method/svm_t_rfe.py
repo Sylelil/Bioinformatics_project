@@ -175,8 +175,10 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
 
     df_array = df.to_numpy()
     genes_name = [gene for gene in df.columns]  # create list of gene names
+    selected_t_statistics_norm = norm(selected_t_statistics)
+    normalized_selected_t_statistics = [t / selected_t_statistics_norm for t in selected_t_statistics]
     ranked_genes = []
-    ranked_t_statistics = []
+    ranked_norm_t_statistics = []
     param_grid = dict(svm__C=[0.0001, 0.001, 0.01, 0.1, 1])
 
     i = 0
@@ -200,11 +202,10 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
 
         ranking_scores = []
         weights_norm = norm(weights)
-        selected_t_statistics_norm = norm(selected_t_statistics)
 
         for j in range(len(weights)):
             r = params['theta'] * (abs(weights[j] / weights_norm)) + (1 - params['theta']) * (
-                abs(selected_t_statistics[j] / selected_t_statistics_norm))
+                abs(normalized_selected_t_statistics[j]))
             ranking_scores.append(r)
         min_score = min(ranking_scores)  # sto prendendo il minimo
 
@@ -214,8 +215,8 @@ def ranking_genes(df, y, selected_t_statistics, params, path_to_c_values):
                 indexes_to_remove.append(k)
 
         for unwanted_index in sorted(indexes_to_remove, reverse=True):
-            ranked_t_statistics.append(selected_t_statistics[unwanted_index])
-            del selected_t_statistics[unwanted_index]
+            ranked_norm_t_statistics.append(normalized_selected_t_statistics[unwanted_index])
+            del normalized_selected_t_statistics[unwanted_index]
             df_array = np.delete(df_array, unwanted_index, 1)
             ranked_genes.append(genes_name[unwanted_index])
             del genes_name[unwanted_index]

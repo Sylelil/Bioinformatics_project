@@ -104,7 +104,7 @@ def main():
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
-        clf = SVC(kernel=params['kernel'])
+        clf = SVC(kernel=params['kernel'], C=0.7)
         if params['smote']:
             smt = SMOTE(sampling_strategy=params['sampling_strategy'], random_state=params['random_state'])
             X_train_sm, y_train_sm = smt.fit_resample(X_train_scaled, y_train)

@@ -182,7 +182,7 @@ def filter_complement(np_img, output_type="uint8"):
     """
       Description: Obtain the complement of an image as a NumPy array.
       :param np_img: Image as a NumPy array.
-      :param type: Type of array to return (float or uint8).
+      :param output_type: Type of array to return (float or uint8).
       :return: Complement image as Numpy array.
     """
 
@@ -235,7 +235,6 @@ def filter_red(rgb, red_lower_thresh, green_upper_thresh, blue_upper_thresh, out
         :param green_upper_thresh: Green channel upper threshold value.
         :param blue_upper_thresh: Blue channel upper threshold value.
         :param output_type: Type of array to return (bool, float, or uint8).
-        :param display_np_info: If True, display NumPy array info and filter time.
         :return: NumPy array representing the mask.
     """
 
@@ -255,19 +254,17 @@ def filter_red(rgb, red_lower_thresh, green_upper_thresh, blue_upper_thresh, out
 
 def filter_green(rgb, red_upper_thresh, green_lower_thresh, blue_lower_thresh, output_type="bool"):
     """
-    Create a mask to filter out greenish colors, where the mask is based on a pixel being below a
+    Description: Create a mask to filter out greenish colors, where the mask is based on a pixel being below a
     red channel threshold value, above a green channel threshold value, and above a blue channel threshold value.
     Note that for the green ink, the green and blue channels tend to track together, so we use a blue channel
     lower threshold value rather than a blue channel upper threshold value.
-    Args:
-      rgb: RGB image as a NumPy array.
-      red_upper_thresh: Red channel upper threshold value.
-      green_lower_thresh: Green channel lower threshold value.
-      blue_lower_thresh: Blue channel lower threshold value.
-      output_type: Type of array to return (bool, float, or uint8).
-      display_np_info: If True, display NumPy array info and filter time.
-    Returns:
-      NumPy array representing the mask.
+
+    :param rgb: RGB image as a NumPy array.
+    :param red_upper_thresh: Red channel upper threshold value.
+    :param green_lower_thresh: Green channel lower threshold value.
+    :param blue_lower_thresh: Blue channel lower threshold value.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :return: NumPy array representing the mask.
     """
     r = rgb[:, :, 0] < red_upper_thresh
     g = rgb[:, :, 1] > green_lower_thresh
@@ -286,12 +283,10 @@ def filter_green(rgb, red_upper_thresh, green_lower_thresh, blue_lower_thresh, o
 
 def filter_green_pen(rgb, output_type="bool"):
     """
-    Create a mask to filter out green pen marks from a slide.
-    Args:
-      rgb: RGB image as a NumPy array.
-      output_type: Type of array to return (bool, float, or uint8).
-    Returns:
-      NumPy array representing the mask.
+    Description: Create a mask to filter out green pen marks from a slide.
+    :param rgb: RGB image as a NumPy array.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :return: NumPy array representing the mask.
     """
 
     result = filter_green(rgb, red_upper_thresh=150, green_lower_thresh=160, blue_lower_thresh=140) & \
@@ -327,17 +322,16 @@ def filter_green_pen(rgb, output_type="bool"):
 def filter_blue(rgb, red_upper_thresh, green_upper_thresh, blue_lower_thresh, output_type="bool",
                 display_np_info=False):
     """
-    Create a mask to filter out blueish colors, where the mask is based on a pixel being below a
+    Description: Create a mask to filter out blueish colors, where the mask is based on a pixel being below a
     red channel threshold value, below a green channel threshold value, and above a blue channel threshold value.
-    Args:
-      rgb: RGB image as a NumPy array.
-      red_upper_thresh: Red channel upper threshold value.
-      green_upper_thresh: Green channel upper threshold value.
-      blue_lower_thresh: Blue channel lower threshold value.
-      output_type: Type of array to return (bool, float, or uint8).
-      display_np_info: If True, display NumPy array info and filter time.
-    Returns:
-      NumPy array representing the mask.
+
+    :param rgb: RGB image as a NumPy array.
+    :param red_upper_thresh: Red channel upper threshold value.
+    :param green_upper_thresh: Green channel upper threshold value.
+    :param blue_lower_thresh: Blue channel lower threshold value.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :param display_np_info: If True, display NumPy array info and filter time.
+    :return: NumPy array representing the mask.
     """
     if display_np_info:
         t = Time()
@@ -358,12 +352,11 @@ def filter_blue(rgb, red_upper_thresh, green_upper_thresh, blue_lower_thresh, ou
 
 def filter_blue_pen(rgb, output_type="bool"):
     """
-    Create a mask to filter out blue pen marks from a slide.
-    Args:
-      rgb: RGB image as a NumPy array.
-      output_type: Type of array to return (bool, float, or uint8).
-    Returns:
-      NumPy array representing the mask.
+    Description: Create a mask to filter out blue pen marks from a slide.
+
+    :param rgb: RGB image as a NumPy array.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :return: NumPy array representing the mask.
     """
     t = Time()
     result = filter_blue(rgb, red_upper_thresh=60, green_upper_thresh=120, blue_lower_thresh=190) & \
@@ -390,17 +383,16 @@ def filter_blue_pen(rgb, output_type="bool"):
 
 def filter_remove_small_objects(np_img, min_size=3000, avoid_overmask=False, overmask_thresh=95, output_type="uint8"):
     """
-    Filter image to remove small objects (connected components) less than a particular minimum size. If avoid_overmask
+    Description: Filter image to remove small objects (connected components) less than a particular minimum size. If avoid_overmask
     is True, this function can recursively call itself with progressively smaller minimum size objects to remove to
     reduce the amount of masking that this filter performs.
-    Args:
-      np_img: Image as a NumPy array of type bool.
-      min_size: Minimum size of small object to remove.
-      avoid_overmask: If True, avoid masking above the overmask_thresh percentage.
-      overmask_thresh: If avoid_overmask is True, avoid masking above this threshold percentage value.
-      output_type: Type of array to return (bool, float, or uint8).
-    Returns:
-      NumPy array (bool, float, or uint8).
+
+    :param np_img: Image as a NumPy array of type bool.
+    :param min_size: Minimum size of small object to remove.
+    :param avoid_overmask: If True, avoid masking above the overmask_thresh percentage.
+    :param overmask_thresh: If avoid_overmask is True, avoid masking above this threshold percentage value.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :return: NumPy array (bool, float, or uint8).
     """
 
     rem_sm = np_img.astype(bool)  # make sure mask is boolean
@@ -427,13 +419,12 @@ def filter_remove_small_objects(np_img, min_size=3000, avoid_overmask=False, ove
 
 def filter_remove_small_holes(np_img, max_size=3000, output_type="uint8"):
     """
-    Filter image to remove small holes less than a particular size.
-    Args:
-      np_img: Image as a NumPy array of type bool.
-      min_size: Remove small holes below this size.
-      output_type: Type of array to return (bool, float, or uint8).
-    Returns:
-      NumPy array (bool, float, or uint8).
+    Description: Filter image to remove small holes less than a particular size.
+
+    :param np_img: Image as a NumPy array of type bool.
+    :param max_size: Remove small holes below this size.
+    :param output_type: Type of array to return (bool, float, or uint8).
+    :return: NumPy array (bool, float, or uint8).
     """
 
     rem_sm = sk_morphology.remove_small_holes(np_img, area_threshold=max_size)
@@ -451,6 +442,7 @@ def filter_remove_small_holes(np_img, max_size=3000, output_type="uint8"):
 def np_to_pil(np_img):
     """
     Description: Convert a NumPy array to a PIL Image.
+
     :param np_img: The image represented as a NumPy array.
     :return: the NumPy array converted to a PIL Image.
     """
@@ -464,6 +456,7 @@ def np_to_pil(np_img):
 def mask_percent(np_img):
     """
       Description: Determine the percentage of a NumPy array that is masked (how many of the values are 0 values).
+
       :param np_img: Image as a NumPy array.
       :return: The percentage of the NumPy array that is masked.
     """
@@ -536,9 +529,10 @@ def get_x_zoom_level(highest_zoom_level, slide_magnification, desired_magnificat
 def select_tile(mask_patch, threshold):
     """
         Description: Determines if a mask tile contains a percentage of foreground above a threshold.
-        mask_patch: Numpy array for the current mask tile.
-        thres: Float indicating the minimum foreground content [0, 1] in the patch to select the tile.
-        return: Integer [0/1] indicating if the tile has been selected or not.
+
+        :param mask_patch: Numpy array for the current mask tile.
+        :param threshold: Float indicating the minimum foreground content [0, 1] in the patch to select the tile.
+        :return: Integer [0/1] indicating if the tile has been selected or not.
         """
     bg = np.all(mask_patch == np.array([0, 0, 0]), axis=2)
     bg_proportion = np.sum(bg) / bg.size

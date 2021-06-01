@@ -16,6 +16,21 @@ import config.images.config as cfg
 
 def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tiles_info_path, images_dir,
                          masked_images_dir):
+    """
+           Description: Whole slide images preprocessing phase
+
+           :param slides_info: list of dictionaries containing slides info
+           :param selected_tiles_dir: Path
+                Directory to save selected tiles coords for each slide
+           :param filter_info_path: Path
+                Path to save filter info
+           :param tiles_info_path: Path
+                Path to save tiles info
+           :param images_dir: Path
+                Directory where to save low resolution images
+           :param masked_images_dir: Path
+                Directory where to save masked low resolution images
+    """
     # Apply filters to down scaled images
     if len(os.listdir(masked_images_dir)) < len(slides_info):
         print(">> Apply filters to down scaled images:")
@@ -38,7 +53,7 @@ def preprocessing_images(slides_info, selected_tiles_dir, filter_info_path, tile
 
 def multiprocess_apply_filters_to_wsi(slides_images, filter_info_path, images_dir, masked_images_dir):
     """
-    Convert all WSI training slides to smaller images using multiple processes (one process per core).
+    Description: Convert all WSI slides to smaller images and apply filters, using multiple processes (one process per core).
     Each process will process a range of slide numbers.
     """
     timer = utils.Time()
@@ -106,14 +121,17 @@ def apply_filters(start_ind, end_ind, slide_images, images_dir, masked_images_di
 
 def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=False):
     """
-    Apply a set of filters to an image and optionally save and/or display filtered images.
-    Args:
-      slide_num: The slide number.
-      save: If True, save filtered images.
-      display: If True, display filtered images to screen.
-    Returns:
-      Tuple consisting of 1) the resulting filtered image as a NumPy array, and 2) dictionary of image information
-      (used for HTML page generation).
+    Description: Apply a set of filters to an image, save filtered image and optionally display intermediate results.
+
+    :param slide_info: Dict
+            Dictionary containing slide info
+    :param scaled_image: PIl image
+            Low resolution image
+    :param masked_images_dir: Path
+            Directory where to save the masked image
+    :param display: If True, display filtered images to screen.
+    :return: String
+            info about filtering
     """
     string = "Slide %s:\n%-20s | Width: %d Height: %d\n" % (
         slide_info['slide_name'], "SVS", slide_info['slide_width'], slide_info['slide_height'])
@@ -216,7 +234,7 @@ def apply_filters_to_image(slide_info, scaled_image, masked_images_dir, display=
 
 def multiprocess_select_tiles_with_tissue(slides_images, masked_pil_images_dir, selected_tiles_dir, tiles_info_path):
     """
-    Convert all WSI training slides to smaller images using multiple processes (one process per core).
+    Description: Select tiles with enough tissue from slides, using multiple processes (one process per core).
     Each process will process a range of slide numbers.
     """
     timer = utils.Time()
@@ -278,6 +296,17 @@ def select_tiles_with_tissue_range(start_index, end_index, slides_info, masked_i
 
 
 def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selected_tiles_dir):
+    """
+    Description: Select tiles with enough tissue from slide.
+    :param slide_info: Dict
+            Dictionary containing slides info
+    :param masked_images_pil_dir: Path
+            Directory to masked images
+    :param selected_tiles_dir:
+            Directory to save selected tiles coords
+    :return: String
+            Info about selected tiles
+    """
     # Initialize deep zoom generator for the slide
     image_dims = (slide_info['slide_width'], slide_info['slide_height'])
     slide = utils.open_wsi(slide_info['slide_path'])
@@ -350,6 +379,15 @@ def select_tiles_with_tissue_from_slide(slide_info, masked_images_pil_dir, selec
 
 
 def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16):
+    """
+    Description: Plot random selected tiles for slide
+    :param slide_info: Dict
+        Dictionary containing slide info
+    :param rand_tiles_dir_to_save: path
+        Directory to save random tiles
+    :num_tiles: int
+        number of random tiles to save
+    """
     # Initialize deep zoom generator for the slide
     slide = utils.open_wsi(slide_info['slide_path'])
     dzg = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE, overlap=cfg.OVERLAP)
@@ -387,6 +425,16 @@ def plot_random_selected_tiles(slide_info, rand_tiles_dir_to_save, num_tiles=16)
 
 
 def plot_selected_tiles_heatmap(masked_images_dir, slides_info, selected_coords_dir, results_dir):
+    """
+    Description: plot heatmap for masked images
+    :param masked_images_dir: Path
+        Directory to masked images
+    :param slides_info: List of Dictionaries containing slides info
+    :param selected_coords_dir: Path
+        Directory to selected tiles coords
+    :param results_dir: Path
+        Directory to save heatmaps
+    """
 
     for slide_info in slides_info:
         image_dims = (slide_info['slide_width'], slide_info['slide_height'])
@@ -432,7 +480,6 @@ def plot_selected_tiles_heatmap(masked_images_dir, slides_info, selected_coords_
 
         pil_masked_image.save(os.path.join(results_dir, slide_info['slide_name'] + ".png"))
         print("Heatmap image saved to %s" % (os.path.join(results_dir, slide_info['slide_name'] + ".png")))
-
 
 
 def is_selected_tile(coord, slide_tiles_coords):

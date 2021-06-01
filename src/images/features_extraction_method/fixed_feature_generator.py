@@ -32,7 +32,7 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir
 
          :param selected_coords_dir: Path
              directory containing selected tile coords, as one numpy file per slide
-     """
+    """
 
     if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
         if cfg.USE_GPU:

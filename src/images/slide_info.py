@@ -45,7 +45,6 @@ def read_slides_info_from_folder(lookup_dir):
 def read_slides_info():
     """
         Description: read directory containing Whole slide images
-        :param lookup_dir: path to directory
         :return: list of dictionaries containing slides info
     """
     normal_slides_info = []
@@ -82,6 +81,14 @@ def read_slides_info():
 
 
 def save_slides_info(slides_info, file_name, display_info=False):
+    """
+        Description: save Whole slide images info on disk
+
+        :param slides_info: list of dictionaries containing slides info
+        :param file_name: file name to save slide info
+        :param display_info: Boolean
+            if True shows slide info on screen
+    """
     if display_info:
         for item in slides_info:
             print("%s: slide width= %d, slide height = %d, num of zoom levels = %d,"

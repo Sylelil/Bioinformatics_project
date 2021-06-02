@@ -8,9 +8,10 @@ import multiprocessing
 from openslide.deepzoom import DeepZoomGenerator
 import config.images.config as cfg
 from .. import utils
+from ...config import paths
 
 
-def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir):
+def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir, use_fine_tuning):
     """
          Description: Using ResNet50 (pretrained on imagenet) as backbone, in order to extract features from images
 
@@ -32,6 +33,9 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir
 
          :param selected_coords_dir: Path
              directory containing selected tile coords, as one numpy file per slide
+
+         :param use_fine_tuning: bool
+             use the fine tuned model in place of the general one
     """
 
     if len(os.listdir(numpy_features_dir)) == 0 or len(os.listdir(numpy_features_dir)) < len(images_info):
@@ -47,19 +51,29 @@ def fixed_feature_generator(images_info, numpy_features_dir, selected_coords_dir
                 if os.path.isfile(os.path.join(numpy_features_dir, slide_info['slide_name'] + '.npy')):
                     print("Skipping slide " + slide_info['slide_name'])
                 else:
-                    save_numpy_features(slide_info, numpy_features_dir, selected_coords_dir)
+                    save_numpy_features(
+                        slide_info,
+                        numpy_features_dir,
+                        selected_coords_dir,
+                        use_fine_tuning=use_fine_tuning)
         else:
             with tf.device('/cpu:0'):
+                if use_fine_tuning:
+                    print("Warning: fine tuning not supported on CPU")
                 multiprocess_save_numpy_features(images_info, numpy_features_dir, selected_coords_dir)
     else:
         print(">> Extracted features already available on disk")
 
 
-def save_numpy_features(slide_info, path_to_save, selected_coords_dir):
+def save_numpy_features(slide_info, path_to_save, selected_coords_dir, use_fine_tuning):
 
     print(">> Image %s:" % (slide_info['slide_name']))
     print(">> Loading pretrained model...")
-    model = ResNet50(weights='imagenet', include_top=True)
+
+    if use_fine_tuning:
+        model = tf.keras.models.load_model(paths.saved_model)
+    else:
+        model = ResNet50(weights='imagenet', include_top=True)
     model = Model(inputs=model.inputs, outputs=model.get_layer('avg_pool').output)
 
     print(">> Pretrained model loaded")

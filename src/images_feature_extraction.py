@@ -30,7 +30,17 @@ def main():
                         required=False,
                         action='store_true')
 
+    parser.add_argument('--with_fine_tuning',
+                        help='Use the fine-tuned model in place of the general model',
+                        required=False,
+                        default=False,
+                        action='store_true')
+
     args = parser.parse_args()
+
+    use_fine_tuning = False
+    if args.with_fine_tuning:
+        use_fine_tuning = True
 
     if not os.path.exists(paths.images_dir):
         sys.stderr.write(f"File \"{paths.images_dir}\" not found")
@@ -118,6 +128,7 @@ def main():
                                                   paths.selected_coords_dir,
                                                   tumor_heatmaps_dir)
 
+
     print("\nReading split slides data:")
     images_splits_path = Path(paths.split_data_dir) / 'images'
     print(f'>> Tot data: {len(slides_info)}')
@@ -155,13 +166,25 @@ def main():
     print(">> Fixed feature generator:")
 
     print("\n>> Extracting features from training images:")
-    fixed_feature_generator(train_slides_info, paths.extracted_features_train, paths.selected_coords_dir)
+    fixed_feature_generator(
+        train_slides_info,
+        paths.extracted_features_train,
+        paths.selected_coords_dir,
+        use_fine_tuning=use_fine_tuning)
 
     print("\n>> Extracting features from val images:")
-    fixed_feature_generator(val_slides_info, paths.extracted_features_val, paths.selected_coords_dir)
+    fixed_feature_generator(
+        val_slides_info,
+        paths.extracted_features_val,
+        paths.selected_coords_dir,
+        use_fine_tuning=use_fine_tuning)
 
     print("\n>> Extracting features from test images:")
-    fixed_feature_generator(test_slides_info, paths.extracted_features_test, paths.selected_coords_dir)
+    fixed_feature_generator(
+        test_slides_info,
+        paths.extracted_features_test,
+        paths.selected_coords_dir,
+        use_fine_tuning=use_fine_tuning)
 
 
 if __name__ == '__main__':

@@ -6,6 +6,10 @@ from PIL import Image
 from PIL.ImageDraw import ImageDraw
 from openslide.deepzoom import DeepZoomGenerator
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import hashlib
+import base64
+
 from config import paths
 from . import utils
 from skimage import img_as_bool
@@ -487,3 +491,43 @@ def is_selected_tile(coord, slide_tiles_coords):
         if selected_coord[0] == coord[0] and selected_coord[1] == coord[1]:
             return True
     return False
+
+
+def hash_base64(_str):
+    return base64.b64encode(hashlib.md5(_str.encode()).digest()).decode().rstrip("=")
+
+
+def extract_tiles_on_disk(slides_info, overlap=0, root_save_path=paths.selected_tiles_dir):
+    num_tiles = 0
+    for current_slide in slides_info:
+        slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, current_slide['slide_name'] + '.npy'))
+        num_tiles += len(slide_tiles_coords)
+
+    if len(os.listdir(root_save_path)) < num_tiles:
+        for current_slide in slides_info:
+            slide_name = current_slide['slide_name']
+            print('Saving tiles of slide ', slide_name)
+            slide = utils.open_wsi(current_slide['slide_path'])
+            zoom = DeepZoomGenerator(slide, tile_size=cfg.TILE_SIZE - 2*overlap, overlap=overlap)
+
+            dzg_level_x = utils.get_x_zoom_level(
+                current_slide['highest_zoom_level'],
+                current_slide['slide_magnification'],
+                10)
+
+            slide_tiles_coords = np.load(os.path.join(paths.selected_coords_dir, slide_name + '.npy'))
+
+            for index, coord in tqdm(enumerate(slide_tiles_coords)):
+                save_path = root_save_path / (hash_base64(slide_name + str(index)).replace("/", "-") + '_' + slide_name + '.npy')
+                if save_path.exists():
+                    print("Skipping tile ", str(save_path))
+                    continue
+
+                tile = zoom.get_tile(dzg_level_x, (coord[0], coord[1]))
+                try:
+                    np_tile = utils.normalize_staining(tile)
+                    np.save(save_path, np_tile)
+                except:
+                    print("Skip file ", str(save_path))
+    else:
+        print(">> Selected tiles already saved on disk")

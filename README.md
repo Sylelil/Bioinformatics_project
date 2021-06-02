@@ -35,6 +35,11 @@ python src/split_train_test.py --testsizepercent 0.2 --valsizepercent 0.2
 
 ## Feature extraction
 
+### Generate the fine-tuned model
+```
+python src/images/fine_tuning.py
+```
+
 ### Feature extraction from gene expression data
 ```
 python src/genes_expression_analysis.py --cfg src/config/genes/conf.ini 
@@ -42,6 +47,11 @@ python src/genes_expression_analysis.py --cfg src/config/genes/conf.ini
 ### Feature extraction from internal layers of CNN classifier
 ```
 python src/images_feature_extraction.py 
+```
+
+### Feature extraction from internal layers of fine-tuned CNN classifier
+```
+python src/images_feature_extraction.py --with_fine_tuning
 ```
 
 ## Concatenation of image and gene features 
@@ -81,7 +91,6 @@ Insert in src/config/integration/conf.ini:
 ```
 python src/feature_concatenation.py --cfg src/config/integration/conf.ini
 ```
-
 
 ## Classification with genes only
 ### SVC

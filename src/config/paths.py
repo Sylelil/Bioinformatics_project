@@ -38,3 +38,6 @@ genes_classification_results_dir = BASE_DIR / 'results' / 'genes_classification'
 
 # results/images_classification
 images_classification_results_dir = BASE_DIR / 'results' / 'images_classification'
+
+selected_tiles_dir = images_results / 'selected_tiles' / 'tiles'
+saved_model = BASE_DIR / 'saved_model.h5'

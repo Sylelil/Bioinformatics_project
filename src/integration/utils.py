@@ -1,6 +1,43 @@
 import configparser
 import pandas as pd
+import numpy as np
 from pathlib import Path
+from config import paths
+from sklearn.model_selection import GroupKFold
+
+
+def get_patient_kfold_split(X_train, y_train, data_info_path, n_splits):
+    # TODO      NELLE VARIE FUNZIONI, AL POSTO DI:
+    # TODO              for train_ix, test_ix in tqdm(cv_outer.split(X_train, y_train))
+    # TODO      SCRIVERE INVECE:
+    # TODO              for train_ix, test_ix in tqdm(get_patient_kfold_split(X_train, y_train, data_info_path=..., n_splits=...))
+
+    # data info path dovrebbero essere questi:
+    # - nel caso di PCA è "pca200/info_train.csv"
+    # - altrimenti "all/info_train.csv"
+    
+    # n_splits si prende da param (attenzione, si prende in modi diversi in shallow_classifier e in nn_classifier)
+
+    train_info_df = pd.read_csv(data_info_path)
+    X_train_filenames = train_info_df['filename']  # per ogni sample, ricavo il filename
+
+    train_filenames_file = Path(paths.filename_splits_dir) / 'train_filenames.npy'
+    train_filenames = np.load(train_filenames_file)         # lista di tutti i filename nel train dataset (senza duplicati)
+
+    group_nums_range = np.arange(len(train_filenames))      # [0,1,2,3,4, ..., len(train_filenames)-1]
+                                                            # -> un numero per ciascun gruppo (gruppo = filename)
+
+    train_filenames_group_nums = {}  # {filename0:0, filename1:1, filename2:2, ...}
+    for filename, group_num in zip(train_filenames, group_nums_range):
+        train_filenames_group_nums[filename] = group_num
+
+    groups = []     # parallelo a X_train: per ogni sample di X_train, in groups segno il suo numero di gruppo
+    for sample_filename in X_train_filenames:
+        groups.append(train_filenames_group_nums[sample_filename])
+
+    group_kfold = GroupKFold(n_splits=n_splits)
+
+    return group_kfold.split(X_train, y_train, groups)
 
 
 def get_concatenated_data_old(data_path):

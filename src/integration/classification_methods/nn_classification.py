@@ -15,6 +15,8 @@ from tensorflow import keras
 from sklearn import metrics
 from imblearn.over_sampling import SMOTE
 
+from integration.utils import get_patient_kfold_split
+
 
 def __make_model(n_input_features, lr, units_1, units_2, metrics_list=METRICS_keras):
     """
@@ -94,7 +96,7 @@ def __mlp_classify(X_train, y_train, X_test, y_test, mlp_settings):
     return y_pred_train, y_pred_test, train_scores, test_scores, history
 
 
-def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params):
+def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params, data_path=None):
     """
        Description: Use cross validation to assess performance of MLP, then get final results on test.
        :param X_train: train data.
@@ -112,10 +114,16 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params)
 
     # cross validation for unbiased error estimation
     print(">> Cross validation for unbiased error estimation...")
-    cv = KFold(n_splits=params['n_inner_splits'], shuffle=True,
-               random_state=params['random_state'])
+    # cv = KFold(n_splits=params['n_inner_splits'], shuffle=True,
+    #           random_state=params['random_state'])
 
-    for train_ix, test_ix in tqdm(cv.split(X_train, y_train)):
+    splits = get_patient_kfold_split(
+        X_train,
+        y_train,
+        data_info_path=data_path / 'info_train.csv',
+        n_splits=params['n_inner_splits'])
+
+    for train_ix, test_ix in tqdm(splits):
         # split data in k folds
         X_train_cv, X_test_cv = X_train[train_ix, :], X_train[test_ix, :]
         y_train_cv, y_test_cv = y_train[train_ix], y_train[test_ix]
@@ -225,7 +233,7 @@ def nn_classifier(args, params, params_general, data_path):
 
     # do cross validation
     results = __mlp_cross_validate(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                   mlp_settings=mlp_settings, params=params)
+                                   mlp_settings=mlp_settings, params=params, data_path=data_path)
     # generate report
     __generate_classification_results(args, params_general, y_test, y_train, data_path, results)
 

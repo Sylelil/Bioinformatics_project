@@ -33,7 +33,10 @@ def get_patient_kfold_split(X_train, y_train, data_info_path, n_splits):
 
     groups = []     # parallelo a X_train: per ogni sample di X_train, in groups segno il suo numero di gruppo
     for sample_filename in X_train_filenames:
-        groups.append(train_filenames_group_nums[sample_filename])
+        try:
+            groups.append(train_filenames_group_nums[sample_filename])
+        except KeyError:
+            groups.append(0) # Inseriamo tutte le tile di cui non troviamo il case id in maniera consistente nello stesso gruppo
 
     group_kfold = GroupKFold(n_splits=n_splits)
 

@@ -14,6 +14,8 @@ from sklearn import metrics
 from common.classification_metrics import METRICS_skl, top_metric_skl
 from imblearn.pipeline import Pipeline
 
+from integration.utils import get_patient_kfold_split
+
 
 def __get_classifier(method_name, params):
     """
@@ -52,11 +54,16 @@ def shallow_classifier(args, params, data_path):
 
     metric = top_metric_skl
 
-    cv_outer = KFold(n_splits=params['cv']['n_outer_splits'], shuffle=True, random_state=params['general']['random_state'])
+    # cv_outer = KFold(n_splits=params['cv']['n_outer_splits'], shuffle=True, random_state=params['general']['random_state'])
+    splits = get_patient_kfold_split(
+        X_train,
+        y_train,
+        data_info_path=data_path / 'info_train.csv',
+        n_splits=params['n_inner_splits'])
 
     # nested cross validation for unbiased error estimation:
     print(">> Nested cross validation for unbiased error estimation...")
-    for train_ix, test_ix in tqdm(cv_outer.split(X_train, y_train)):
+    for train_ix, test_ix in tqdm(splits):
 
         # split data in k_outer folds (one is test, the rest is trainval) for outer loop
         X_train_cv, X_test_cv = X_train[train_ix, :], X_train[test_ix, :]

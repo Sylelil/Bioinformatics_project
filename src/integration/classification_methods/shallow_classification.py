@@ -55,11 +55,11 @@ def shallow_classifier(args, params, data_path):
     metric = top_metric_skl
 
     # cv_outer = KFold(n_splits=params['cv']['n_outer_splits'], shuffle=True, random_state=params['general']['random_state'])
-    splits = get_patient_kfold_split(
+    splits, _ = get_patient_kfold_split(
         X_train,
         y_train,
         data_info_path=data_path / 'info_train.csv',
-        n_splits=params['n_inner_splits'])
+        n_splits=params['cv']['n_outer_splits'])
 
     # nested cross validation for unbiased error estimation:
     print(">> Nested cross validation for unbiased error estimation...")
@@ -119,11 +119,16 @@ def shallow_classifier(args, params, data_path):
 
     # simple cross validation to find the best model:
     print('>> Simple cross validation to find the best model...')
+    _, groups = get_patient_kfold_split(
+        X_train,
+        y_train,
+        data_info_path=data_path / 'info_train.csv',
+        n_splits=params['cv']['n_inner_splits'])
     cv = KFold(n_splits=params['cv']['n_inner_splits'], shuffle=True, random_state=params['general']['random_state'])
     search = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=cv, n_jobs=-1, scoring='recall',
                           refit=True, verbose=2)
 
-    search.fit(X_train, y_train)
+    search.fit(X_train, y_train, groups=groups)
     best_model = search.best_estimator_
     best_hyperparam = search.best_params_
     best_score = search.best_score_

@@ -7,10 +7,6 @@ from sklearn.model_selection import GroupKFold
 
 
 def get_patient_kfold_split(X_train, y_train, data_info_path, n_splits):
-    # TODO      NELLE VARIE FUNZIONI, AL POSTO DI:
-    # TODO              for train_ix, test_ix in tqdm(cv_outer.split(X_train, y_train))
-    # TODO      SCRIVERE INVECE:
-    # TODO              for train_ix, test_ix in tqdm(get_patient_kfold_split(X_train, y_train, data_info_path=..., n_splits=...))
 
     # data info path dovrebbero essere questi:
     # - nel caso di PCA è "pca200/info_train.csv"
@@ -40,7 +36,7 @@ def get_patient_kfold_split(X_train, y_train, data_info_path, n_splits):
 
     group_kfold = GroupKFold(n_splits=n_splits)
 
-    return group_kfold.split(X_train, y_train, groups)
+    return group_kfold.split(X_train, y_train, groups), groups
 
 
 def get_concatenated_data_old(data_path):

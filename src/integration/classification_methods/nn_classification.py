@@ -117,7 +117,7 @@ def __mlp_cross_validate(X_train, y_train, X_test, y_test, mlp_settings, params,
     # cv = KFold(n_splits=params['n_inner_splits'], shuffle=True,
     #           random_state=params['random_state'])
 
-    splits = get_patient_kfold_split(
+    splits, _ = get_patient_kfold_split(
         X_train,
         y_train,
         data_info_path=data_path / 'info_train.csv',
